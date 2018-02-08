@@ -1,0 +1,37 @@
+
+## Electrum Personal Server configuration file
+## Comments start with #
+
+[wallets]
+## Add addresses to this section
+
+# These are just random addresses I found on a blockchain explorer
+
+# A key can be anything
+addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
+# A comma separated list is also accepted
+my_test_addresses = 1KKszdQEpXgSY4EvsnGcGEzbQFmdcFwuNS,1EuEVUtQQ8hmuMHNdMdjLwjpkm6Ef7RYVk
+# And space separated
+more_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1Arzu6mWZuXGTF9yR2hZhMgBJgu1Xh2bNC 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz
+
+[bitcoin-rpc]
+host = localhost
+port = 8332
+user = bitcoinrpc
+password = password
+
+#how often in seconds to poll for new transactions when electrum not connected
+poll_interval_listening = 30
+#how often in seconds to poll for new transactions when electrum is connected
+poll_interval_connected = 5
+
+[electrum-server]
+#0.0.0.0 to accept connections from any IP
+#127.0.0.1 to accept from only localhost
+#recommended you accept localhost only and connect with a ssh tunnel
+host = 127.0.0.1
+port = 50002
+
+[misc]
+#not implemented yet
+print_debug = false
