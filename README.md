@@ -10,11 +10,12 @@ multisignature wallets, offline signing, mnemonic recovery phrases and so on
 can still be used, but backed by the user's own full node.
 
 Using Electrum with Electrum Personal Server is probably the most
-resource-efficent way right now to use a hardware wallet connected to your
+resource-efficient way right now to use a hardware wallet connected to your
 own full node. 
 
 For a longer explaination of this project and why it's important, see the
-[bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198).
+[mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
+and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198).
 
 See also the Electrum bitcoin wallet [website](https://electrum.org/).
 
