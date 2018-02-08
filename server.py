@@ -65,7 +65,7 @@ VERSION_NUMBER = "0.1"
 
 BANNER = \
 """Welcome to Electrum Personal Server
-gitub.com/whatever
+https://github.com/chris-belcher/electrum-personal-server
 
 Monitoring {addr} addresses
 
