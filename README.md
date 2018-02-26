@@ -21,8 +21,10 @@ See also the Electrum bitcoin wallet [website](https://electrum.org/).
 
 ## How To Use
 
-This application requires python3 and a Bitcoin full node built with wallet
-capability.
+This application requires python3 and a Bitcoin full node version 0.16 or
+higher. Make sure you
+[verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
+of any binaries before running them, or compile from source.
 
 Download the latest release or clone the git repository. Enter the directory
 and rename the file `config.cfg_sample` to `config.cfg`, edit this file to
@@ -65,8 +67,6 @@ features such as:
 
 * Deterministic wallets and master public keys are not supported. Addresses
   must be imported individually.
-
-* Bech32 bitcoin addresses are not supported.
 
 * The Electrum server protocol has a caveat about multiple transactions included
   in the same block. So there may be weird behaviour if that happens.

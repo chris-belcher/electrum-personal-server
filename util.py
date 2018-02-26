@@ -31,9 +31,11 @@ def script_to_scripthash(script):
     h = sha256(bytes.fromhex(script))[0:32]
     return bh2u(bytes(reversed(h)))
 
-def address_to_scripthash(addr):
-    script = btc.address_to_script(addr)
-    return script_to_scripthash(script)
+def address_to_script(addr, rpc):
+    return rpc.call("validateaddress", [addr])["scriptPubKey"]
+
+def address_to_scripthash(addr, rpc):
+    return script_to_scripthash(address_to_script(addr, rpc))
 
 #the 'result' field in the blockchain.scripthash.subscribe method
 # reply uses this as a summary of the address
@@ -66,8 +68,10 @@ def hash_merkle_root(merkle_s, target_hash, pos):
 
 
 def script_to_address(script):
+    #TODO why is this even here? its not used anywhere, maybe old code
     #TODO bech32 addresses
-    #TODO testnet, although everything uses scripthash so the address vbyte doesnt matter
+    #TODO testnet, although everything uses scripthash so the address
+    #     vbyte doesnt matter
     return btc.script_to_address(script, 0x00)
 
 def calc_tree_width(height, txcount):
@@ -85,23 +89,27 @@ def decend_merkle_tree(hashes, flags, height, txcount, pos):
             left = decend_merkle_tree(hashes, flags, height-1, txcount, pos*2)
             #bitcoin has a rule that if theres an odd number of nodes in
             # the merkle tree, the last hash is duplicated
+            #in the electrum format we must hash together the duplicate
+            # tree branch
             if pos*2+1 < calc_tree_width(height-1, txcount):
                 right = decend_merkle_tree(hashes, flags, height-1,
                     txcount, pos*2+1)
             else:
-                right = left
-                #TODO decend down one branch and hash it up, place in right
+                if isinstance(left, tuple):
+                    right = expand_tree_hashing(left)
+                else:
+                    right = left
             return (left, right)
         else:
             hs = next(hashes)
-            hs = hs[:4] + '...' + hs[-4:]
-            print(hs)
+            #hs = hs[:4] + '...' + hs[-4:]
+            #print(hs)
             return hs
     else:
         #txid node
         hs = next(hashes)
-        hs = hs[:4] + '...' + hs[-4:]
-        print(hs)
+        #hs = hs[:4] + '...' + hs[-4:]
+        #print(hs)
         if flag:
             return "tx:" + str(pos) + ":" + hs
         else:
@@ -129,6 +137,25 @@ def expand_tree_electrum_format(node, result):
         result.append(left)
     if not isinstance(right, tuple):
         result.append(right)
+
+def deserialize_hash_node(node):
+    if node.startswith("tx"):
+        return node.split(":")[2]
+    else:
+        return node
+
+#recurse down into the tree, hashing everything and returning root hash
+def expand_tree_hashing(node):
+    left, right = node
+    if isinstance(left, tuple):
+        hash_left = expand_tree_hashing(left)
+    else:
+        hash_left = deserialize_hash_node(left)
+    if isinstance(right, tuple):
+        hash_right = expand_tree_hashing(right)
+    else:
+        hash_right = deserialize_hash_node(right)
+    return hash_encode(Hash(hash_decode(hash_left) + hash_decode(hash_right)))
 
 #https://github.com/bitcoin/bitcoin/blob/master/src/merkleblock.h
 #https://github.com/breadwallet/breadwallet-core/blob/master/BRMerkleBlock.c
@@ -279,20 +306,19 @@ merkle_test_vectors = [
 #response electrum3.hachre.de {'result': {'pos': 2860, 'block_height': 503961, 'merkle': ['590e0d07c8d33b0453748d1034d3fd4e779e1e78a2c8ef20c2e66830a6d4230d', '0f1d4d6aaa71beaf8d30b7df3cd776ece4bcd1169d1550e8abfb2b3053388ac8', 'cbd44606e7d8ca49ccaa409a51b60854d6e31534c5c6315a257ef571f1398db3', '7d4d426bb8a3b5146b0c35845b7e12dc7bcd7f44c570ff712632d0d86b695cbd', '20e5e6a7eb7cf42e4d3a9ac803f160973b10da3da74d68afb8bfef04d9a46d85', '9032b3b57d81862168733b5a6b6370eaeafb4aaaea5023bf4cf3a998f8ca67e2', 'a16ed5aa6bab2c9b64e91f033aa1fdffa44270f0907aeb8eedd31840514f8f26', 'a53a1448437ac49c9f560f3e5c4a769c6295df2a04242b713d1f0747d90a8fe4', '6922f4bd74e95ae28fcd71c35dfb95e4551876ba78cb828cbc863870b34add53', 'bf152261c5f22dc73cb2fe5ee85984f0c8d71ab8db28bd0e39931f43d6766f1e', '2cbe3c851f5a58e2a407bf38bb829fde76e4fd22005b5c3124d3eff4de55c3a5', '0b7ceffc6a25d3b3c0619fd2d254881e8987f9182c3fb12bf5db14311cd7208d']}, 'method': 'blockchain.transaction.get_merkle', 'id': 32, 'jsonrpc': '2.0', 'params': ['590e0d07c8d33b0453748d1034d3fd4e779e1e78a2c8ef20c2e66830a6d4230d', 503961]}
 #proof = "00000020c656c90b521a2bbca14174f2939b882a28d23d86144b0e000000000000000000cf5185a8e369c3de5f15e039e777760994fd66184b619d839dace3aec9953fd6d861595ac1910018ee097a972d0b0000078d20d71c3114dbf52bb13f2c18f987891e8854d2d29f61c0b3d3256afcef7c0b1e6f76d6431f93390ebd28dbb81ad7c8f08459e85efeb23cc72df2c5612215bf53dd4ab3703886bc8c82cb78ba761855e495fb5dc371cd8fe25ae974bdf42269e267caf898a9f34cbf2350eaaa4afbeaea70636b5a3b73682186817db5b33290bd5c696bd8d0322671ff70c5447fcd7bdc127e5b84350c6b14b5a3b86b424d7db38d39f171f57e255a31c6c53415e3d65408b6519a40aacc49cad8e70646d4cb0d23d4a63068e6c220efc8a2781e9e774efdd334108d7453043bd3c8070d0e5903ad5b07"
 
-#has 7 txes
+#has 7 txes, duplicated entry in the last depth, at tx level
 # 0000000000007d1bdd2cfd23ffb3c2bae3143772bd6577aecae9c6b29f88c2af
 #lasttx c40bbed8f34cb1c24660e2e0cb51e09a180f1ab97037265293fceab88247bccf
 #addr 15dcVuX7UT4fB74dikaAE4MXhCTkFZpV8F
 #response electrum3.hachre.de {'id': 33, 'params': ['c40bbed8f34cb1c24660e2e0cb51e09a180f1ab97037265293fceab88247bccf', 120013], 'result': {'block_height': 120013, 'pos': 6, 'merkle': ['c40bbed8f34cb1c24660e2e0cb51e09a180f1ab97037265293fceab88247bccf', 'ad69c91b8e9b7122dc2a2575cfa12a36de05595e0e8f59092d04b263b4c8f70f', '8ae24d1f1c3b0d65ec88f8c84cad7e02e98b26d7ad566bf3653158b72ebb3acd']}, 'jsonrpc': '2.0', 'method': 'blockchain.transaction.get_merkle'}
 #proof = "0100000056e02c6d3278c754e0699517834741f7c4ad3dcbfeb7803a3462000000000000af3bdd5dd465443fd003e9281455e60aae573dd4d46304d7ba17276ea33d506488cbb44dacb5001b9ebb193b0700000003cd3abb2eb7583165f36b56add7268be9027ead4cc8f888ec650d3b1c1f4de28a0ff7c8b463b2042d09598f0e5e5905de362aa1cf75252adc22719b8e1bc969adcfbc4782b8eafc9352263770b91a0f189ae051cbe0e26046c2b14cf3d8be0bc40135"
 
-#has 6 txes
+#has 6 txes, duplicated entry in the last-but-one depth
 # 00000000000005163d8d16192985a3f2d0f6f44e668ad05b26f7edcd3385a37f
 # last tx eaefedc6dbb37223c771d8ccbbe4dac9e9d646ab90f17e387b63c866fad6e2c3
 # addr 1NwNmR7sd6NqxXBJMXrwt9yUms29pSDmm
 #response electrum3.hachre.de {'jsonrpc': '2.0', 'id': 33, 'method': 'blockchain.transaction.get_merkle', 'result': {'pos': 5, 'block_height': 150106, 'merkle': ['1f12a4c866548ab51766172f97a6741fbd62834ddfcadba249909ea8150eca88', 'f5a5aa78bd1f1ee5de900b7d1928864912425b67ece4a07e40af8eeb86f10d94', 'd52e599bc0ecc5e17bcb1e7539b61586c7457170923eab6d36243995ed452bf5']}, 'params': ['eaefedc6dbb37223c771d8ccbbe4dac9e9d646ab90f17e387b63c866fad6e2c3', 150106]}
 proof = "01000000299edfd28524eae4fb6012e4087afdb6e1b912db85e612374b03000000000000e16572394f8578a47bf36e15cd16faa5e3b9e18805cf4e271ae4ef95aa8cea7eb31fa14e4b6d0b1a42857d960600000003f52b45ed953924366dab3e92707145c78615b639751ecb7be1c5ecc09b592ed588ca0e15a89e9049a2dbcadf4d8362bd1f74a6972f176617b58a5466c8a4121fc3e2d6fa66c8637b387ef190ab46d6e9c9dae4bbccd871c72372b3dbc6edefea012d"
-
 '''
 ix = 1
 try:
@@ -302,6 +328,7 @@ try:
 except ValueError:
     print("valueerror")
 '''
+#the function electrum uses to verify merkle branches is in verifer.py called hash_merkle_root()
 
 '''
 h1 = b"1f12a4c866548ab51766172f97a6741fbd62834ddfcadba249909ea8150eca88"

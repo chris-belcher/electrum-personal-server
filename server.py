@@ -57,7 +57,6 @@ from decimal import Decimal
 
 from jsonrpc import JsonRpc, JsonRpcError
 import util
-import bitcoin as btc
 
 ADDRESSES_LABEL = "electrum-watchonly-addresses"
 
@@ -327,18 +326,17 @@ def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
 
 def get_input_and_output_scriptpubkeys(rpc, txid):
     gettx = rpc.call("gettransaction", [txid])
-    txd = btc.deserialize(gettx["hex"])
-    output_scriptpubkeys = [sc['script'] for sc in txd['outs']]
+    txd = rpc.call("decoderawtransaction", [gettx["hex"]])
+    output_scriptpubkeys = [out["scriptPubKey"]["hex"] for out in txd["vout"]]
     input_scriptpubkeys = []
-    for ins in txd["ins"]:
+    for inn in txd["vin"]:
         try:
-            wallet_tx = rpc.call("gettransaction", [ins["outpoint"][
-                "hash"]])
+            wallet_tx = rpc.call("gettransaction", [inn["txid"]])
         except JsonRpcError:
             #wallet doesnt know about this tx, so the input isnt ours
             continue
-        script = btc.deserialize(str(wallet_tx["hex"]))["outs"][ins[
-            "outpoint"]["index"]]["script"]
+        input_decoded = rpc.call("decoderawtransaction", [wallet_tx["hex"]])
+        script = input_decoded["vout"][inn["vout"]]["scriptPubKey"]["hex"]
         input_scriptpubkeys.append(script)
     return output_scriptpubkeys, input_scriptpubkeys, txd
 
@@ -346,12 +344,10 @@ def generate_new_history_element(rpc, tx, txd):
     if tx["confirmations"] == 0:
         unconfirmed_input = False
         total_input_value = 0
-        for ins in txd["ins"]:
-            utxo = rpc.call("gettxout", [ins["outpoint"]["hash"],
-                ins["outpoint"]["index"], True])
+        for inn in txd["vin"]:
+            utxo = rpc.call("gettxout", [inn["txid"], inn["vout"], True])
             if utxo is None:
-                utxo = rpc.call("gettxout", [ins["outpoint"]["hash"],
-                    ins["outpoint"]["index"], False])
+                utxo = rpc.call("gettxout", [inn["txid"], inn["vout"], False])
                 if utxo is None:
                     debug("utxo not found(!)")
                     #TODO detect this and figure out how to tell
@@ -360,7 +356,8 @@ def generate_new_history_element(rpc, tx, txd):
             unconfirmed_input = unconfirmed_input or utxo["confirmations"] == 0
         debug("total_input_value = " + str(total_input_value))
 
-        fee = total_input_value - sum([sc["value"] for sc in txd["outs"]])
+        fee = total_input_value - sum([int(Decimal(out["value"])*Decimal(1e8))
+            for out in txd["vout"]])
         height = -1 if unconfirmed_input else 0
         new_history_element = ({"tx_hash": tx["txid"], "height": height,
             "fee": fee})
@@ -505,7 +502,7 @@ def build_address_history_index(rpc, wallet_addresses):
     st = time.time()
     address_history = {}
     for addr in wallet_addresses:
-        scripthash = util.address_to_scripthash(addr)
+        scripthash = util.address_to_scripthash(addr, rpc)
         address_history[scripthash] = {'addr': addr, 'history': [],
             'subscribed': False}
     wallet_addr_scripthashes = set(address_history.keys())
@@ -530,6 +527,7 @@ def build_address_history_index(rpc, wallet_addresses):
                 continue
             if tx["txid"] in obtained_txids:
                 continue
+            debug("adding obtained tx=" + str(tx["txid"]))
             obtained_txids.add(tx["txid"])
 
             #obtain all the addresses this transaction is involved with
