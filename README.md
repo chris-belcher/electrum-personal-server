@@ -4,10 +4,14 @@ Electrum Personal Server is an implementation of the Electrum server protocol
 which fulfills the specific need of using the Electrum UI with full node
 verification and privacy, but without the heavyweight server backend, for a
 single user. It allows the user to benefit from all of Bitcoin Core's
-resource-saving features like pruning, blocksonly and disabled txindex. All
-of Electrum's feature-richness like hardware wallet integration,
-multisignature wallets, offline signing, mnemonic recovery phrases and so on
-can still be used, but backed by the user's own full node.
+resource-saving features like
+[pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning),
+[blocksonly](https://bitcointalk.org/index.php?topic=1377345.0) and disabled
+txindex. All of Electrum's feature-richness like hardware wallet integration,
+[multisignature wallets](http://docs.electrum.org/en/latest/multisig.html),
+[offline signing](http://docs.electrum.org/en/latest/coldstorage.html),
+[mnemonic recovery phrases](https://en.bitcoin.it/wiki/Mnemonic_phrase)
+and so on can still be used, but backed by the user's own full node.
 
 Using Electrum with Electrum Personal Server is probably the most
 resource-efficient way right now to use a hardware wallet connected to your
@@ -60,9 +64,6 @@ tunnel.
 This project is in alpha stages as there are several essential missing
 features such as:
 
-* Merkle proofs are not handled, so every confirmed transaction is labelled
-  `Not Verified`.
-
 * The server does not support SSL so Electrum must be configured to disable it.
 
 * Deterministic wallets and master public keys are not supported. Addresses
@@ -87,3 +88,6 @@ possible.
 
 I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels.
 
+## Media Coverage
+
+* https://bitcoinmagazine.com/articles/electrum-personal-server-will-give-users-full-node-security-they-need/

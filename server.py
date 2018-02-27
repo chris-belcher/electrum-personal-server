@@ -56,7 +56,7 @@ from configparser import ConfigParser, NoSectionError
 from decimal import Decimal
 
 from jsonrpc import JsonRpc, JsonRpcError
-import util
+import util, merkleproof
 
 ADDRESSES_LABEL = "electrum-watchonly-addresses"
 
@@ -143,18 +143,28 @@ def handle_query(sock, line, rpc, address_history):
     #protocol documentation
     #https://github.com/kyuupichan/electrumx/blob/master/docs/PROTOCOL.rst
     if method == "blockchain.transaction.get":
-        try:
-            tx = rpc.call("gettransaction", [query["params"][0]])
-            send_response(sock, query, tx["hex"])
-        except JsonRpcError:
-            debug("Unable to get tx " + query["params"][0])
+        tx = rpc.call("gettransaction", [query["params"][0]])
+        send_response(sock, query, tx["hex"])
     elif method == "blockchain.transaction.get_merkle":
-        #we dont support merkle proofs yet, but we must reply with
-        #something otherwise electrum will disconnect from us
-        #so reply with an invalid proof
-        #https://github.com/spesmilo/electrum/blob/c8e67e2bd07efe042703bc1368d499c5e555f854/lib/verifier.py#L74
         txid = query["params"][0]
-        reply = {"block_height": 1, "pos": 0, "merkle": [txid]}
+        try:
+            tx = rpc.call("gettransaction", [txid])
+            core_proof = rpc.call("gettxoutproof", [[txid], tx["blockhash"]])
+            electrum_proof = merkleproof.convert_core_to_electrum_merkle_proof(
+                core_proof)
+            implied_merkle_root = util.hash_merkle_root(
+                electrum_proof["merkle"], txid, electrum_proof["pos"])
+            if implied_merkle_root != electrum_proof["merkleroot"]:
+                raise ValueError
+            txheader = get_block_header(rpc, tx["blockhash"])
+            reply = {"block_height": txheader["block_height"], "pos":
+                electrum_proof["pos"], "merkle": electrum_proof["merkle"]}
+        except (ValueError, JsonRpcError) as e:
+            log("WARNING: merkle proof failed for " + txid + " err=" + repr(e))
+            #so reply with an invalid proof which electrum handles without
+            # disconnecting us
+            #https://github.com/spesmilo/electrum/blob/c8e67e2bd07efe042703bc1368d499c5e555f854/lib/verifier.py#L74
+            reply = {"block_height": 1, "pos": 0, "merkle": [txid]}
         send_response(sock, query, reply)
     elif method == "blockchain.scripthash.subscribe":
         scrhash = query["params"][0]
