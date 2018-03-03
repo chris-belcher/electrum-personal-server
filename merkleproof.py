@@ -259,7 +259,7 @@ def test():
     print("All tests passed")
 
 '''
-proof = "010000004e24a2880cd72d9bde7502087bd3756819794dc7548f68dd68dc3001000000002793fce9cdf91b4f84760571bf6009d5f0ffaddbfdc9234ef58a036096092117b10f4b4cfd68011c903e350b0200000002ee50562fc6f995eff2df61be0d5f943bac941149aa21aacb32adc130c0f17d6a2077a642b1eabbc5120e31566a11e2689aa4d39b01cce9a1902360baa5e4328e0105"
+proof = ""
 def chunks(d, n):
     return [d[x:x + n] for x in range(0, len(d), n)]
 #print(proof)

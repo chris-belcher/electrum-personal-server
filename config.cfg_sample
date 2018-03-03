@@ -2,17 +2,22 @@
 ## Electrum Personal Server configuration file
 ## Comments start with #
 
-[wallets]
+[electrum-master-public-keys]
+## Add electrum master public keys to this section
+
+#any_key_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
+
+[bip39-master-public-keys]
+## Add master public keys in the bip39 standard to this section
+## Most hardware wallet keys go here
+
+
+[watch-only-addresses]
 ## Add addresses to this section
 
-# These are just random example addresses found on a blockchain explorer
-
-# A key can be anything
-addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
-# A comma separated list is also accepted
-my_test_addresses = 1KKszdQEpXgSY4EvsnGcGEzbQFmdcFwuNS,1EuEVUtQQ8hmuMHNdMdjLwjpkm6Ef7RYVk,bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq
-# And space separated
-more_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1Arzu6mWZuXGTF9yR2hZhMgBJgu1Xh2bNC 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz
+#addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
+# A space or comma separated list is accepted
+#my_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq
 
 [bitcoin-rpc]
 host = localhost
@@ -20,18 +25,25 @@ port = 8332
 user = bitcoinrpc
 password = password
 
-#how often in seconds to poll for new transactions when electrum not connected
+# how often in seconds to poll for new transactions when electrum not connected
 poll_interval_listening = 30
-#how often in seconds to poll for new transactions when electrum is connected
-poll_interval_connected = 2
+# how often in seconds to poll for new transactions when electrum is connected
+poll_interval_connected = 5
+
+# Parameters for dealing with deterministic wallets
+# how many addresses to import first time, should be big because if you import too little you may have to rescan again
+initial_import_count = 200
+# number of unused addresses kept at the head of the wallet
+gap_limit = 25
+
 
 [electrum-server]
-#0.0.0.0 to accept connections from any IP
+# 0.0.0.0 to accept connections from any IP
 #127.0.0.1 to accept from only localhost
-#recommended you accept localhost only and connect with a ssh tunnel
+# recommended you accept localhost only and for connecting remotely use a ssh tunnel
 host = 127.0.0.1
 port = 50002
 
 [misc]
-#not implemented yet
+# not implemented yet
 print_debug = false

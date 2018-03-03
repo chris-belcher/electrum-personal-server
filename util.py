@@ -1,5 +1,4 @@
 
-import bitcoin as btc
 import hashlib, binascii
 
 ## stuff copied from electrum's source
@@ -57,14 +56,20 @@ def hash_merkle_root(merkle_s, target_hash, pos):
             h + hash_decode(item))
     return hash_encode(h)
 
+def hash_160(public_key):
+    try:
+        md = hashlib.new('ripemd160')
+        md.update(sha256(public_key))
+        return md.digest()
+    except BaseException:
+        from . import ripemd
+        md = ripemd.new(sha256(public_key))
+        return md.digest()
+
 ## end of electrum copypaste
 
-def script_to_address(script):
-    #TODO why is this even here? its not used anywhere, maybe old code
-    #TODO bech32 addresses
-    #TODO testnet, although everything uses scripthash so the address
-    #     vbyte doesnt matter
-    return btc.script_to_address(script, 0x00)
+def script_to_address(scriptPubKey, rpc):
+    return rpc.call("decodescript", [scriptPubKey])["addresses"][0]
 
 def address_to_script(addr, rpc):
     return rpc.call("validateaddress", [addr])["scriptPubKey"]

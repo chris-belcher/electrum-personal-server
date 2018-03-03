@@ -1,62 +1,14 @@
 #! /usr/bin/python3
 
-#add a feature where it prints the first 3 addresses from a deterministic
-# wallet, so you can check the addresses are correct before importing them
-# into the node
-
-#or deterministic wallets
-#should figure out what do regarding gap limits, when to import more addresses
-# and how many addresses to start with
-# maybe have a separate list of later addresses and if one of them get
-#  requested then import more
-
-#TODO try to support ssl
-#doesnt support ssl yet you you must run ./electrum --nossl
-#https://github.com/spesmilo/electrum/commit/dc388d4c7c541fadb9869727e359edace4c9f6f0
-#maybe copy from electrumx
-#https://github.com/kyuupichan/electrumx/blob/35dd1f61996b02a84691ea71ff50f0900df969bc/server/peers.py#L476
-#https://github.com/kyuupichan/electrumx/blob/2d7403f2efed7e8f33c5cb93e2cd9144415cbb9f/server/controller.py#L259
-
-#merkle trees cant be used if bitcoin core has pruning enabled, this will
-# probably requires new code to be written for core
-#another possible use of merkleproofs in wallet.dat
-# https://github.com/JoinMarket-Org/joinmarket/issues/156#issuecomment-231059844
-
-#using core's multiple wallet feature might help, should read up on that
-
-#now that the rescanblockchain rpc call exists in 0.16 which allows specifying
-# a starting height, that will cut down the time to rescan as long as the user
-# has saved their wallet creation date
-
-#one day there could be a nice GUI which does everything, including converting
-# the wallet creation date to a block height and rescanning
-'''
-<belcher> now that 0.16 has this rpc called rescanblockchain which takes an optional start_height, i wonder what the most practical way of converting date to block height is
-<belcher> thinking about the situation where you have a mnemonic recovery phrase + the date you created it, and want to rescan
-<belcher> binary search the timestamps in the block headers i guess, then subtract two weeks just in case
-<wumpus> belcher: binary search in something that is not strictly increasing seems faulty
-<belcher> yes true, so maybe binary search to roughly get to the right block height then linear search +- a few blocks
-<wumpus> belcher: though my gut feeling is that subtracting the two weeks would fix it
-<belcher> when people write down the wallet creation date they probably wont be precise, you could get away with writing only the year and month i bet
-<wumpus> as the mismatch is at most 2 hours
-<Sentineo> wumpus: 2 hours for the clock scew allowed by peers? (when they throw away a block which is older than 2 hours from their actual time)?
-<wumpus> Sentineo: that's what I remember, I might be off though
-<Sentineo> I am not sure if it s 2 or 4 :D
-<Sentineo> lazyness :)
-<wumpus> in any case it is a bounded value, which means binary search might work within that precision, too lazy to look for proof though :)
-'''
-
-##### good things
-
-# well placed to take advantage of dandelion private tx broadcasting
-# and broadcasting through tor
+#the electrum protocol uses hash(scriptpubkey) as a key for lookups
+# as an alternative to address or scriptpubkey
 
 import socket, time, json, datetime, struct, binascii, math, pprint
 from configparser import ConfigParser, NoSectionError
 from decimal import Decimal
 
 from jsonrpc import JsonRpc, JsonRpcError
-import util, merkleproof
+import util, merkleproof, deterministicwallet
 
 ADDRESSES_LABEL = "electrum-watchonly-addresses"
 
@@ -66,7 +18,7 @@ BANNER = \
 """Welcome to Electrum Personal Server
 https://github.com/chris-belcher/electrum-personal-server
 
-Monitoring {addr} addresses
+Monitoring {detwallets} deterministic wallets, in total {addr} addresses.
 
 Connected bitcoin node: {useragent}
 Peers: {peers}
@@ -103,11 +55,14 @@ def send_update(sock, update):
     sock.sendall(json.dumps(update).encode('utf-8') + b'\n')
     debug('<= ' + json.dumps(update))
 
-def on_heartbeat_listening(rpc, address_history, unconfirmed_txes):
+def on_heartbeat_listening(rpc, address_history, unconfirmed_txes,
+        deterministic_wallets):
     debug("on heartbeat listening")
-    check_for_updated_txes(rpc, address_history, unconfirmed_txes)
+    check_for_updated_txes(rpc, address_history, unconfirmed_txes,
+        deterministic_wallets)
 
-def on_heartbeat_connected(sock, rpc, address_history, unconfirmed_txes):
+def on_heartbeat_connected(sock, rpc, address_history, unconfirmed_txes,
+        deterministic_wallets):
     debug("on heartbeat connected")
     is_tip_updated, header = check_for_new_blockchain_tip(rpc)
     if is_tip_updated:
@@ -117,7 +72,7 @@ def on_heartbeat_connected(sock, rpc, address_history, unconfirmed_txes):
                 "params": [header]}
             send_update(sock, update)
     updated_scripthashes = check_for_updated_txes(rpc, address_history,
-        unconfirmed_txes)
+        unconfirmed_txes, deterministic_wallets)
     for scrhash in updated_scripthashes:
         if not address_history[scrhash]["subscribed"]:
             continue
@@ -132,7 +87,7 @@ def on_disconnect(address_history):
     for srchash, his in address_history.items():
         his["subscribed"] = False
 
-def handle_query(sock, line, rpc, address_history):
+def handle_query(sock, line, rpc, address_history, deterministic_wallets):
     debug("=> " + line)
     try:
         query = json.loads(line)
@@ -238,6 +193,7 @@ def handle_query(sock, line, rpc, address_history):
         blockchaininfo = rpc.call("getblockchaininfo", [])
         uptime = rpc.call("uptime", [])
         send_response(sock, query, BANNER.format(
+            detwallets=len(deterministic_wallets),
             addr=len(address_history),
             useragent=networkinfo["subversion"],
             peers=networkinfo["connections"],
@@ -286,7 +242,8 @@ def create_server_socket(hostport):
     return server_sock
 
 def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
-        poll_interval_listening, poll_interval_connected):
+        deterministic_wallets, poll_interval_listening,
+        poll_interval_connected):
     log("Starting electrum server")
     while True:
         try:
@@ -299,7 +256,7 @@ def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
                     break
                 except socket.timeout:
                     on_heartbeat_listening(rpc, address_history,
-                        unconfirmed_txes)
+                        unconfirmed_txes, deterministic_wallets)
             server_sock.close()
             sock.settimeout(poll_interval_connected)
             log('Electrum connected from ' + str(addr))
@@ -318,10 +275,10 @@ def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
                         recv_buffer = recv_buffer[lb + 1:]
                         lb = recv_buffer.find(b'\n')
                         handle_query(sock, line.decode("utf-8"), rpc,
-                            address_history)
+                            address_history, deterministic_wallets)
                 except socket.timeout:
                     on_heartbeat_connected(sock, rpc, address_history,
-                        unconfirmed_txes)
+                        unconfirmed_txes, deterministic_wallets)
         except (IOError, EOFError) as e:
             if isinstance(e, EOFError):
                 log("Electrum wallet disconnected")
@@ -392,9 +349,10 @@ def sort_address_history_list(his):
     his["history"].extend(unconfirm_txes)
     return unconfirm_txes
 
-def check_for_updated_txes(rpc, address_history, unconfirmed_txes):
-    updated_srchashes1 = check_for_unconfirmed_txes(rpc, address_history,
-        unconfirmed_txes)
+def check_for_updated_txes(rpc, address_history, unconfirmed_txes,
+        deterministic_wallets):
+    updated_srchashes1 = check_for_new_txes(rpc, address_history,
+        unconfirmed_txes, deterministic_wallets)
     updated_srchashes2 = check_for_confirmations(rpc, address_history,
         unconfirmed_txes)
     updated_srchashes = updated_srchashes1 | updated_srchashes2
@@ -435,7 +393,8 @@ def check_for_confirmations(rpc, address_history, unconfirmed_txes):
         updated_srchashes.update(set(srchashes))
     return updated_srchashes
 
-def check_for_unconfirmed_txes(rpc, address_history, unconfirmed_txes):
+def check_for_new_txes(rpc, address_history, unconfirmed_txes,
+        deterministic_wallets):
     MAX_TX_REQUEST_COUNT = 256 
     tx_request_count = 2
     max_attempts = int(math.log(MAX_TX_REQUEST_COUNT, 2))
@@ -486,7 +445,6 @@ def check_for_unconfirmed_txes(rpc, address_history, unconfirmed_txes):
         obtained_txids.add(tx["txid"])
         output_scriptpubkeys, input_scriptpubkeys, txd = \
             get_input_and_output_scriptpubkeys(rpc, tx["txid"])
-
         matching_scripthashes = []
         for spk in (output_scriptpubkeys + input_scriptpubkeys):
             scripthash = util.script_to_scripthash(spk)
@@ -494,9 +452,21 @@ def check_for_unconfirmed_txes(rpc, address_history, unconfirmed_txes):
                 matching_scripthashes.append(scripthash)
         if len(matching_scripthashes) == 0:
             continue
+
+        for wal in deterministic_wallets:
+            overrun_depths = wal.have_scriptpubkeys_overrun_gaplimit(
+                output_scriptpubkeys)
+            if overrun_depths != None:
+                for change, import_count in overrun_depths.items():
+                    spks = wal.get_new_scriptpubkeys(change, import_count)
+                    new_addrs = [util.script_to_address(s, rpc) for s in spks]
+                    debug("Importing " + str(len(spks)) + " into change="
+                        + str(change))
+                    import_addresses(rpc, new_addrs)
+
         updated_scripthashes.extend(matching_scripthashes)
         new_history_element = generate_new_history_element(rpc, tx, txd)
-        log("Found new unconfirmed tx: " + str(new_history_element))
+        log("Found new tx: " + str(new_history_element))
         for srchash in matching_scripthashes:
             address_history[srchash]["history"].append(new_history_element)
             if new_history_element["height"] == 0:
@@ -504,16 +474,16 @@ def check_for_unconfirmed_txes(rpc, address_history, unconfirmed_txes):
                     unconfirmed_txes[tx["txid"]].append(srchash)
                 else:
                     unconfirmed_txes[tx["txid"]] = [srchash]
+        #check whether the gap limits have been overrun and import more addrs
     return set(updated_scripthashes)
 
-def build_address_history_index(rpc, wallet_addresses):
-    log("Building history index with " + str(len(wallet_addresses)) +
+def build_address_history(rpc, monitored_scriptpubkeys, deterministic_wallets):
+    log("Building history with " + str(len(monitored_scriptpubkeys)) +
         " addresses")
     st = time.time()
     address_history = {}
-    for addr in wallet_addresses:
-        scripthash = util.address_to_scripthash(addr, rpc)
-        address_history[scripthash] = {'addr': addr, 'history': [],
+    for spk in monitored_scriptpubkeys:
+        address_history[util.script_to_scripthash(spk)] = {'history': [],
             'subscribed': False}
     wallet_addr_scripthashes = set(address_history.keys())
     #populate history
@@ -554,6 +524,18 @@ def build_address_history_index(rpc, wallet_addresses):
             if len(sh_to_add) == 0:
                 continue
 
+            for wal in deterministic_wallets:
+                overrun_depths = wal.have_scriptpubkeys_overrun_gaplimit(
+                    output_scriptpubkeys)
+                if overrun_depths != None:
+                    log("ERROR: Not enough addresses imported. Exiting.")
+                    log("Delete wallet.dat and increase the value of " +
+                        "`initial_import_count` in the file `config.cfg` " +
+                        "then reimport and rescan")
+                    #TODO make it so users dont have to delete wallet.dat
+                    # check whether all initial_import_count addresses are
+                    # imported rather than just the first one
+                    return None, None
             new_history_element = generate_new_history_element(rpc, tx, txd)
             for scripthash in sh_to_add:
                 address_history[scripthash][
@@ -578,29 +560,92 @@ def build_address_history_index(rpc, wallet_addresses):
     debug("last_known_recent_txid = " + str(last_known_recent_txid[0]))
 
     et = time.time()
-    log("Found " + str(count) + " txes. Address history index built in "
-        + str(et - st) + "sec")
+    log("Found " + str(count) + " txes. History built in " + str(et - st)
+        + "sec")
     debug("address_history =\n" + pprint.pformat(address_history))
-
     return address_history, unconfirmed_txes
 
-def import_watchonly_addresses(rpc, addrs):
-    log("Importing " + str(len(addrs)) + " watch-only addresses into the"
-        + " Bitcoin node after 5 seconds . . .")
-    debug("addrs = " + str(addrs))
-    time.sleep(5)
+def get_scriptpubkeys_to_monitor(rpc, config):
+    imported_addresses = set(rpc.call("getaddressesbyaccount",
+        [ADDRESSES_LABEL]))
+
+    deterministic_wallets = []
+    for key in config.options("electrum-master-public-keys"):
+        wal = deterministicwallet.parse_electrum_master_public_key(
+            config.get("electrum-master-public-keys", key),
+            int(config.get("bitcoin-rpc", "gap_limit")))
+        deterministic_wallets.append(wal)
+    #add bip39 wallets here
+
+    #check whether these deterministic wallets have already been imported
+    import_needed = False
+    wallets_imported = 0
+    spks_to_import = []
+    for wal in deterministic_wallets:
+        first_addr = util.script_to_address(wal.get_scriptpubkeys(change=0,
+            from_index=0, count=1)[0], rpc)
+        if first_addr not in imported_addresses:
+            import_needed = True
+            wallets_imported += 1
+            for change in [0, 1]:
+                spks_to_import.extend(wal.get_scriptpubkeys(change, 0,
+                    int(config.get("bitcoin-rpc", "initial_import_count"))))
+    #check whether watch-only addresses have been imported
+    watch_only_addresses = []
+    for key in config.options("watch-only-addresses"):
+        watch_only_addresses.extend(config.get("watch-only-addresses",
+            key).replace(' ', ',').split(','))
+    watch_only_addresses = set(watch_only_addresses)
+    watch_only_addresses_to_import = []
+    if not watch_only_addresses.issubset(imported_addresses):
+        import_needed = True
+        watch_only_addresses_to_import = wallet_addresses - imported_addresses
+
+    if import_needed:
+        addresses_to_import = [util.script_to_address(spk, rpc)
+            for spk in spks_to_import]
+        #TODO minus imported_addresses
+        log("Importing " + str(wallets_imported) + " wallets and " +
+            str(len(watch_only_addresses_to_import)) + " watch-only " +
+            "addresses into the Bitcoin node")
+        time.sleep(5)
+        return (True, addresses_to_import + list(
+            watch_only_addresses_to_import), None)
+
+    #test
+    # importing one det wallet and no addrs, two det wallets and no addrs
+    # no det wallets and some addrs, some det wallets and some addrs
+
+    #at this point we know we dont need to import any addresses
+    #find which index the deterministic wallets are up to
+    spks_to_monitor = []
+    for wal in deterministic_wallets:
+        for change in [0, 1]:
+            spks_to_monitor.extend(wal.get_scriptpubkeys(change, 0,
+                int(config.get("bitcoin-rpc", "initial_import_count"))))
+            #loop until one address found that isnt imported
+            while True:
+                spk = wal.get_new_scriptpubkeys(change, count=1)[0]
+                spks_to_monitor.append(spk)
+                if util.script_to_address(spk, rpc) not in imported_addresses:
+                    break
+            spks_to_monitor.pop()
+            wal.rewind_one(change)
+
+    spks_to_monitor.extend([util.address_to_script(addr, rpc)
+        for addr in watch_only_addresses])
+    return False, spks_to_monitor, deterministic_wallets
+
+def import_addresses(rpc, addrs):
+    debug("importing addrs = " + str(addrs))
     for a in addrs:
         rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
-    #TODO tell people about the `rescanblockchain` call which allows a range
-    log("Done.\nIf recovering a wallet which already has existing " +
-        "transactions, then\nrestart Bitcoin with -rescan. If your wallet " +
-        "is new and empty then just restart this script")
 
 def main():
     try:
         config = ConfigParser()
         config.read(["config.cfg"])
-        config.options("wallets")
+        config.options("electrum-master-public-keys")
     except NoSectionError:
         log("Non-existant configuration file `config.cfg`")
         return
@@ -608,6 +653,7 @@ def main():
                 port = int(config.get("bitcoin-rpc", "port")),
                 user = config.get("bitcoin-rpc", "user"),
                 password = config.get("bitcoin-rpc", "password"))
+
     #TODO somewhere here loop until rpc works and fully sync'd, to allow
     # people to run this script without waiting for their node to fully
     # catch up sync'd when getblockchaininfo blocks == headers, or use
@@ -618,25 +664,31 @@ def main():
             bestblockhash[0] = rpc.call("getbestblockhash", [])
         except TypeError:
             if not printed_error_msg:
-                log("Error with bitcoin rpc, check host/port/username/password")
+                log("Error with bitcoin rpc, check host/port/user/password")
                 printed_error_msg = True
             time.sleep(5)
-    wallet_addresses = []
-    for key in config.options("wallets"):
-        addrs = config.get("wallets", key).replace(' ', ',').split(',')
-        wallet_addresses.extend(addrs)
-    wallet_addresses = set(wallet_addresses)
-    imported_addresses = set(rpc.call("getaddressesbyaccount",
-        [ADDRESSES_LABEL]))
-    if not wallet_addresses.issubset(imported_addresses):
-        import_watchonly_addresses(rpc, wallet_addresses - imported_addresses)
+
+    import_needed, relevant_spks_addrs, deterministic_wallets = \
+        get_scriptpubkeys_to_monitor(rpc, config)
+    if import_needed:
+        import_addresses(rpc, relevant_spks_addrs)
+        #TODO tell people about the rescanblockchain call which allows a range
+        log("Done.\nIf recovering a wallet which already has existing " +
+            "transactions, then\nrestart Bitcoin with -rescan. If your " +
+            "wallet is new and empty then just restart this script")
     else:
-        address_history, unconfirmed_txes = build_address_history_index(
-            rpc, wallet_addresses)
+        address_history, unconfirmed_txes = build_address_history(
+            rpc, relevant_spks_addrs, deterministic_wallets)
+        if address_history == None:
+            return
         hostport = (config.get("electrum-server", "host"),
                 int(config.get("electrum-server", "port")))
+        poll_interval_listening = int(config.get("bitcoin-rpc",
+            "poll_interval_listening"))
+        poll_interval_connected = int(config.get("bitcoin-rpc",
+            "poll_interval_connected"))
         run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
-            int(config.get("bitcoin-rpc", "poll_interval_listening")),
-            int(config.get("bitcoin-rpc", "poll_interval_connected")))
+            deterministic_wallets, poll_interval_listening,
+            poll_interval_connected)
 
 main()
