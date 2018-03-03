@@ -672,10 +672,10 @@ def main():
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
         import_addresses(rpc, relevant_spks_addrs)
-        #TODO tell people about the rescanblockchain call which allows a range
         log("Done.\nIf recovering a wallet which already has existing " +
-            "transactions, then\nrestart Bitcoin with -rescan. If your " +
-            "wallet is new and empty then just restart this script")
+            "transactions, then\nrun the rescan script. If you're confident " +
+            "that the wallets are new\nand empty then there's no need to " +
+            "rescan, just restart this script")
     else:
         address_history, unconfirmed_txes = build_address_history(
             rpc, relevant_spks_addrs, deterministic_wallets)
