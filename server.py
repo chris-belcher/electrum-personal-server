@@ -3,7 +3,7 @@
 #the electrum protocol uses hash(scriptpubkey) as a key for lookups
 # as an alternative to address or scriptpubkey
 
-import socket, time, json, datetime, struct, binascii, math, pprint
+import socket, time, json, datetime, struct, binascii, math, pprint, ssl
 from configparser import ConfigParser, NoSectionError
 from decimal import Decimal
 
@@ -260,6 +260,12 @@ def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
                         unconfirmed_txes, deterministic_wallets)
             server_sock.close()
             sock.settimeout(poll_interval_connected)
+            ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            #generate self signed cert with
+            #openssl req -new -x509 -days 365 -nodes -out server.pem -keyout server.pem
+            ctx.load_cert_chain(certfile="server.pem",
+                keyfile="server.pem")
+            sock = ctx.wrap_socket(sock, server_side=True)
             log('Electrum connected from ' + str(addr))
             recv_buffer = bytearray()
             while True:
@@ -285,6 +291,8 @@ def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
                 log("Electrum wallet disconnected")
             else:
                 log("IOError: " + repr(e))
+            import traceback
+            traceback.print_exc()
             on_disconnect(address_history)
             time.sleep(0.2)
             try:
