@@ -5,11 +5,26 @@ from binascii import hexlify
 
 # Below code ASSUMES binary inputs and compressed pubkeys
 MAINNET_PRIVATE = b'\x04\x88\xAD\xE4'
-MAINNET_PUBLIC = b'\x04\x88\xB2\x1E'
+#MAINNET_PUBLIC = b'\x04\x88\xB2\x1E'
 TESTNET_PRIVATE = b'\x04\x35\x83\x94'
-TESTNET_PUBLIC = b'\x04\x35\x87\xCF'
+#TESTNET_PUBLIC = b'\x04\x35\x87\xCF'
 PRIVATE = [MAINNET_PRIVATE, TESTNET_PRIVATE]
-PUBLIC = [MAINNET_PUBLIC, TESTNET_PUBLIC]
+#PUBLIC = [MAINNET_PUBLIC, TESTNET_PUBLIC]
+
+#updated for electrum's bip32 version bytes
+#only public keys because electrum personal server only needs them
+#https://github.com/spesmilo/electrum-docs/blob/master/xpub_version_bytes.rst
+PUBLIC = [  b'\x04\x88\xb2\x1e', #mainnet p2pkh or p2sh xpub
+            b'\x04\x9d\x7c\xb2', #mainnet p2wpkh-p2sh ypub
+            b'\x02\x95\xb4\x3f', #mainnet p2wsh-p2sh Ypub
+            b'\x04\xb2\x47\x46', #mainnet p2wpkh zpub
+            b'\x02\xaa\x7e\xd3', #mainnet p2wsh Zpub
+            b'\x04\x35\x87\xcf', #testnet p2pkh or p2sh tpub
+            b'\x04\x4a\x52\x62', #testnet p2wpkh-p2sh upub
+            b'\x02\x42\x85\xef', #testnet p2wsh-p2sh Upub
+            b'\x04\x5f\x1c\xf6', #testnet p2wpkh vpub
+            b'\x02\x57\x54\x83' #testnet p2wsh Vpub
+        ]
 
 # BIP32 child key derivation
 

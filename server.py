@@ -209,6 +209,7 @@ def handle_query(sock, line, rpc, address_history, deterministic_wallets):
         send_response(sock, query, []) #no peers to report
     else:
         log("*** BUG! Not handling method: " + method + " query=" + str(query))
+        #TODO just send back the same query will result = []
 
 def get_block_header(rpc, blockhash):
     rpc_head = rpc.call("getblockheader", [blockhash])
@@ -594,7 +595,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     watch_only_addresses = []
     for key in config.options("watch-only-addresses"):
         watch_only_addresses.extend(config.get("watch-only-addresses",
-            key).replace(' ', ',').split(','))
+            key).split(' '))
     watch_only_addresses = set(watch_only_addresses)
     watch_only_addresses_to_import = []
     if not watch_only_addresses.issubset(imported_addresses):

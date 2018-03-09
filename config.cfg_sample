@@ -7,6 +7,9 @@
 
 #any_key_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
+# Multisig wallets use format `required-signatures [list of master pub keys]`
+#multisig_wallet = 2 xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
+
 [bip39-master-public-keys]
 ## Add master public keys in the bip39 standard to this section
 ## Most hardware wallet keys go here
@@ -16,7 +19,7 @@
 ## Add addresses to this section
 
 #addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
-# A space or comma separated list is accepted
+# A space separated list is accepted
 #my_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq
 
 [bitcoin-rpc]
