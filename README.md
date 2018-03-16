@@ -38,13 +38,10 @@ wallet addresses to the `[wallets]` section.
 Finally run `./server.py` on Linux or double-click `run-server.bat` on Windows.
 The first time the server is run it will import all configured addresses as
 watch-only into the Bitcoin node, and then exit giving you a chance to
-`-rescan` if your wallet contains historical transactions.
+rescan if your wallet contains historical transactions.
 
-Electrum wallet must be configured to connect to the server. SSL must be
-disabled which can be done either by `Tools` -> `Connection` -> Uncheck box
-`Use SSL`, or starting with the command line flag `--nossl`, depending on the
-version of Electrum. Tell Electrum to connect to the server in
-`Tools` -> `Server`, usually `localhost` if running on the same machine.
+Tell Electrum to connect to the server in `Tools` -> `Server`, usually
+`localhost` if running on the same machine.
 
 Note that you can also try this with on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet).
 Electrum can be started in testnet mode with the command line flag `--testnet`.
@@ -63,8 +60,6 @@ tunnel.
 
 This project is in alpha stages as there are several essential missing
 features such as:
-
-* The server does not support SSL so Electrum must be configured to disable it.
 
 * Deterministic wallets and master public keys are not supported. Addresses
   must be imported individually.

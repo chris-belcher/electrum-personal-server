@@ -43,9 +43,15 @@ gap_limit = 25
 [electrum-server]
 # 0.0.0.0 to accept connections from any IP
 #127.0.0.1 to accept from only localhost
-# recommended you accept localhost only and for connecting remotely use a ssh tunnel
+# recommend you accept localhost only, for connecting remotely use a ssh tunnel
 host = 127.0.0.1
 port = 50002
+
+#uses the default one, which is fine because by default nobody should be
+# allowed to connect to your server or scan your packets
+#to generate another certificate see https://github.com/spesmilo/electrum-server/blob/ce1b11d7f5f7a70a3b6cc7ec1d3e552436e54ffe/HOWTO.md#step-8-create-a-self-signed-ssl-cert
+certfile = cert.crt
+keyfile = cert.key
 
 [misc]
 # not implemented yet

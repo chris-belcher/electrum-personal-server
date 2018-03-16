@@ -179,6 +179,9 @@ def handle_query(sock, line, rpc, address_history, deterministic_wallets):
             result = e.message
         debug("tx broadcast result = " + str(result))
         send_response(sock, query, result)
+    elif method == "mempool.get_fee_histogram":
+        result = [] #not handling, sending empty
+        send_response(sock, query, result)
     elif method == "blockchain.estimatefee":
         estimate = rpc.call("estimatesmartfee", [query["params"][0]])
         feerate = 0.0001
@@ -209,7 +212,7 @@ def handle_query(sock, line, rpc, address_history, deterministic_wallets):
         send_response(sock, query, []) #no peers to report
     else:
         log("*** BUG! Not handling method: " + method + " query=" + str(query))
-        #TODO just send back the same query will result = []
+        #TODO just send back the same query with result = []
 
 def get_block_header(rpc, blockhash):
     rpc_head = rpc.call("getblockheader", [blockhash])
@@ -239,34 +242,34 @@ def create_server_socket(hostport):
     server_sock = socket.socket()
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_sock.bind(hostport)
+    server_sock.listen(1)
     log("Listening on " + str(hostport))
     return server_sock
 
 def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
         deterministic_wallets, poll_interval_listening,
-        poll_interval_connected):
+        poll_interval_connected, certfile, keyfile):
     log("Starting electrum server")
+    server_sock = create_server_socket(hostport)
+    server_sock.settimeout(poll_interval_listening)
     while True:
         try:
-            server_sock = create_server_socket(hostport)
-            server_sock.settimeout(poll_interval_listening)
-            while True:
+            sock = None
+            while sock == None:
                 try:
-                    server_sock.listen(1)
                     sock, addr = server_sock.accept()
-                    break
+                    sock = ssl.wrap_socket(sock, server_side=True,
+                        certfile=certfile, keyfile=keyfile,
+                        ssl_version=ssl.PROTOCOL_SSLv23)
                 except socket.timeout:
                     on_heartbeat_listening(rpc, address_history,
                         unconfirmed_txes, deterministic_wallets)
-            server_sock.close()
-            sock.settimeout(poll_interval_connected)
-            ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            #generate self signed cert with
-            #openssl req -new -x509 -days 365 -nodes -out server.pem -keyout server.pem
-            ctx.load_cert_chain(certfile="server.pem",
-                keyfile="server.pem")
-            sock = ctx.wrap_socket(sock, server_side=True)
+                except ssl.SSLError:
+                    sock.close()
+                    sock = None
+
             log('Electrum connected from ' + str(addr))
+            sock.settimeout(poll_interval_connected)
             recv_buffer = bytearray()
             while True:
                 try:
@@ -291,14 +294,13 @@ def run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
                 log("Electrum wallet disconnected")
             else:
                 log("IOError: " + repr(e))
-            import traceback
-            traceback.print_exc()
-            on_disconnect(address_history)
-            time.sleep(0.2)
             try:
-                server_sock.close()
+                sock.close()
             except IOError:
                 pass
+            sock = None
+            on_disconnect(address_history)
+            time.sleep(0.2)
 
 def get_input_and_output_scriptpubkeys(rpc, txid):
     gettx = rpc.call("gettransaction", [txid])
@@ -696,8 +698,10 @@ def main():
             "poll_interval_listening"))
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
+        certfile = config.get("electrum-server", "certfile")
+        keyfile = config.get("electrum-server", "keyfile")
         run_electrum_server(hostport, rpc, address_history, unconfirmed_txes,
             deterministic_wallets, poll_interval_listening,
-            poll_interval_connected)
+            poll_interval_connected, certfile, keyfile)
 
 main()
