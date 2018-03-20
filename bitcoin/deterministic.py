@@ -141,3 +141,43 @@ def bip32_descend(*args):
     for p in path:
         key = bip32_ckd(key, p)
     return bip32_extract_key(key)
+
+# electrum
+def electrum_stretch(seed):
+    return slowsha(seed)
+
+# Accepts seed or stretched seed, returns master public key
+
+def electrum_mpk(seed):
+    if len(seed) == 32:
+        seed = electrum_stretch(seed)
+    return privkey_to_pubkey(seed)[2:]
+
+# Accepts (seed or stretched seed), index and secondary index
+# (conventionally 0 for ordinary addresses, 1 for change) , returns privkey
+
+
+def electrum_privkey(seed, n, for_change=0):
+    if len(seed) == 32:
+        seed = electrum_stretch(seed)
+    mpk = electrum_mpk(seed)
+    offset = dbl_sha256(from_int_representation_to_bytes(n)+b':'+
+        from_int_representation_to_bytes(for_change)+b':'+
+        binascii.unhexlify(mpk))
+    return add_privkeys(seed, offset)
+
+# Accepts (seed or stretched seed or master pubkey), index and secondary index
+# (conventionally 0 for ordinary addresses, 1 for change) , returns pubkey
+
+def electrum_pubkey(masterkey, n, for_change=0):
+    if len(masterkey) == 32:
+        mpk = electrum_mpk(electrum_stretch(masterkey))
+    elif len(masterkey) == 64:
+        mpk = electrum_mpk(masterkey)
+    else:
+        mpk = masterkey
+    bin_mpk = encode_pubkey(mpk, 'bin_electrum')
+    offset = bin_dbl_sha256(from_int_representation_to_bytes(n)+b':'+
+        from_int_representation_to_bytes(for_change)+b':'+bin_mpk)
+    return add_pubkeys('04'+mpk, privtopub(offset))
+

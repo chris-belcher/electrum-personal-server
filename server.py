@@ -444,6 +444,7 @@ def check_for_new_txes(rpc, address_history, unconfirmed_txes,
     #finding a confirmed and unconfirmed tx, in that order, then both confirm
     #finding an unconfirmed and confirmed tx, in that order, then both confirm
     #send a tx to an address which hasnt been used before
+    #import two addresses, transaction from one to the other, unc then confirm
     obtained_txids = set()
     updated_scripthashes = []
     for tx in new_txes:
@@ -581,12 +582,11 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         [ADDRESSES_LABEL]))
 
     deterministic_wallets = []
-    for key in config.options("electrum-master-public-keys"):
+    for key in config.options("master-public-keys"):
         wal = deterministicwallet.parse_electrum_master_public_key(
-            config.get("electrum-master-public-keys", key),
+            config.get("master-public-keys", key),
             int(config.get("bitcoin-rpc", "gap_limit")))
         deterministic_wallets.append(wal)
-    #add bip39 wallets here
 
     #check whether these deterministic wallets have already been imported
     import_needed = False
@@ -649,14 +649,18 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 
 def import_addresses(rpc, addrs):
     debug("importing addrs = " + str(addrs))
+    log("Importing " + str(len(addrs)) + " addresses in total")
+    st = time.time()
     for a in addrs:
         rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
+    et = time.time()
+    debug("imported addresses in " + str(et - st) + " sec")
 
 def main():
     try:
         config = ConfigParser()
         config.read(["config.cfg"])
-        config.options("electrum-master-public-keys")
+        config.options("master-public-keys")
     except NoSectionError:
         log("Non-existant configuration file `config.cfg`")
         return

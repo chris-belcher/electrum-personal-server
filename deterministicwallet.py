@@ -2,16 +2,40 @@
 import bitcoin as btc
 import util
 
+# the class hierarchy for deterministic wallets in this file:
+# subclasses are written towards the right
+# each class knows how to create the scriptPubKeys of that wallet
+#
+#                                       |-- SingleSigOldMnemonicWallet
+#                                       |-- SingleSigP2PKHWallet
+#                                       |-- SingleSigP2WPKHWallet
+#                     SingleSigWallet --|
+#                    /                  |-- SingleSigP2WPKH_P2SHWallet
+# DeterministicWallet
+#                    \                 |-- MultisigP2SHWallet
+#                     MultisigWallet --|
+#                                      |-- MultisigP2WSHWallet
+#                                      |-- MultisigP2WSH_P2SHWallet
+
 #the wallet types are here
 #https://github.com/spesmilo/electrum/blob/3.0.6/RELEASE-NOTES
 #and
 #https://github.com/spesmilo/electrum-docs/blob/master/xpub_version_bytes.rst
 
+def is_string_parsable_as_hex_int(s):
+    try:
+        int(s, 16)
+        return True
+    except:
+        return False
+
 def parse_electrum_master_public_key(keydata, gaplimit):
     if keydata[:4] in ("xpub", "tpub"):
-        return SingleSigP2PKHWallet(keydata, gaplimit)
+        wallet = SingleSigP2PKHWallet(keydata)
     elif keydata[:4] in ("zpub", "vpub"):
-        return SingleSigP2WPKHWallet(keydata, gaplimit)
+        wallet = SingleSigP2WPKHWallet(keydata)
+    elif keydata[:4] in ("ypub", "upub"):
+        wallet = SingleSigP2WPKH_P2SHWallet(keydata)
     elif keydata.find(" ") != -1: #multiple keys = multisig
         chunks = keydata.split(" ")
         try:
@@ -23,15 +47,21 @@ def parse_electrum_master_public_key(keydata, gaplimit):
         if not all([pubkeys[0][:4] == pub[:4] for pub in pubkeys[1:]]):
             raise ValueError("inconsistent bip32 pubkey types")
         if pubkeys[0][:4] in ("xpub", "tpub"):
-            return MultisigP2SHWallet(m, pubkeys, gaplimit)
-        if pubkeys[0][:4] in("Zpub", "Vpub"):
-            return MultisigP2WSHWallet(m, pubkeys, gaplimit)
+            wallet = MultisigP2SHWallet(m, pubkeys)
+        elif pubkeys[0][:4] in ("Zpub", "Vpub"):
+            wallet = MultisigP2WSHWallet(m, pubkeys)
+        elif pubkeys[0][:4] in ("Ypub", "Upub"):
+            wallet = MultisigP2WSH_P2SHWallet(m, pubkeys)
+    elif is_string_parsable_as_hex_int(keydata) and len(keydata) == 128:
+        wallet = SingleSigOldMnemonicWallet(keydata)
     else:
         raise ValueError("Unrecognized electrum mpk format: " + keydata[:4])
+    wallet.gaplimit = gaplimit
+    return wallet
 
 class DeterministicWallet(object):
-    def __init__(self, gaplimit):
-        self.gaplimit = gaplimit
+    def __init__(self):
+        self.gaplimit = 0
         self.next_index = [0, 0]
         self.scriptpubkey_index = {}
 
@@ -73,19 +103,22 @@ class DeterministicWallet(object):
         self.next_index[change] -= 1
 
 class SingleSigWallet(DeterministicWallet):
-    def __init__(self, mpk, gaplimit):
-        super(SingleSigWallet, self).__init__(gaplimit)
+    def __init__(self, mpk):
+        super(SingleSigWallet, self).__init__()
         self.branches = (btc.bip32_ckd(mpk, 0), btc.bip32_ckd(mpk, 1))
         #m/change/i
 
     def pubkey_to_scriptpubkey(self, pubkey):
         raise RuntimeError()
 
+    def get_pubkey(self, change, index):
+        return btc.bip32_extract_key(btc.bip32_ckd(self.branches[change],
+            index))
+
     def get_scriptpubkeys(self, change, from_index, count):
         result = []
         for index in range(from_index, from_index + count):
-            pubkey = btc.bip32_extract_key(btc.bip32_ckd(self.branches[change],
-                index))
+            pubkey = self.get_pubkey(change, index)
             scriptpubkey = self.pubkey_to_scriptpubkey(pubkey)
             self.scriptpubkey_index[scriptpubkey] = (change, index)
             result.append(scriptpubkey)
@@ -105,9 +138,30 @@ class SingleSigP2WPKHWallet(SingleSigWallet):
         #witness version is always 0, length is always 0x14
         return "0014" + pkh
 
+class SingleSigP2WPKH_P2SHWallet(SingleSigWallet):
+    def pubkey_to_scriptpubkey(self, pubkey):
+        #witness-version length pubkeyhash
+        #witness version is always 0, length is always 0x14
+        redeem_script = '0014' + util.bh2u(util.hash_160(util.bfh(pubkey)))
+        sh = util.bh2u(util.hash_160(util.bfh(redeem_script)))
+        return "a914" + sh + "87"
+
+class SingleSigOldMnemonicWallet(SingleSigWallet):
+    def __init__(self, mpk):
+        super(SingleSigWallet, self).__init__()
+        self.mpk = mpk
+
+    def get_pubkey(self, change, index):
+        return btc.electrum_pubkey(self.mpk, index, change)
+
+    def pubkey_to_scriptpubkey(self, pubkey):
+        pkh = util.bh2u(util.hash_160(util.bfh(pubkey)))
+        #op_dup op_hash_160 length hash160 op_equalverify op_checksig
+        return "76a914" + pkh + "88ac"
+
 class MultisigWallet(DeterministicWallet):
-    def __init__(self, m, mpk_list, gaplimit):
-        super(MultisigWallet, self).__init__(gaplimit)
+    def __init__(self, m, mpk_list):
+        super(MultisigWallet, self).__init__()
         self.m = m
         self.pubkey_branches = [(btc.bip32_ckd(mpk, 0), btc.bip32_ckd(mpk, 1))
             for mpk in mpk_list]
@@ -138,15 +192,28 @@ class MultisigWallet(DeterministicWallet):
 class MultisigP2SHWallet(MultisigWallet):
     def redeem_script_to_scriptpubkey(self, redeem_script):
         sh = util.bh2u(util.hash_160(util.bfh(redeem_script)))
-        return "a914" + sh + "87"
         #op_hash160 length hash160 op_equal
+        return "a914" + sh + "87"
 
 class MultisigP2WSHWallet(MultisigWallet):
     def redeem_script_to_scriptpubkey(self, redeem_script):
         sh = util.bh2u(util.sha256(util.bfh(redeem_script)))
-        return "0020" + sh
         #witness-version length sha256
         #witness version is always 0, length is always 0x20
+        return "0020" + sh
+
+class MultisigP2WSH_P2SHWallet(MultisigWallet):
+    def redeem_script_to_scriptpubkey(self, redeem_script):
+        #witness-version length sha256
+        #witness version is always 0, length is always 0x20
+        nested_redeemScript = "0020" + util.bh2u(util.sha256(
+            util.bfh(redeem_script)))
+        sh = util.bh2u(util.hash_160(util.bfh(nested_redeemScript)))
+        #op_hash160 length hash160 op_equal
+        return "a914" + sh + "87"
+
+# electrum has its own tests here
+#https://github.com/spesmilo/electrum/blob/03b40a3c0a7dd84e76bc0d0ea2ad390dafc92250/lib/tests/test_wallet_vertical.py
 
 electrum_keydata_test_vectors = [
     #p2pkh wallet
@@ -267,6 +334,52 @@ electrum_keydata_test_vectors = [
      '00207a3e478266e5fe49fe22e3d8f04d3adda3b6a0835806a0db1f77b84d0ba7f79c',
      '002059e66462023ecd54e20d4dce286795e7d5823af511989736edc0c7a844e249f5',
      '0020bd8077906dd367d6d107d960397e46db2daba5793249f1f032d8d7e12e6f193c'])
+    , #p2wpkh-p2sh
+    ("upub5E4QEumGPNTmSKD95TrYX2xqLwwvBULbRzzHkrpW9WKKCB1y9DEfPXDnUyQjLjmVs" +
+    "7gSd7k5vRb1FoSb6BjyiWNg4arkJLaqk1jULzbwA5q",
+    ["a914ae8f84a06668742f713d0743c1f54d248040e63387", #recv
+     "a914c2e9bdcc48596b8cce418042ade72198fddf3cd987",
+     "a914a44b6ad63ccef0ae1741eaccee99bf2fa83f842987",
+     "a9148cf1c891d96a0be07893d0bddcf00ed5dad2c46e87",
+     "a91414d677b32f2409f4dfb3073d382c302bcd6ed33587",
+     "a9141b284bee7198d5134512f37ef60e4048864b4bd687"],
+    ["a914a5aacff65860440893107b01912dc8f60cadab2b87", #change
+     "a914dcd74ebc8bfc5cf0535717a3e833592d54b3c48687",
+     "a91446793cae4c2b8149ade61c1627b96b90599bc08787",
+     "a91439f3776831f321125bdb5099fbbd654923f8316c87"])
+    , #p2wpkh-p2sh
+    ("ypub6XrRLtXNB7NQo3vDaMNnffXVJe1WVaebXcb4ncpTHHADLuFYmf2CcPn96YzUbMt8s" +
+    "HSMmtr1mCcMgCBLqNdY2hrXXcdiLxCdD9e2dChBLun",
+    ["a91429c2ad045bbb162ef3c2d9cacb9812bec463061787", #recv
+     "a91433ec6bb67b113978d9cfd307a97fd15bc0a5a62087",
+     "a91450523020275ccbf4e916a0d8523ae42391ad988a87",
+     "a91438c2e5e76a874d86cfc914fe9fc1868b6afb5c5487"],
+    ["a91475f608698bb735120a17699fee854bce9a8dc8d387",
+     "a91477e69344ef53587051c85a06a52a646457b44e6c87",
+     "a914607c98ea34fbdffe39fee161ae2ffd5517bf1a5587"])
+    , #old mnemonic mpk
+    ("e9d4b7866dd1e91c862aebf62a49548c7dbf7bcc6e4b7b8c9da820c7737968df9c09d" +
+    "5a3e271dc814a29981f81b3faaf2737b551ef5dcc6189cf0f8252c442b3",
+    ["76a9149cd3dfb0d87a861770ae4e268e74b45335cf00ab88ac", #recv
+     "76a914c30f2af6a79296b6531bf34dba14c8419be8fb7d88ac",
+     "76a9145eb4eeaefcf9a709f8671444933243fbd05366a388ac",
+     "76a914f96669095e6df76cfdf5c7e49a1909f002e123d088ac"],
+    ["76a914ca14915184a2662b5d1505ce7142c8ca066c70e288ac", #change
+     "76a9148942ac692ace81019176c4fb0ac408b18b49237f88ac",
+     "76a914e1232622a96a04f5e5a24ca0792bb9c28b089d6e88ac"])
+    , #p2wsh-p2sh 2of2 multisig
+    ("2 Ypub6hWbqA2p47QgsLt5J4nxrR3ngu8xsPGb7PdV8CDh48KyNngNqPKSqertAqYhQ4u" +
+    "mELu1UsZUCYfj9XPA6AdSMZWDZQobwF7EJ8uNrECaZg1 Ypub6iNDhL4WWq5kFZcdFqHHw" +
+    "X4YTH4rYGp8xbndpRrY7WNZFFRfogSrL7wRTajmVHgR46AT1cqUG1mrcRd7h1WXwBsgX2Q" +
+    "vT3zFbBCDiSDLkau",
+    ["a91428060ade179c792fac07fc8817fd150ce7cdd3f987", #recv
+     "a9145ba5ed441b9f3e22f71193d4043b645183e6aeee87",
+     "a91484cc1f317b7d5afff115916f1e27319919601d0187",
+     "a9144001695a154cac4d118af889d3fdcaf929af315787",
+     "a914897888f3152a27cbd7611faf6aa01085931e542a87"],
+    ["a91454dbb52de65795d144f3c4faeba0e37d9765c85687", #change
+     "a914f725cbd61c67f34ed40355f243b5bb0650ce61c587",
+     "a9143672bcd3d02d3ea7c3205ddbc825028a0d2a781987"])
 ]
 
 electrum_bad_keydata_test_vectors = [

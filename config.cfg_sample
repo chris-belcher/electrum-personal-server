@@ -2,17 +2,14 @@
 ## Electrum Personal Server configuration file
 ## Comments start with #
 
-[electrum-master-public-keys]
+[master-public-keys]
 ## Add electrum master public keys to this section
+## Create a wallet in electrum then go Wallet -> Information
 
 #any_key_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
 # Multisig wallets use format `required-signatures [list of master pub keys]`
 #multisig_wallet = 2 xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
-
-[bip39-master-public-keys]
-## Add master public keys in the bip39 standard to this section
-## Most hardware wallet keys go here
 
 
 [watch-only-addresses]
@@ -35,7 +32,7 @@ poll_interval_connected = 5
 
 # Parameters for dealing with deterministic wallets
 # how many addresses to import first time, should be big because if you import too little you may have to rescan again
-initial_import_count = 200
+initial_import_count = 1000
 # number of unused addresses kept at the head of the wallet
 gap_limit = 25
 

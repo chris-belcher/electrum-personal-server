@@ -113,3 +113,5 @@ if sys.version_info.major == 3:
             string = string[1:]
         return result
 
+    def from_int_representation_to_bytes(a):
+        return bytes(str(a), 'utf-8')
