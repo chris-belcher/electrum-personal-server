@@ -35,9 +35,9 @@ def main():
     try:
         config = ConfigParser()
         config.read(["config.cfg"])
-        config.options("electrum-master-public-keys")
+        config.options("master-public-keys")
     except NoSectionError:
-        log("Non-existant configuration file `config.cfg`")
+        print("Non-existant configuration file `config.cfg`")
         return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
                 port = int(config.get("bitcoin-rpc", "port")),

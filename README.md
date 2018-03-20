@@ -1,7 +1,7 @@
 # Electrum Personal Server
 
 Electrum Personal Server is an implementation of the Electrum server protocol
-which fulfills the specific need of using the Electrum UI with full node
+which fulfills the specific need of using the Electrum wallet with full node
 verification and privacy, but without the heavyweight server backend, for a
 single user. It allows the user to benefit from all of Bitcoin Core's
 resource-saving features like
@@ -13,13 +13,27 @@ txindex. All of Electrum's feature-richness like hardware wallet integration,
 [mnemonic recovery phrases](https://en.bitcoin.it/wiki/Mnemonic_phrase)
 and so on can still be used, but backed by the user's own full node.
 
+Full node wallets are important in bitcoin because they are an big part of what
+makes the system be trustless. No longer do people have to trust a financial
+institution like a bank or paypal, they can run software on their own
+computers. If bitcoin is digital gold, then a full node wallet is your own
+personal goldsmith who checks for you that received payments are genuine. You
+wouldn't accept large amounts of cash or gold coins without checking they are
+actually genuine, the same applies for bitcoin.
+
+Full node wallets are also important for privacy. Using Electrum under default
+configuration requires it to send all your bitcoin addresses to some server.
+That server can then easily spy on you. Full nodes download the entire
+blockchain and scan it for the user's own addresses, and therefore don't reveal
+to anyone else which bitcoin addresses they are interested in.
+
 Using Electrum with Electrum Personal Server is probably the most
 resource-efficient way right now to use a hardware wallet connected to your
-own full node. 
+own full node.
 
-For a longer explaination of this project and why it's important, see the
+For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
-and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198).
+and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198). See also the Bitcoin Wiki [pages](https://en.bitcoin.it/wiki/Clearing_Up_Misconceptions_About_Full_Nodes) on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 
 See also the Electrum bitcoin wallet [website](https://electrum.org/).
 
@@ -50,13 +64,26 @@ Electrum can be started in testnet mode with the command line flag `--testnet`.
 
 #### Exposure to the Internet
 
-You really don't want other people connecting to your server. They won't be
+Other people should not be connecting to your server. They won't be
 able to synchronize their wallet, and they could potentially learn all your
 wallet addresses.
 
-By default the server will bind to and accept connections only from `localhost`
-so you should either run Electrum wallet from the same computer or use a SSH
-tunnel.
+By default the server will accept connections only from `localhost` so you
+should either run Electrum wallet from the same computer or use a SSH tunnel to
+another computer.
+
+#### How is this different from other Electrum servers ?
+
+They are different approaches with different tradeoffs. Electrum Personal
+Server is compatible with pruning, blocksonly and txindex=0, uses less CPU and
+RAM and doesn't require an index of every bitcoin address ever used; the
+tradeoff is when recovering an old wallet, you must to import your wallet into
+it first and you may need to rescan, so it loses the "instant on" feature of
+Electrum wallet. Other Electrum server implementations will be able to sync
+your wallet immediately even if you have historical transactions, and they can
+serve multiple Electrum wallets at once.
+
+Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/) if you're interested in this sort of thing.
 
 ## Project Readiness
 

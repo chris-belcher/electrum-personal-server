@@ -3,8 +3,7 @@ import bitcoin as btc
 import binascii
 from math import ceil, log
 
-import util
-from util import hash_encode, hash_decode, Hash
+from hashes import hash_encode, hash_decode, Hash, hash_merkle_root
 
 #lots of ideas and code taken from bitcoin core and breadwallet
 #https://github.com/bitcoin/bitcoin/blob/master/src/merkleblock.h
@@ -248,7 +247,7 @@ def test():
         try:
             electrum_proof = convert_core_to_electrum_merkle_proof(proof)
             #print(electrum_proof)
-            implied_merkle_root = util.hash_merkle_root(
+            implied_merkle_root = hash_merkle_root(
                 electrum_proof["merkle"], electrum_proof["txid"],
                 electrum_proof["pos"])
             assert implied_merkle_root == electrum_proof["merkleroot"]

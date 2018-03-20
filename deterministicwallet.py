@@ -1,6 +1,6 @@
 
 import bitcoin as btc
-import util
+from hashes import bh2u, hash_160, bfh, sha256
 
 # the class hierarchy for deterministic wallets in this file:
 # subclasses are written towards the right
@@ -127,13 +127,13 @@ class SingleSigWallet(DeterministicWallet):
 
 class SingleSigP2PKHWallet(SingleSigWallet):
     def pubkey_to_scriptpubkey(self, pubkey):
-        pkh = util.bh2u(util.hash_160(util.bfh(pubkey)))
+        pkh = bh2u(hash_160(bfh(pubkey)))
         #op_dup op_hash_160 length hash160 op_equalverify op_checksig
         return "76a914" + pkh + "88ac"
 
 class SingleSigP2WPKHWallet(SingleSigWallet):
     def pubkey_to_scriptpubkey(self, pubkey):
-        pkh = util.bh2u(util.hash_160(util.bfh(pubkey)))
+        pkh = bh2u(hash_160(bfh(pubkey)))
         #witness-version length hash160
         #witness version is always 0, length is always 0x14
         return "0014" + pkh
@@ -142,8 +142,8 @@ class SingleSigP2WPKH_P2SHWallet(SingleSigWallet):
     def pubkey_to_scriptpubkey(self, pubkey):
         #witness-version length pubkeyhash
         #witness version is always 0, length is always 0x14
-        redeem_script = '0014' + util.bh2u(util.hash_160(util.bfh(pubkey)))
-        sh = util.bh2u(util.hash_160(util.bfh(redeem_script)))
+        redeem_script = '0014' + bh2u(hash_160(bfh(pubkey)))
+        sh = bh2u(hash_160(bfh(redeem_script)))
         return "a914" + sh + "87"
 
 class SingleSigOldMnemonicWallet(SingleSigWallet):
@@ -155,7 +155,7 @@ class SingleSigOldMnemonicWallet(SingleSigWallet):
         return btc.electrum_pubkey(self.mpk, index, change)
 
     def pubkey_to_scriptpubkey(self, pubkey):
-        pkh = util.bh2u(util.hash_160(util.bfh(pubkey)))
+        pkh = bh2u(hash_160(bfh(pubkey)))
         #op_dup op_hash_160 length hash160 op_equalverify op_checksig
         return "76a914" + pkh + "88ac"
 
@@ -191,13 +191,13 @@ class MultisigWallet(DeterministicWallet):
 
 class MultisigP2SHWallet(MultisigWallet):
     def redeem_script_to_scriptpubkey(self, redeem_script):
-        sh = util.bh2u(util.hash_160(util.bfh(redeem_script)))
+        sh = bh2u(hash_160(bfh(redeem_script)))
         #op_hash160 length hash160 op_equal
         return "a914" + sh + "87"
 
 class MultisigP2WSHWallet(MultisigWallet):
     def redeem_script_to_scriptpubkey(self, redeem_script):
-        sh = util.bh2u(util.sha256(util.bfh(redeem_script)))
+        sh = bh2u(sha256(bfh(redeem_script)))
         #witness-version length sha256
         #witness version is always 0, length is always 0x20
         return "0020" + sh
@@ -206,9 +206,8 @@ class MultisigP2WSH_P2SHWallet(MultisigWallet):
     def redeem_script_to_scriptpubkey(self, redeem_script):
         #witness-version length sha256
         #witness version is always 0, length is always 0x20
-        nested_redeemScript = "0020" + util.bh2u(util.sha256(
-            util.bfh(redeem_script)))
-        sh = util.bh2u(util.hash_160(util.bfh(nested_redeemScript)))
+        nested_redeemScript = "0020" + bh2u(sha256(bfh(redeem_script)))
+        sh = bh2u(hash_160(bfh(nested_redeemScript)))
         #op_hash160 length hash160 op_equal
         return "a914" + sh + "87"
 

@@ -8,7 +8,7 @@ from configparser import ConfigParser, NoSectionError
 from decimal import Decimal
 
 from jsonrpc import JsonRpc, JsonRpcError
-import util, merkleproof, deterministicwallet
+import hashes, merkleproof, deterministicwallet
 
 ADDRESSES_LABEL = "electrum-watchonly-addresses"
 
@@ -76,7 +76,7 @@ def on_heartbeat_connected(sock, rpc, address_history, unconfirmed_txes,
     for scrhash in updated_scripthashes:
         if not address_history[scrhash]["subscribed"]:
             continue
-        history_hash = util.get_status_electrum( ((h["tx_hash"], h["height"])
+        history_hash = hashes.get_status_electrum( ((h["tx_hash"], h["height"])
             for h in address_history[scrhash]["history"]) )
         update = {"method": "blockchain.scripthash.subscribe", "params": 
             [scrhash, history_hash]}
@@ -107,7 +107,7 @@ def handle_query(sock, line, rpc, address_history, deterministic_wallets):
             core_proof = rpc.call("gettxoutproof", [[txid], tx["blockhash"]])
             electrum_proof = merkleproof.convert_core_to_electrum_merkle_proof(
                 core_proof)
-            implied_merkle_root = util.hash_merkle_root(
+            implied_merkle_root = hashes.hash_merkle_root(
                 electrum_proof["merkle"], txid, electrum_proof["pos"])
             if implied_merkle_root != electrum_proof["merkleroot"]:
                 raise ValueError
@@ -125,12 +125,12 @@ def handle_query(sock, line, rpc, address_history, deterministic_wallets):
         scrhash = query["params"][0]
         if scrhash in address_history:
             address_history[scrhash]["subscribed"] = True
-            history_hash = util.get_status_electrum((
+            history_hash = hashes.get_status_electrum((
                 (h["tx_hash"], h["height"])
                 for h in address_history[scrhash]["history"]))
         else:
             log("WARNING: address scripthash not known to us: " + scrhash)
-            history_hash = util.get_status_electrum([])
+            history_hash = hashes.get_status_electrum([])
         send_response(sock, query, history_hash)
     elif method == "blockchain.scripthash.get_history":
         scrhash = query["params"][0]
@@ -459,7 +459,7 @@ def check_for_new_txes(rpc, address_history, unconfirmed_txes,
             get_input_and_output_scriptpubkeys(rpc, tx["txid"])
         matching_scripthashes = []
         for spk in (output_scriptpubkeys + input_scriptpubkeys):
-            scripthash = util.script_to_scripthash(spk)
+            scripthash = hashes.script_to_scripthash(spk)
             if scripthash in address_history:
                 matching_scripthashes.append(scripthash)
         if len(matching_scripthashes) == 0:
@@ -471,7 +471,7 @@ def check_for_new_txes(rpc, address_history, unconfirmed_txes,
             if overrun_depths != None:
                 for change, import_count in overrun_depths.items():
                     spks = wal.get_new_scriptpubkeys(change, import_count)
-                    new_addrs = [util.script_to_address(s, rpc) for s in spks]
+                    new_addrs = [hashes.script_to_address(s, rpc) for s in spks]
                     debug("Importing " + str(len(spks)) + " into change="
                         + str(change))
                     import_addresses(rpc, new_addrs)
@@ -495,7 +495,7 @@ def build_address_history(rpc, monitored_scriptpubkeys, deterministic_wallets):
     st = time.time()
     address_history = {}
     for spk in monitored_scriptpubkeys:
-        address_history[util.script_to_scripthash(spk)] = {'history': [],
+        address_history[hashes.script_to_scripthash(spk)] = {'history': [],
             'subscribed': False}
     wallet_addr_scripthashes = set(address_history.keys())
     #populate history
@@ -525,11 +525,11 @@ def build_address_history(rpc, monitored_scriptpubkeys, deterministic_wallets):
             #obtain all the addresses this transaction is involved with
             output_scriptpubkeys, input_scriptpubkeys, txd = \
                 get_input_and_output_scriptpubkeys(rpc, tx["txid"])
-            output_scripthashes = [util.script_to_scripthash(sc)
+            output_scripthashes = [hashes.script_to_scripthash(sc)
                 for sc in output_scriptpubkeys]
             sh_to_add = wallet_addr_scripthashes.intersection(set(
                 output_scripthashes))
-            input_scripthashes = [util.script_to_scripthash(sc)
+            input_scripthashes = [hashes.script_to_scripthash(sc)
                 for sc in input_scriptpubkeys]
             sh_to_add |= wallet_addr_scripthashes.intersection(set(
                 input_scripthashes))
@@ -593,7 +593,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     wallets_imported = 0
     spks_to_import = []
     for wal in deterministic_wallets:
-        first_addr = util.script_to_address(wal.get_scriptpubkeys(change=0,
+        first_addr = hashes.script_to_address(wal.get_scriptpubkeys(change=0,
             from_index=0, count=1)[0], rpc)
         if first_addr not in imported_addresses:
             import_needed = True
@@ -613,7 +613,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         watch_only_addresses_to_import = wallet_addresses - imported_addresses
 
     if import_needed:
-        addresses_to_import = [util.script_to_address(spk, rpc)
+        addresses_to_import = [hashes.script_to_address(spk, rpc)
             for spk in spks_to_import]
         #TODO minus imported_addresses
         log("Importing " + str(wallets_imported) + " wallets and " +
@@ -638,12 +638,12 @@ def get_scriptpubkeys_to_monitor(rpc, config):
             while True:
                 spk = wal.get_new_scriptpubkeys(change, count=1)[0]
                 spks_to_monitor.append(spk)
-                if util.script_to_address(spk, rpc) not in imported_addresses:
+                if hashes.script_to_address(spk, rpc) not in imported_addresses:
                     break
             spks_to_monitor.pop()
             wal.rewind_one(change)
 
-    spks_to_monitor.extend([util.address_to_script(addr, rpc)
+    spks_to_monitor.extend([hashes.address_to_script(addr, rpc)
         for addr in watch_only_addresses])
     return False, spks_to_monitor, deterministic_wallets
 
@@ -683,6 +683,7 @@ def main():
                 printed_error_msg = True
             time.sleep(5)
 
+    log("Starting Electrum Personal Server")
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
