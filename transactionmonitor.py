@@ -3,7 +3,7 @@ import time, pprint, math
 from decimal import Decimal
 
 from jsonrpc import JsonRpcError
-from server import debug, log, import_addresses
+import server as s
 import hashes
 
 class TransactionMonitor(object):
@@ -32,11 +32,11 @@ class TransactionMonitor(object):
             return False
 
     def unsubscribe_all_addresses(self):
-        for srchash, his in self.address_history.items():
+        for scrhash, his in self.address_history.items():
             his["subscribed"] = False
 
     def build_address_history(self, monitored_scriptpubkeys):
-        log("Building history with " + str(len(monitored_scriptpubkeys)) +
+        s.log("Building history with " + str(len(monitored_scriptpubkeys)) +
             " addresses")
         st = time.time()
         address_history = {}
@@ -56,7 +56,7 @@ class TransactionMonitor(object):
         obtained_txids = set()
         while len(ret) == BATCH_SIZE:
             ret = self.rpc.call("listtransactions", ["*", BATCH_SIZE, t, True])
-            debug("listtransactions skip=" + str(t) + " len(ret)="
+            s.debug("listtransactions skip=" + str(t) + " len(ret)="
                 + str(len(ret)))
             t += len(ret)
             for tx in ret:
@@ -66,7 +66,7 @@ class TransactionMonitor(object):
                     continue
                 if tx["txid"] in obtained_txids:
                     continue
-                debug("adding obtained tx=" + str(tx["txid"]))
+                s.debug("adding obtained tx=" + str(tx["txid"]))
                 obtained_txids.add(tx["txid"])
 
                 #obtain all the addresses this transaction is involved with
@@ -87,8 +87,8 @@ class TransactionMonitor(object):
                     overrun_depths = wal.have_scriptpubkeys_overrun_gaplimit(
                         output_scriptpubkeys)
                     if overrun_depths != None:
-                        log("ERROR: Not enough addresses imported.")
-                        log("Delete wallet.dat and increase the value " +
+                        s.log("ERROR: Not enough addresses imported.")
+                        s.log("Delete wallet.dat and increase the value " +
                             "of `initial_import_count` in the file " + 
                             "`config.cfg` then reimport and rescan")
                         #TODO make it so users dont have to delete wallet.dat
@@ -102,26 +102,26 @@ class TransactionMonitor(object):
                 count += 1
 
         unconfirmed_txes = {}
-        for srchash, his in address_history.items():
+        for scrhash, his in address_history.items():
             uctx = self.sort_address_history_list(his)
             for u in uctx:
                 if u["tx_hash"] in unconfirmed_txes:
-                    unconfirmed_txes[u["tx_hash"]].append(srchash)
+                    unconfirmed_txes[u["tx_hash"]].append(scrhash)
                 else:
-                    unconfirmed_txes[u["tx_hash"]] = [srchash]
-        debug("unconfirmed_txes = " + str(unconfirmed_txes))
+                    unconfirmed_txes[u["tx_hash"]] = [scrhash]
+        s.debug("unconfirmed_txes = " + str(unconfirmed_txes))
         if len(ret) > 0:
             #txid doesnt uniquely identify transactions from listtransactions
             #but the tuple (txid, address) does
             self.last_known_recent_txid = (ret[-1]["txid"], ret[-1]["address"])
         else:
             self.last_known_recent_txid = None
-        debug("last_known_recent_txid = " + str(self.last_known_recent_txid))
+        s.debug("last_known_recent_txid = " + str(self.last_known_recent_txid))
 
         et = time.time()
-        log("Found " + str(count) + " txes. History built in " +
+        s.log("Found " + str(count) + " txes. History built in " +
             str(et - st) + "sec")
-        debug("address_history =\n" + pprint.pformat(address_history))
+        s.debug("address_history =\n" + pprint.pformat(address_history))
         self.address_history = address_history
         self.unconfirmed_txes = unconfirmed_txes
         return True
@@ -155,13 +155,13 @@ class TransactionMonitor(object):
                     utxo = self.rpc.call("gettxout", [inn["txid"], inn["vout"],
                         False])
                     if utxo is None:
-                        debug("utxo not found(!)")
+                        s.debug("utxo not found(!)")
                         #TODO detect this and figure out how to tell
                         # electrum that we dont know the fee
                 total_input_value += int(Decimal(utxo["value"]) * Decimal(1e8))
                 unconfirmed_input = (unconfirmed_input or
                     utxo["confirmations"] == 0)
-            debug("total_input_value = " + str(total_input_value))
+            s.debug("total_input_value = " + str(total_input_value))
 
             fee = total_input_value - sum([int(Decimal(out["value"])
                 * Decimal(1e8)) for out in txd["vout"]])
@@ -190,57 +190,58 @@ class TransactionMonitor(object):
         return unconfirm_txes
 
     def check_for_updated_txes(self):
-        updated_srchashes1 = self.check_for_new_txes()
-        updated_srchashes2 = self.check_for_confirmations()
-        updated_srchashes = updated_srchashes1 | updated_srchashes2
-        for ush in updated_srchashes:
+        updated_scrhashes1 = self.check_for_new_txes()
+        updated_scrhashes2 = self.check_for_confirmations()
+        updated_scrhashes = updated_scrhashes1 | updated_scrhashes2
+        for ush in updated_scrhashes:
             his = self.address_history[ush]
             self.sort_address_history_list(his)
-        if len(updated_srchashes) > 0:
-            debug("new tx address_history =\n"
+        if len(updated_scrhashes) > 0:
+            s.debug("new tx address_history =\n"
                 + pprint.pformat(self.address_history))
-            debug("unconfirmed txes = " + pprint.pformat(self.unconfirmed_txes))
-            debug("updated_scripthashes = " + str(updated_srchashes))
+            s.debug("unconfirmed txes = " +
+                pprint.pformat(self.unconfirmed_txes))
+            s.debug("updated_scripthashes = " + str(updated_scrhashes))
         else:
-            debug("no updated txes")
-        updated_srchashes = filter(lambda sh:self.address_history[sh][
-            "subscribed"], updated_srchashes)
-        #TODO srchashes is misspelled, should be scrhashes
-        return updated_srchashes
+            s.debug("no updated txes")
+        updated_scrhashes = filter(lambda sh:self.address_history[sh][
+            "subscribed"], updated_scrhashes)
+        return updated_scrhashes
 
     def check_for_confirmations(self):
-        confirmed_txes_srchashes = []
-        debug("check4con unconfirmed_txes = "
+        confirmed_txes_scrhashes = []
+        s.debug("check4con unconfirmed_txes = "
             + pprint.pformat(self.unconfirmed_txes))
-        for uc_txid, srchashes in self.unconfirmed_txes.items():
+        for uc_txid, scrhashes in self.unconfirmed_txes.items():
             tx = self.rpc.call("gettransaction", [uc_txid])
-            debug("uc_txid=" + uc_txid + " => " + str(tx))
+            s.debug("uc_txid=" + uc_txid + " => " + str(tx))
             if tx["confirmations"] == 0:
                 continue #still unconfirmed
-            log("A transaction confirmed: " + uc_txid)
-            confirmed_txes_srchashes.append((uc_txid, srchashes))
+            s.log("A transaction confirmed: " + uc_txid)
+            confirmed_txes_scrhashes.append((uc_txid, scrhashes))
             block = self.rpc.call("getblockheader", [tx["blockhash"]])
-            for srchash in srchashes:
+            for scrhash in scrhashes:
                 #delete the old unconfirmed entry in address_history
-                deleted_entries = [h for h in self.address_history[srchash][
+                deleted_entries = [h for h in self.address_history[scrhash][
                     "history"] if h["tx_hash"] == uc_txid]
                 for d_his in deleted_entries:
-                    self.address_history[srchash]["history"].remove(d_his)
+                    self.address_history[scrhash]["history"].remove(d_his)
                 #create the new confirmed entry in address_history
-                self.address_history[srchash]["history"].append({"height":
+                self.address_history[scrhash]["history"].append({"height":
                     block["height"], "tx_hash": uc_txid})
-        updated_srchashes = set()
-        for tx, srchashes in confirmed_txes_srchashes:
+        updated_scrhashes = set()
+        for tx, scrhashes in confirmed_txes_scrhashes:
             del self.unconfirmed_txes[tx]
-            updated_srchashes.update(set(srchashes))
-        return updated_srchashes
+            updated_scrhashes.update(set(scrhashes))
+        return updated_scrhashes
 
     def check_for_new_txes(self):
         MAX_TX_REQUEST_COUNT = 256 
         tx_request_count = 2
         max_attempts = int(math.log(MAX_TX_REQUEST_COUNT, 2))
         for i in range(max_attempts):
-            debug("listtransactions tx_request_count=" + str(tx_request_count))
+            s.debug("listtransactions tx_request_count="
+                + str(tx_request_count))
             ret = self.rpc.call("listtransactions", ["*", tx_request_count, 0,
                 True])
             ret = ret[::-1]
@@ -259,25 +260,18 @@ class TransactionMonitor(object):
 
         #TODO low priority: handle a user getting more than 255 new
         # transactions in 15 seconds
-        debug("recent tx index = " + str(recent_tx_index) + " ret = " +
+        s.debug("recent tx index = " + str(recent_tx_index) + " ret = " +
             str(ret))
         #    str([(t["txid"], t["address"]) for t in ret]))
         if len(ret) > 0:
             self.last_known_recent_txid = (ret[0]["txid"], ret[0]["address"])
-            debug("last_known_recent_txid = " + str(
+            s.debug("last_known_recent_txid = " + str(
                 self.last_known_recent_txid))
         assert(recent_tx_index != -1)
         if recent_tx_index == 0:
             return set()
         new_txes = ret[:recent_tx_index][::-1]
-        debug("new txes = " + str(new_txes))
-        #tests: finding one unconfirmed tx, finding one confirmed tx
-        #sending a tx that has nothing to do with our wallets
-        #getting a new tx on a completely empty wallet
-        #finding confirmed and unconfirmed tx, in that order, then both confirm
-        #finding unconfirmed and confirmed tx, in that order, then both confirm
-        #send a tx to an address which hasnt been used before
-        #import two addresses, transaction from one to the other
+        s.debug("new txes = " + str(new_txes))
         obtained_txids = set()
         updated_scripthashes = []
         for tx in new_txes:
@@ -304,23 +298,378 @@ class TransactionMonitor(object):
                 if overrun_depths != None:
                     for change, import_count in overrun_depths.items():
                         spks = wal.get_new_scriptpubkeys(change, import_count)
-                        new_addrs = [hashes.script_to_address(s, rpc)
+                        for spk in spks:
+                            self.address_history[hashes.script_to_scripthash(
+                                spk)] =  {'history': [], 'subscribed': False}
+                        new_addrs = [hashes.script_to_address(s, self.rpc)
                             for s in spks]
-                        debug("Importing " + str(len(spks)) + " into change="
+                        s.debug("importing " + str(len(spks)) + " into change="
                             + str(change))
-                        import_addresses(rpc, new_addrs)
+                        s.import_addresses(self.rpc, new_addrs)
 
             updated_scripthashes.extend(matching_scripthashes)
             new_history_element = self.generate_new_history_element(tx, txd)
-            log("Found new tx: " + str(new_history_element))
-            for srchash in matching_scripthashes:
-                self.address_history[srchash]["history"].append(
+            s.log("Found new tx: " + str(new_history_element))
+            for scrhash in matching_scripthashes:
+                self.address_history[scrhash]["history"].append(
                     new_history_element)
                 if new_history_element["height"] == 0:
                     if tx["txid"] in self.unconfirmed_txes:
-                        self.unconfirmed_txes[tx["txid"]].append(srchash)
+                        self.unconfirmed_txes[tx["txid"]].append(scrhash)
                     else:
-                        self.unconfirmed_txes[tx["txid"]] = [srchash]
+                        self.unconfirmed_txes[tx["txid"]] = [scrhash]
             #check whether gap limits have been overrun and import more addrs
         return set(updated_scripthashes)
+
+
+## start tests here
+
+class TestJsonRpc(object):
+    def __init__(self, txlist, utxoset, block_heights):
+        self.txlist = txlist
+        self.utxoset = utxoset
+        self.block_heights = block_heights
+        self.imported_addresses = []
+
+    def call(self, method, params):
+        if method == "listtransactions":
+            count = int(params[1])
+            skip = int(params[2])
+            return self.txlist[skip:skip + count]
+        elif method == "gettransaction":
+            for t in self.txlist:
+                if t["txid"] == params[0]:
+                    return t
+            raise JsonRpcError({"code": None, "message": None})
+        elif method == "decoderawtransaction":
+            for t in self.txlist:
+                if t["hex"] == params[0]:
+                    return t
+            assert 0
+        elif method == "gettxout":
+            for u in self.utxoset:
+                if u["txid"] == params[0] and u["vout"] == params[1]:
+                    return u
+        elif method == "getblockheader":
+            if params[0] not in self.block_heights:
+                assert 0
+            return {"height": self.block_heights[params[0]]}
+        elif method == "decodescript":
+            return {"addresses": [test_spk_to_address(params[0])]}
+        elif method == "importaddress":
+            self.imported_addresses.append(params[0])
+        else:
+            raise ValueError("unknown method in test jsonrpc")
+
+    def add_transaction(self, tx):
+        self.txlist.append(tx)
+
+    def get_imported_addresses(self):
+        return self.imported_addresses
+
+from deterministicwallet import DeterministicWallet
+
+class TestDeterministicWallet(DeterministicWallet):
+    """Empty deterministic wallets"""
+    def __init__(self):
+        pass
+
+    def have_scriptpubkeys_overrun_gaplimit(self, scriptpubkeys):
+        return None #not overrun
+
+    def get_new_scriptpubkeys(self, change, count):
+        pass
+
+def test_spk_to_address(spk):
+    return spk + "-address"
+
+def assert_address_history_tx(address_history, spk, height, txid, subscribed):
+    history_element = address_history[hashes.script_to_scripthash(spk)]
+    assert history_element["history"][0]["height"] == height
+    assert history_element["history"][0]["tx_hash"] == txid
+    #fee always zero, its easier to test because otherwise you have
+    # to use Decimal to stop float weirdness
+    if height == 0:
+        assert history_element["history"][0]["fee"] == 0
+    assert history_element["subscribed"] == subscribed
+
+def test():
+    #empty deterministic wallets
+    deterministic_wallets = [TestDeterministicWallet()]
+    test_spk1 = "deadbeefdeadbeefdeadbeefdeadbeef"
+    test_containing_block1 = "blockhash-placeholder1"
+    test_paying_in_tx1 = {
+        "txid": "placeholder-test-txid1",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk1}}],
+        "address": test_spk_to_address(test_spk1),
+        "category": "receive",
+        "confirmations": 1,
+        "blockhash": test_containing_block1,
+        "hex": "placeholder-test-txhex1"
+    }
+    test_spk2 = "deadbeefdeadbeefdeadbeef"
+    test_containing_block2 = "blockhash-placeholder2"
+    test_paying_in_tx2 = {
+        "txid": "placeholder-test-txid2",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk2}}],
+        "address": test_spk_to_address(test_spk2),
+        "category": "receive",
+        "confirmations": 1,
+        "blockhash": test_containing_block2,
+        "hex": "placeholder-test-txhex2"
+    }
+
+    ###single confirmed tx in wallet belonging to us, address history built
+    rpc = TestJsonRpc([test_paying_in_tx1], [],
+        {test_containing_block1: 420000})
+    txmonitor1 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor1.build_address_history([test_spk1])
+    assert len(txmonitor1.address_history) == 1
+    assert_address_history_tx(txmonitor1.address_history, spk=test_spk1,
+        height=420000, txid=test_paying_in_tx1["txid"], subscribed=False)
+
+    ###two confirmed txes in wallet belonging to us, addr history built
+    rpc = TestJsonRpc([test_paying_in_tx1, test_paying_in_tx2], [],
+        {test_containing_block1: 1, test_containing_block2: 2})
+    deterministic_wallets = [TestDeterministicWallet()]
+    txmonitor2 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor2.build_address_history([test_spk1, test_spk2])
+    assert len(txmonitor2.address_history) == 2
+    assert_address_history_tx(txmonitor2.address_history, spk=test_spk1,
+        height=1, txid=test_paying_in_tx1["txid"], subscribed=False)
+    assert_address_history_tx(txmonitor2.address_history, spk=test_spk2,
+        height=2, txid=test_paying_in_tx2["txid"], subscribed=False)
+
+    ###one unconfirmed tx in wallet belonging to us, with confirmed inputs,
+    ### addr history built, then tx confirms, not subscribed to address
+    test_spk3 = "deadbeefdeadbeef"
+    test_containing_block3 = "blockhash-placeholder3"
+    input_utxo3 = {"txid": "placeholder-unknown-input-txid", "vout": 0,
+        "value": 1, "confirmations": 1}
+    test_paying_in_tx3 = {
+        "txid": "placeholder-test-txid3",
+        "vin": [input_utxo3],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk3}}],
+        "address": test_spk_to_address(test_spk3),
+        "category": "receive",
+        "confirmations": 0,
+        "blockhash": test_containing_block3,
+        "hex": "placeholder-test-txhex3"
+    }
+    rpc = TestJsonRpc([test_paying_in_tx3], [input_utxo3],
+        {test_containing_block3: 10})
+    txmonitor3 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor3.build_address_history([test_spk3])
+    assert len(txmonitor3.address_history) == 1
+    assert_address_history_tx(txmonitor3.address_history, spk=test_spk3,
+        height=0, txid=test_paying_in_tx3["txid"], subscribed=False)
+    assert len(list(txmonitor3.check_for_updated_txes())) == 0
+    test_paying_in_tx3["confirmations"] = 1 #tx confirms
+    #not subscribed so still only returns an empty list
+    assert len(list(txmonitor3.check_for_updated_txes())) == 0
+    assert_address_history_tx(txmonitor3.address_history, spk=test_spk3,
+        height=10, txid=test_paying_in_tx3["txid"], subscribed=False)
+
+    ###build empty address history, subscribe one address
+    ### an unconfirmed tx appears, then confirms
+    test_spk4 = "deadbeefdeadbeefaa"
+    test_containing_block4 = "blockhash-placeholder4"
+    input_utxo4 = {"txid": "placeholder-unknown-input-txid", "vout": 0,
+        "value": 1, "confirmations": 1}
+    test_paying_in_tx4 = {
+        "txid": "placeholder-test-txid4",
+        "vin": [input_utxo4],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk4}}],
+        "address": test_spk_to_address(test_spk4),
+        "category": "receive",
+        "confirmations": 0,
+        "blockhash": test_containing_block4,
+        "hex": "placeholder-test-txhex4"
+    }
+    rpc = TestJsonRpc([], [input_utxo4], {test_containing_block4: 10})
+    txmonitor4 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor4.build_address_history([test_spk4])
+    assert len(txmonitor4.address_history) == 1
+    sh4 = hashes.script_to_scripthash(test_spk4)
+    assert len(txmonitor4.get_electrum_history(sh4)) == 0
+    txmonitor4.subscribe_address(sh4)
+    # unconfirm transaction appears
+    assert len(list(txmonitor4.check_for_updated_txes())) == 0
+    rpc.add_transaction(test_paying_in_tx4)
+    assert len(list(txmonitor4.check_for_updated_txes())) == 1
+    assert_address_history_tx(txmonitor4.address_history, spk=test_spk4,
+        height=0, txid=test_paying_in_tx4["txid"], subscribed=True)
+    # transaction confirms
+    test_paying_in_tx4["confirmations"] = 1
+    assert len(list(txmonitor4.check_for_updated_txes())) == 1
+    assert_address_history_tx(txmonitor4.address_history, spk=test_spk4,
+        height=10, txid=test_paying_in_tx4["txid"], subscribed=True)
+
+    ###transaction that has nothing to do with our wallet
+    test_spk5 = "deadbeefdeadbeefbb"
+    test_containing_block5 = "blockhash-placeholder5"
+    test_paying_in_tx5 = {
+        "txid": "placeholder-test-txid5",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk5}}],
+        "address": test_spk_to_address(test_spk5),
+        "category": "receive",
+        "confirmations": 0,
+        "blockhash": test_containing_block5,
+        "hex": "placeholder-test-txhex5"
+    }
+    test_spk5_1 = "deadbeefdeadbeefcc"
+    rpc = TestJsonRpc([test_paying_in_tx5], [], {test_containing_block4: 10})
+    txmonitor5 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor5.build_address_history([test_spk5_1])
+    assert len(txmonitor5.address_history) == 1
+    assert len(txmonitor5.get_electrum_history(hashes.script_to_scripthash(
+        test_spk5_1))) == 0
+
+    ###transaction which arrives to an address which already has a tx on it
+    test_spk6 = "deadbeefdeadbeefdd"
+    test_containing_block6 = "blockhash-placeholder6"
+    test_paying_in_tx6 = {
+        "txid": "placeholder-test-txid6",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk6}}],
+        "address": test_spk_to_address(test_spk6),
+        "category": "receive",
+        "confirmations": 1,
+        "blockhash": test_containing_block6,
+        "hex": "placeholder-test-txhex6"
+    }
+    test_paying_in_tx6_1 = {
+        "txid": "placeholder-test-txid6_1",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk6}}],
+        "address": test_spk_to_address(test_spk6),
+        "category": "receive",
+        "confirmations": 1,
+        "blockhash": test_containing_block6,
+        "hex": "placeholder-test-txhex6"
+    }
+    rpc = TestJsonRpc([test_paying_in_tx6], [], {test_containing_block6: 10})
+    txmonitor6 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor6.build_address_history([test_spk6])
+    sh = hashes.script_to_scripthash(test_spk6)
+    assert len(txmonitor6.get_electrum_history(sh)) == 1
+    rpc.add_transaction(test_paying_in_tx6_1)
+    assert len(txmonitor6.get_electrum_history(sh)) == 1
+    txmonitor6.check_for_updated_txes()
+    assert len(txmonitor6.get_electrum_history(sh)) == 2
+
+    ###transaction spending FROM one of our addresses
+    test_spk7 = "deadbeefdeadbeefee"
+    test_input_containing_block7 = "blockhash-input-placeholder7"
+    test_input_tx7 = {
+        "txid": "placeholder-input-test-txid7",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk7}}],
+        "address": test_spk_to_address(test_spk7),
+        "category": "send",
+        "confirmations": 2,
+        "blockhash": test_input_containing_block7,
+        "hex": "placeholder-input-test-txhex7"
+    }
+    test_containing_block7 = "blockhash-placeholder7"
+    test_paying_from_tx7 = {
+        "txid": "placeholder-test-txid7",
+        "vin": [{"txid": test_input_tx7["txid"], "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": "deadbeef"}}],
+        "address": test_spk_to_address(test_spk7),
+        "category": "receive",
+        "confirmations": 1,
+        "blockhash": test_containing_block7,
+        "hex": "placeholder-test-txhex7"
+    }
+    rpc = TestJsonRpc([test_input_tx7, test_paying_from_tx7], [],
+        {test_containing_block7: 9, test_input_containing_block7: 8})
+    txmonitor7 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor7.build_address_history([test_spk7])
+    sh = hashes.script_to_scripthash(test_spk7)
+    assert len(txmonitor7.get_electrum_history(sh)) == 2
+
+    ###transaction from one address to the other, both addresses in wallet
+    test_spk8 = "deadbeefdeadbeefee"
+    test_spk8_1 = "deadbeefdeadbeefff"
+    test_input_containing_block8 = "blockhash-input-placeholder8"
+    test_input_tx8 = {
+        "txid": "placeholder-input-test-txid8",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk8}}],
+        "address": test_spk_to_address(test_spk8),
+        "category": "send",
+        "confirmations": 2,
+        "blockhash": test_input_containing_block8,
+        "hex": "placeholder-input-test-txhex8"
+    }
+    test_containing_block8 = "blockhash-placeholder8"
+    test_paying_from_tx8 = {
+        "txid": "placeholder-test-txid8",
+        "vin": [{"txid": test_input_tx8["txid"], "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk8_1}}],
+        "address": test_spk_to_address(test_spk8),
+        "category": "receive",
+        "confirmations": 1,
+        "blockhash": test_containing_block8,
+        "hex": "placeholder-test-txhex8"
+    }
+    rpc = TestJsonRpc([test_input_tx8, test_paying_from_tx8], [],
+        {test_containing_block8: 9, test_input_containing_block8: 8})
+    txmonitor8 = TransactionMonitor(rpc, deterministic_wallets)
+    assert txmonitor8.build_address_history([test_spk8, test_spk8_1])
+    assert len(txmonitor8.get_electrum_history(hashes.script_to_scripthash(
+        test_spk8))) == 2
+    assert len(txmonitor8.get_electrum_history(hashes.script_to_scripthash(
+        test_spk8_1))) == 1
+
+    ###overrun gap limit so import address is needed
+    test_spk9 = "deadbeefdeadbeef00"
+    test_containing_block9 = "blockhash-placeholder9"
+    test_paying_in_tx9 = {
+        "txid": "placeholder-test-txid9",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk9}}],
+        "address": test_spk_to_address(test_spk9),
+        "category": "receive",
+        "confirmations": 1,
+        "blockhash": test_containing_block9,
+        "hex": "placeholder-test-txhex9"
+    }
+    test_spk9_imported = "deadbeefdeadbeef11"
+    class TestImportDeterministicWallet(DeterministicWallet):
+        def __init__(self):
+            pass
+
+        def have_scriptpubkeys_overrun_gaplimit(self, scriptpubkeys):
+            return {0: 1} #overrun by one
+
+        def get_new_scriptpubkeys(self, change, count):
+            return [test_spk9_imported]
+
+    rpc = TestJsonRpc([], [], {test_containing_block9: 10})
+    txmonitor9 = TransactionMonitor(rpc, [TestImportDeterministicWallet()])
+    assert txmonitor9.build_address_history([test_spk9])
+    assert len(txmonitor9.address_history) == 1
+    assert len(list(txmonitor9.check_for_updated_txes())) == 0
+    assert len(txmonitor9.get_electrum_history(hashes.script_to_scripthash(
+        test_spk9))) == 0
+    rpc.add_transaction(test_paying_in_tx9)
+    assert len(list(txmonitor9.check_for_updated_txes())) == 0
+    assert len(txmonitor9.get_electrum_history(hashes.script_to_scripthash(
+        test_spk9))) == 1
+    assert len(txmonitor9.get_electrum_history(hashes.script_to_scripthash(
+        test_spk9_imported))) == 0
+
+    #other possible stuff to test:
+    #finding confirmed and unconfirmed tx, in that order, then both confirm
+    #finding unconfirmed and confirmed tx, in that order, then both confirm
+
+    print("\nAll tests passed")
+
+if __name__ == "__main__":
+    test()
 
