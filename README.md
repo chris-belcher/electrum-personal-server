@@ -23,13 +23,10 @@ actually genuine, the same applies for bitcoin.
 
 Full node wallets are also important for privacy. Using Electrum under default
 configuration requires it to send all your bitcoin addresses to some server.
-That server can then easily spy on you. Full nodes download the entire
-blockchain and scan it for the user's own addresses, and therefore don't reveal
-to anyone else which bitcoin addresses they are interested in.
-
-Using Electrum with Electrum Personal Server is probably the most
-resource-efficient way right now to use a hardware wallet connected to your
-own full node.
+That server can then easily spy on you. Full node wallets like Electrum Personal
+Server would download the entire blockchain and scan it for the user's own
+addresses, and therefore don't reveal to anyone else which bitcoin addresses
+they are interested in.
 
 For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
@@ -37,29 +34,31 @@ and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg2717
 
 See also the Electrum bitcoin wallet [website](https://electrum.org/).
 
-## How To Use
+## How To
 
-This application requires python3 and a Bitcoin full node version 0.16 or
-higher. Make sure you
+* Download and install python3 and a Bitcoin full node version 0.16 or higher. Make sure you
 [verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
 of any binaries before running them, or compile from source.
 
-Download the latest release or clone the git repository. Enter the directory
-and rename the file `config.cfg_sample` to `config.cfg`, edit this file to
-configure everything about the server. Add your wallet master public keys or
-watch-only addresses to the `[master-public-keys]` and `[watch-only-addresses]`
-sections.
+* Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases) or clone the git repository. Enter the directory
+and rename the file `config.cfg_sample` to `config.cfg`.
 
-Finally run `./server.py` on Linux or double-click `run-server.bat` on Windows.
+* Edit the file `config.cfg` to configure everything about the server. Add your
+wallet master public keys or watch-only addresses to the `[master-public-keys]`
+and `[watch-only-addresses]` sections. Master public keys for an Electrum wallet
+can be found in the Electrum client menu `Wallet` -> `Information`.
+
+* Run `./server.py` on Linux or double-click `run-server.bat` on Windows.
 The first time the server is run it will import all configured addresses as
-watch-only into the Bitcoin node, and then exit giving you a chance to
-rescan if your wallet contains historical transactions.
+watch-only into the Bitcoin node, and then exit. If the wallets contain 
+historical transactions you can use the rescan script to make them appear.
 
-Tell Electrum to connect to the server in `Tools` -> `Server`, usually
-`localhost` if running on the same machine. Make sure the port number matches
-whats written in `config.cfg`.
+* Run the server again which will start Electrum Personal Server. Tell Electrum
+wallet to connect to it in `Tools` -> `Server`. By default the server details
+are `localhost` if running on the same machine. Make sure the port number
+matches what is written in `config.cfg` (port 50002 by default).
 
-You can also try this with on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet).
+Electrum Personal Server also works on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet).
 Electrum can be started in testnet mode with the command line flag `--testnet`.
 
 #### Exposure to the Internet
@@ -69,38 +68,43 @@ able to synchronize their wallet, and they could potentially learn all your
 wallet addresses.
 
 By default the server will accept connections only from `localhost` so you
-should either run Electrum wallet from the same computer or use a SSH tunnel to
-another computer.
+should either run Electrum wallet from the same computer or use a SSH tunnel
+from another computer.
 
 #### How is this different from other Electrum servers ?
 
 They are different approaches with different tradeoffs. Electrum Personal
 Server is compatible with pruning, blocksonly and txindex=0, uses less CPU and
-RAM and doesn't require an index of every bitcoin address ever used; the
-tradeoff is when recovering an old wallet, you must to import your wallet into
-it first and you may need to rescan, so it loses the "instant on" feature of
-Electrum wallet. Other Electrum server implementations will be able to sync
-your wallet immediately even if you have historical transactions, and they can
-serve multiple Electrum wallets at once.
+RAM, is suitable for being used intermittently rather than needing to be
+always-on, and doesn't require an index of every bitcoin address ever used. The
+tradeoff is when recovering an old wallet, you must to import your wallet first
+and you may need to rescan, so it loses the "instant on" feature of Electrum
+wallet. Other Electrum server implementations will be able to sync your wallet
+immediately even if you have historical transactions, and they can serve
+multiple Electrum connections at once.
 
 Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/) if you're interested in this sort of thing.
 
 ## Project Readiness
 
-This project is in alpha stages as there are several essential missing
-features such as:
-
-* The Electrum server protocol has a caveat about multiple transactions included
-  in the same block. So there may be weird behaviour if that happens.
-
-* There's no way to turn off debug messages, so the console will be spammed by
-  them when used.
+This project is in beta release. It should be usable by any reasonably-technical
+bitcoin user.
 
 When trying this, make sure you report any crashes, odd behaviour, transactions
 appearing as `Not Verified` or times when Electrum disconnects (which
 indicates the server behaved unexpectedly).
 
 Someone should try running this on a Raspberry PI.
+
+#### Caveat about pruning
+
+Electrum Personal Server is fully compatible with pruning, except for one thing.
+Merkle proofs are read from disk. If pruning is enabled and if that specific
+block has been deleted from disk, then no merkle proof can be sent to Electrum
+which will display the transaction as `Not Verified` in the wallet interface.
+
+One day this may be improved on by writing new code for Bitcoin Core. See the
+discussion [here](https://bitcointalk.org/index.php?topic=3167572.0).
 
 ## Contributing
 

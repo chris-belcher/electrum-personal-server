@@ -6,11 +6,21 @@ from jsonrpc import JsonRpcError
 import server as s
 import hashes
 
+#internally this code uses scriptPubKeys, it only converts to bitcoin addresses
+# when importing to bitcoind or checking whether enough addresses have been
+# imported
+#the electrum protocol uses sha256(scriptpubkey) as a key for lookups
+# this code calls them scripthashes
+
 class TransactionMonitor(object):
+    """
+    Class which monitors the bitcoind wallet for new transactions
+    and builds a history datastructure for sending to electrum
+    """
     def __init__(self, rpc, deterministic_wallets):
         self.rpc = rpc
         self.deterministic_wallets = deterministic_wallets
-        self.last_known_recent_txid = None
+        self.last_known_wallet_txid = None
         self.address_history = None
         self.unconfirmed_txes = None
 
@@ -113,10 +123,10 @@ class TransactionMonitor(object):
         if len(ret) > 0:
             #txid doesnt uniquely identify transactions from listtransactions
             #but the tuple (txid, address) does
-            self.last_known_recent_txid = (ret[-1]["txid"], ret[-1]["address"])
+            self.last_known_wallet_txid = (ret[-1]["txid"], ret[-1]["address"])
         else:
-            self.last_known_recent_txid = None
-        s.debug("last_known_recent_txid = " + str(self.last_known_recent_txid))
+            self.last_known_wallet_txid = None
+        s.debug("last_known_wallet_txid = " + str(self.last_known_wallet_txid))
 
         et = time.time()
         s.debug("address_history =\n" + pprint.pformat(address_history))
@@ -245,15 +255,15 @@ class TransactionMonitor(object):
             ret = self.rpc.call("listtransactions", ["*", tx_request_count, 0,
                 True])
             ret = ret[::-1]
-            if self.last_known_recent_txid == None:
+            if self.last_known_wallet_txid == None:
                 recent_tx_index = len(ret) #=0 means no new txes
                 break
             else:
                 txid_list = [(tx["txid"], tx["address"]) for tx in ret]
                 recent_tx_index = next((i for i, (txid, addr)
                     in enumerate(txid_list) if
-                    txid == self.last_known_recent_txid[0] and
-                    addr == self.last_known_recent_txid[1]), -1)
+                    txid == self.last_known_wallet_txid[0] and
+                    addr == self.last_known_wallet_txid[1]), -1)
                 if recent_tx_index != -1:
                     break
                 tx_request_count *= 2
@@ -264,9 +274,9 @@ class TransactionMonitor(object):
             str(ret))
         #    str([(t["txid"], t["address"]) for t in ret]))
         if len(ret) > 0:
-            self.last_known_recent_txid = (ret[0]["txid"], ret[0]["address"])
-            s.debug("last_known_recent_txid = " + str(
-                self.last_known_recent_txid))
+            self.last_known_wallet_txid = (ret[0]["txid"], ret[0]["address"])
+            s.debug("last_known_wallet_txid = " + str(
+                self.last_known_wallet_txid))
         assert(recent_tx_index != -1)
         if recent_tx_index == 0:
             return set()
@@ -350,6 +360,7 @@ class TestJsonRpc(object):
             for u in self.utxoset:
                 if u["txid"] == params[0] and u["vout"] == params[1]:
                     return u
+            assert 0
         elif method == "getblockheader":
             if params[0] not in self.block_heights:
                 assert 0
@@ -663,6 +674,8 @@ def test():
         test_spk9))) == 1
     assert len(txmonitor9.get_electrum_history(hashes.script_to_scripthash(
         test_spk9_imported))) == 0
+    assert len(rpc.get_imported_addresses()) == 1
+    assert rpc.get_imported_addresses()[0] == test_spk_to_address(test_spk9_imported)
 
     #other possible stuff to test:
     #finding confirmed and unconfirmed tx, in that order, then both confirm

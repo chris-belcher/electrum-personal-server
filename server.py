@@ -320,6 +320,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         import_needed = True
         watch_only_addresses_to_import = wallet_addresses - imported_addresses
 
+    #if addresses need to be imported then return them
     if import_needed:
         addresses_to_import = [hashes.script_to_address(spk, rpc)
             for spk in spks_to_import]
