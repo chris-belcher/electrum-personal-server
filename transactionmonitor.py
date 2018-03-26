@@ -119,9 +119,9 @@ class TransactionMonitor(object):
         s.debug("last_known_recent_txid = " + str(self.last_known_recent_txid))
 
         et = time.time()
+        s.debug("address_history =\n" + pprint.pformat(address_history))
         s.log("Found " + str(count) + " txes. History built in " +
             str(et - st) + "sec")
-        s.debug("address_history =\n" + pprint.pformat(address_history))
         self.address_history = address_history
         self.unconfirmed_txes = unconfirmed_txes
         return True

@@ -3,7 +3,7 @@
 #the electrum protocol uses hash(scriptpubkey) as a key for lookups
 # as an alternative to address or scriptpubkey
 
-import socket, time, json, datetime, struct, binascii, ssl
+import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
 from configparser import ConfigParser, NoSectionError
 
 from jsonrpc import JsonRpc, JsonRpcError
@@ -364,6 +364,27 @@ def import_addresses(rpc, addrs):
     et = time.time()
     debug("imported addresses in " + str(et - st) + " sec")
 
+def obtain_rpc_username_password(datadir):
+    if len(datadir.strip()) == 0:
+        debug("no datadir configuration, checking in default location")
+        systemname = platform.system()
+        #paths from https://en.bitcoin.it/wiki/Data_directory
+        if systemname == "Linux":
+            datadir = os.path.expanduser("~/.bitcoin")
+        elif systemname == "Windows":
+            datadir = os.path.expandvars("%APPDATA%\Bitcoin")
+        elif systemname == "Darwin": #mac os
+            datadir = os.path.expanduser(
+                "~/Library/Application Support/Bitcoin/")
+    cookie_path = os.path.join(datadir, ".cookie")
+    if not os.path.exists(cookie_path):
+        log("Unable to find .cookie file, try setting `datadir` config")
+        return None, None
+    fd = open(cookie_path)
+    username, password = fd.read().strip().split(":")
+    fd.close()
+    return username, password
+
 def main():
     try:
         config = ConfigParser()
@@ -372,10 +393,13 @@ def main():
     except NoSectionError:
         log("Non-existant configuration file `config.cfg`")
         return
+    rpc_u, rpc_p = obtain_rpc_username_password(config.get(
+        "bitcoin-rpc", "datadir"))
+    if rpc_u == None:
+        return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
                 port = int(config.get("bitcoin-rpc", "port")),
-                user = config.get("bitcoin-rpc", "user"),
-                password = config.get("bitcoin-rpc", "password"))
+                user = rpc_u, password = rpc_p)
 
     #TODO somewhere here loop until rpc works and fully sync'd, to allow
     # people to run this script without waiting for their node to fully

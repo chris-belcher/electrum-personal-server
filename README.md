@@ -46,9 +46,9 @@ of any binaries before running them, or compile from source.
 
 Download the latest release or clone the git repository. Enter the directory
 and rename the file `config.cfg_sample` to `config.cfg`, edit this file to
-configure your bitcoin node json-rpc authentication details. Next add your
-wallet master public keys or watch-only addresses to the `[master-public-keys]`
-and `[watch-only-addresses]` sections.
+configure everything about the server. Add your wallet master public keys or
+watch-only addresses to the `[master-public-keys]` and `[watch-only-addresses]`
+sections.
 
 Finally run `./server.py` on Linux or double-click `run-server.bat` on Windows.
 The first time the server is run it will import all configured addresses as
