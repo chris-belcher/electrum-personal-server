@@ -24,6 +24,10 @@ host = localhost
 port = 8332
 #empty means look in the default location
 datadir = 
+#to be used with the multi-wallet feature
+# see https://github.com/bitcoin/bitcoin/blob/master/doc/release-notes/release-notes-0.15.0.md#multi-wallet-support
+# empty means default file, for when using a single wallet file
+wallet_filename =
 
 # how often in seconds to poll for new transactions when electrum not connected
 poll_interval_listening = 30

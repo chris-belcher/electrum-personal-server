@@ -13,10 +13,14 @@ class JsonRpcError(Exception):
 class JsonRpcConnectionError(JsonRpcError): pass
 
 class JsonRpc(object):
-    def __init__(self, host, port, user, password):
+    def __init__(self, host, port, user, password, wallet_filename=""):
         self.host = host
         self.port = port
         self.authstr = "%s:%s" % (user, password)
+        if len(wallet_filename) > 0:
+            self.url = "/wallet/" + wallet_filename
+        else:
+            self.url = ""
         self.queryId = 1
 
     def queryHTTP(self, obj):
@@ -28,7 +32,7 @@ class JsonRpc(object):
         body = json.dumps(obj)
         try:
             conn = http.client.HTTPConnection(self.host, self.port)
-            conn.request("POST", "", body, headers)
+            conn.request("POST", self.url, body, headers)
             response = conn.getresponse()
             if response.status == 401:
                 conn.close()

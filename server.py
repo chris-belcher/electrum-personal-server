@@ -399,8 +399,9 @@ def main():
     if rpc_u == None:
         return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
-                port = int(config.get("bitcoin-rpc", "port")),
-                user = rpc_u, password = rpc_p)
+        port = int(config.get("bitcoin-rpc", "port")),
+        user = rpc_u, password = rpc_p,
+        wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip())
 
     #TODO somewhere here loop until rpc works and fully sync'd, to allow
     # people to run this script without waiting for their node to fully
