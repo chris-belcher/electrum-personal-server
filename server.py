@@ -1,13 +1,13 @@
 #! /usr/bin/python3
 
 import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
-import sys
 from configparser import ConfigParser, NoSectionError
 
-from jsonrpc import JsonRpc, JsonRpcError
-import hashes, merkleproof, deterministicwallet, transactionmonitor
-
-ADDRESSES_LABEL = "electrum-watchonly-addresses"
+from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
+import electrumpersonalserver.hashes as hashes
+import electrumpersonalserver.merkleproof as merkleproof
+import electrumpersonalserver.deterministicwallet as deterministicwallet
+import electrumpersonalserver.transactionmonitor as transactionmonitor
 
 VERSION_NUMBER = "0.1"
 
@@ -304,7 +304,7 @@ def run_electrum_server(hostport, rpc, txmonitor, poll_interval_listening,
 
 def get_scriptpubkeys_to_monitor(rpc, config):
     imported_addresses = set(rpc.call("getaddressesbyaccount",
-        [ADDRESSES_LABEL]))
+        [transactionmonitor.ADDRESSES_LABEL]))
 
     deterministic_wallets = []
     for key in config.options("master-public-keys"):
@@ -373,22 +373,6 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         for addr in watch_only_addresses])
     return False, spks_to_monitor, deterministic_wallets
 
-def import_addresses(rpc, addrs):
-    debug("importing addrs = " + str(addrs))
-    log("Importing " + str(len(addrs)) + " addresses in total")
-    addr_i = iter(addrs)
-    notifications = 10
-    for i in range(notifications):
-        pc = int(100.0 * i / notifications)
-        sys.stdout.write("[" + str(pc) + "%]... ")
-        sys.stdout.flush()
-        for j in range(int(len(addrs) / notifications)):
-            rpc.call("importaddress", [next(addr_i), ADDRESSES_LABEL, False])
-    for a in addr_i: #import the reminder of addresses
-        rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
-    print("[100%]")
-    log("Importing done")
-
 def obtain_rpc_username_password(datadir):
     if len(datadir.strip()) == 0:
         debug("no datadir configuration, checking in default location")
@@ -446,7 +430,8 @@ def main():
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
-        import_addresses(rpc, relevant_spks_addrs)
+        transactionmonitor.import_addresses(rpc, relevant_spks_addrs, debug,
+            log)
         log("Done.\nIf recovering a wallet which already has existing " +
             "transactions, then\nrun the rescan script. If you're confident " +
             "that the wallets are new\nand empty then there's no need to " +

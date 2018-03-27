@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 from configparser import ConfigParser, NoSectionError
-from jsonrpc import JsonRpc, JsonRpcError
+from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
 from datetime import datetime
 import server
 

@@ -1,10 +1,9 @@
 
-import time, pprint, math
+import time, pprint, math, sys
 from decimal import Decimal
 
-from jsonrpc import JsonRpcError
-import server as s
-import hashes
+from electrumpersonalserver.jsonrpc import JsonRpcError
+import electrumpersonalserver.hashes as hashes
 
 #internally this code uses scriptPubKeys, it only converts to bitcoin addresses
 # when importing to bitcoind or checking whether enough addresses have been
@@ -24,6 +23,24 @@ import hashes
 #when a transaction happens paying to an address from a deterministic wallet
 # lookup the position of that address, if its less than gap_limit then
 # import more addresses
+
+ADDRESSES_LABEL = "electrum-watchonly-addresses"
+
+def import_addresses(rpc, addrs, debug, log):
+    debug("importing addrs = " + str(addrs))
+    log("Importing " + str(len(addrs)) + " addresses in total")
+    addr_i = iter(addrs)
+    notifications = 10
+    for i in range(notifications):
+        pc = int(100.0 * i / notifications)
+        sys.stdout.write("[" + str(pc) + "%]... ")
+        sys.stdout.flush()
+        for j in range(int(len(addrs) / notifications)):
+            rpc.call("importaddress", [next(addr_i), ADDRESSES_LABEL, False])
+    for a in addr_i: #import the reminder of addresses
+        rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
+    print("[100%]")
+    log("Importing done")
 
 class TransactionMonitor(object):
     """
@@ -328,7 +345,8 @@ class TransactionMonitor(object):
                             for s in spks]
                         self.debug("importing " + str(len(spks)) +
                             " into change=" + str(change))
-                        s.import_addresses(self.rpc, new_addrs)
+                        import_addresses(self.rpc, new_addrs, self.debug,
+                            self.log)
 
             updated_scripthashes.extend(matching_scripthashes)
             new_history_element = self.generate_new_history_element(tx, txd)
@@ -391,7 +409,7 @@ class TestJsonRpc(object):
     def get_imported_addresses(self):
         return self.imported_addresses
 
-from deterministicwallet import DeterministicWallet
+from electrumpersonalserver.deterministicwallet import DeterministicWallet
 
 class TestDeterministicWallet(DeterministicWallet):
     """Empty deterministic wallets"""
