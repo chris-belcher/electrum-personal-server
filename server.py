@@ -4,6 +4,7 @@
 # as an alternative to address or scriptpubkey
 
 import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
+import sys
 from configparser import ConfigParser, NoSectionError
 
 from jsonrpc import JsonRpc, JsonRpcError
@@ -359,11 +360,17 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 def import_addresses(rpc, addrs):
     debug("importing addrs = " + str(addrs))
     log("Importing " + str(len(addrs)) + " addresses in total")
-    st = time.time()
-    for a in addrs:
+    addr_i = iter(addrs)
+    notifications = 10
+    for i in range(notifications):
+        pc = int(100.0 * i / notifications)
+        sys.stdout.write("[" + str(pc) + "%]... ")
+        sys.stdout.flush()
+        for j in range(int(len(addrs) / notifications)):
+            rpc.call("importaddress", [next(addr_i), ADDRESSES_LABEL, False])
+    for a in addr_i: #import the reminder of addresses
         rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
-    et = time.time()
-    debug("imported addresses in " + str(et - st) + " sec")
+    print("[100%]")
 
 def obtain_rpc_username_password(datadir):
     if len(datadir.strip()) == 0:

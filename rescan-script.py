@@ -3,6 +3,7 @@
 from configparser import ConfigParser, NoSectionError
 from jsonrpc import JsonRpc, JsonRpcError
 from datetime import datetime
+import server
 
 def search_for_block_height_of_date(datestr, rpc):
     target_time = datetime.strptime(datestr, "%d/%m/%Y")
@@ -39,10 +40,14 @@ def main():
     except NoSectionError:
         print("Non-existant configuration file `config.cfg`")
         return
+    rpc_u, rpc_p = server.obtain_rpc_username_password(config.get(
+        "bitcoin-rpc", "datadir"))
+    if rpc_u == None:
+        return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
-                port = int(config.get("bitcoin-rpc", "port")),
-                user = config.get("bitcoin-rpc", "user"),
-                password = config.get("bitcoin-rpc", "password"))
+        port = int(config.get("bitcoin-rpc", "port")),
+        user = rpc_u, password = rpc_p,
+        wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip())
     user_input = input("Enter earliest wallet creation date (DD/MM/YYYY) "
         "or block height to rescan from: ")
     try:
