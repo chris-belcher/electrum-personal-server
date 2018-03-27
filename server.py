@@ -1,8 +1,5 @@
 #! /usr/bin/python3
 
-#the electrum protocol uses hash(scriptpubkey) as a key for lookups
-# as an alternative to address or scriptpubkey
-
 import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
 import sys
 from configparser import ConfigParser, NoSectionError
@@ -14,9 +11,10 @@ ADDRESSES_LABEL = "electrum-watchonly-addresses"
 
 VERSION_NUMBER = "0.1"
 
+DONATION_ADDR = "bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz"
+
 BANNER = \
 """Welcome to Electrum Personal Server
-https://github.com/chris-belcher/electrum-personal-server
 
 Monitoring {detwallets} deterministic wallets, in total {addr} addresses.
 
@@ -25,23 +23,40 @@ Peers: {peers}
 Uptime: {uptime}
 Blocksonly: {blocksonly}
 Pruning: {pruning}
+
+https://github.com/chris-belcher/electrum-personal-server
+
+Donate to help make Electrum Personal Server even better:
+{donationaddr}
+
 """
 
 ##python has demented rules for variable scope, so these
 ## global variables are actually mutable lists
 subscribed_to_headers = [False]
 bestblockhash = [None]
+debug_fd = None
 
 #log for checking up/seeing your wallet, debug for when something has gone wrong
 def debugorlog(line, ttype):
     timestamp = datetime.datetime.now().strftime("%H:%M:%S,%f")
-    print(timestamp + " [" + ttype + "] " + line)
+    return timestamp + " [" + ttype + "] " + line
 
 def debug(line):
-    debugorlog(line, "DEBUG")
+    global debug_fd
+    if debug_fd == None:
+        return
+    debug_fd.write(debugorlog(line, "DEBUG") + "\n")
+    debug_fd.flush()
 
 def log(line):
-    debugorlog(line, "  LOG")
+    global debug_fd
+    line = debugorlog(line, "  LOG")
+    print(line)
+    if debug_fd == None:
+        return
+    debug_fd.write(line + "\n")
+    debug_fd.flush()
 
 def send_response(sock, query, result):
     query["result"] = result
@@ -62,7 +77,7 @@ def on_heartbeat_connected(sock, rpc, txmonitor):
     debug("on heartbeat connected")
     is_tip_updated, header = check_for_new_blockchain_tip(rpc)
     if is_tip_updated:
-        log("Blockchain tip updated")
+        debug("Blockchain tip updated")
         if subscribed_to_headers[0]:
             update = {"method": "blockchain.headers.subscribe",
                 "params": [header]}
@@ -189,9 +204,10 @@ def handle_query(sock, line, rpc, txmonitor):
             peers=networkinfo["connections"],
             uptime=str(datetime.timedelta(seconds=uptime)),
             blocksonly=not networkinfo["localrelay"],
-            pruning=blockchaininfo["pruned"]))
+            pruning=blockchaininfo["pruned"],
+            donationaddr=DONATION_ADDR))
     elif method == "server.donation_address":
-        send_response(sock, query, "bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz")
+        send_response(sock, query, DONATION_ADDR)
     elif method == "server.version":
         send_response(sock, query, ["ElectrumPersonalServer "
             + VERSION_NUMBER, VERSION_NUMBER])
@@ -230,7 +246,7 @@ def create_server_socket(hostport):
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_sock.bind(hostport)
     server_sock.listen(1)
-    log("Listening on " + str(hostport))
+    log("Listening for Electrum Wallet on " + str(hostport))
     return server_sock
 
 def run_electrum_server(hostport, rpc, txmonitor, poll_interval_listening,
@@ -371,6 +387,7 @@ def import_addresses(rpc, addrs):
     for a in addr_i: #import the reminder of addresses
         rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
     print("[100%]")
+    log("Importing done")
 
 def obtain_rpc_username_password(datadir):
     if len(datadir.strip()) == 0:
@@ -394,6 +411,7 @@ def obtain_rpc_username_password(datadir):
     return username, password
 
 def main():
+    global debug_fd
     try:
         config = ConfigParser()
         config.read(["config.cfg"])
@@ -424,7 +442,7 @@ def main():
                 printed_error_msg = True
             time.sleep(5)
 
-    log("Starting Electrum Personal Server")
+    debug_fd = open("debug.log", "w")
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
@@ -435,7 +453,7 @@ def main():
             "rescan, just restart this script")
     else:
         txmonitor = transactionmonitor.TransactionMonitor(rpc,
-            deterministic_wallets)
+            deterministic_wallets, debug, log)
         if not txmonitor.build_address_history(relevant_spks_addrs):
             return
         hostport = (config.get("electrum-server", "host"),

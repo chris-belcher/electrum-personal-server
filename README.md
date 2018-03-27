@@ -28,6 +28,9 @@ Server would download the entire blockchain and scan it for the user's own
 addresses, and therefore don't reveal to anyone else which bitcoin addresses
 they are interested in.
 
+Before Electrum Personal Server, there was no easy way to connect a hardware
+wallet to a full node.
+
 For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
 and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198). See also the Bitcoin Wiki [pages](https://en.bitcoin.it/wiki/Clearing_Up_Misconceptions_About_Full_Nodes) on [full nodes](https://en.bitcoin.it/wiki/Full_node).
@@ -106,11 +109,25 @@ which will display the transaction as `Not Verified` in the wallet interface.
 One day this may be improved on by writing new code for Bitcoin Core. See the
 discussion [here](https://bitcointalk.org/index.php?topic=3167572.0).
 
+#### Further ideas for work
+
+* It would be cool to have a GUI front-end for this. So less technical users
+can set up a personal server helped by a GUI wizard for configuring that
+explains everything. With the rescan script built-in.
+
+* An option to broadcast transactions over tor, so that transaction broadcasting
+doesn't leak the user's IP address.
+
+* The above mentioned caveat about pruning could be improved by writing new code
+for Bitcoin Core.
+
 ## Contributing
 
-I welcome contributions. Please keep lines under 80 characters in length and
-ideally don't add any external dependencies to keep this as easy to install as
-possible.
+This is an open source project which happily accepts coding contributions from
+anyone. Please keep lines under 80 characters in length and ideally don't add
+any external dependencies to keep this as easy to install as possible.
+
+Donate to help make Electrum Personal Server even better: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`.
 
 I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels,
 or by email.

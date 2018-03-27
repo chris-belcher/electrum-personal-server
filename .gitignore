@@ -1,4 +1,5 @@
 *.pyc
 *.swp
 config.cfg
+debug.log
 
