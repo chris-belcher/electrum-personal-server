@@ -54,6 +54,3 @@ port = 50002
 certfile = certs/cert.crt
 keyfile = certs/cert.key
 
-[misc]
-# not implemented yet
-print_debug = false
