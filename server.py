@@ -2,6 +2,7 @@
 
 import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
 from configparser import ConfigParser, NoSectionError, NoOptionError
+import traceback
 
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.hashes as hashes
@@ -427,8 +428,9 @@ def main():
     while bestblockhash[0] == None:
         try:
             bestblockhash[0] = rpc.call("getbestblockhash", [])
-        except TypeError:
+        except JsonRpcError as e:
             if not printed_error_msg:
+                log("Error: " + repr(e))
                 log("Error with bitcoin rpc, check host/port/user/password")
                 printed_error_msg = True
             time.sleep(5)

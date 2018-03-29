@@ -5,11 +5,7 @@ import base64
 import http.client
 import json
 
-class JsonRpcError(Exception):
-    def __init__(self, obj):
-        self.code = obj["code"]
-        self.message = obj["message"]
-
+class JsonRpcError(Exception): pass
 class JsonRpcConnectionError(JsonRpcError): pass
 
 class JsonRpc(object):
