@@ -41,7 +41,7 @@ See also the Electrum bitcoin wallet [website](https://electrum.org/).
 
 * Download and install python3 and a Bitcoin full node version 0.16 or higher. Make sure you
 [verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
-of any binaries before running them, or compile from source.
+of any binaries before running them, or compile from source. The Bitcoin node must have wallet enabled.
 
 * Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases) or clone the git repository. Enter the directory
 and rename the file `config.cfg_sample` to `config.cfg`.
