@@ -335,7 +335,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     watch_only_addresses_to_import = []
     if not watch_only_addresses.issubset(imported_addresses):
         import_needed = True
-        watch_only_addresses_to_import = wallet_addresses - imported_addresses
+        watch_only_addresses_to_import = watch_only_addresses - imported_addresses
 
     #if addresses need to be imported then return them
     if import_needed:
