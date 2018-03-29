@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
-from configparser import ConfigParser, NoSectionError
+from configparser import ConfigParser, NoSectionError, NoOptionError
 
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.hashes as hashes
@@ -403,8 +403,15 @@ def main():
     except NoSectionError:
         log("Non-existant configuration file `config.cfg`")
         return
-    rpc_u, rpc_p = obtain_rpc_username_password(config.get(
-        "bitcoin-rpc", "datadir"))
+    debug_fd = open("debug.log", "w")
+    try:
+        rpc_u = config.get("bitcoin-rpc", "rpc_user")
+        rpc_p = config.get("bitcoin-rpc", "rpc_password")
+        debug("obtaining auth from rpc_user/pass")
+    except NoOptionError:
+        rpc_u, rpc_p = obtain_rpc_username_password(config.get(
+            "bitcoin-rpc", "datadir"))
+        debug("obtaining auth from .cookie")
     if rpc_u == None:
         return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
@@ -426,7 +433,6 @@ def main():
                 printed_error_msg = True
             time.sleep(5)
 
-    debug_fd = open("debug.log", "w")
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
