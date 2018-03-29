@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-from configparser import ConfigParser, NoSectionError
+from configparser import ConfigParser, NoSectionError, NoOptionError
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
 from datetime import datetime
 import server
@@ -40,8 +40,12 @@ def main():
     except NoSectionError:
         print("Non-existant configuration file `config.cfg`")
         return
-    rpc_u, rpc_p = server.obtain_rpc_username_password(config.get(
-        "bitcoin-rpc", "datadir"))
+    try:
+        rpc_u = config.get("bitcoin-rpc", "rpc_user")
+        rpc_p = config.get("bitcoin-rpc", "rpc_password")
+    except NoOptionError:
+        rpc_u, rpc_p = server.obtain_rpc_username_password(config.get(
+            "bitcoin-rpc", "datadir"))
     if rpc_u == None:
         return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
