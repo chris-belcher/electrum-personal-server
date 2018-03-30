@@ -61,8 +61,15 @@ wallet to connect to it in `Tools` -> `Server`. By default the server details
 are `localhost` if running on the same machine. Make sure the port number
 matches what is written in `config.cfg` (port 50002 by default).
 
-Electrum Personal Server also works on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet).
-Electrum can be started in testnet mode with the command line flag `--testnet`.
+A guide for installing Electrum Personal Server on a Raspberry Pi can be found
+[here](https://github.com/Stadicus/guides/blob/master/raspibolt/raspibolt_64_electrum.md).
+
+By default Electrum will connect to several Electrum servers to obtain block
+headers. This can be avoided by starting Electrum on the command line with the
+`--oneserver` flag.
+
+Electrum Personal Server also works on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet). The Electrum wallet can be started in testnet mode with the command line flag `--testnet`.
+
 
 #### Exposure to the Internet
 
@@ -127,8 +134,7 @@ any external dependencies to keep this as easy to install as possible.
 
 Donate to help make Electrum Personal Server even better: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`.
 
-I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels,
-or by email.
+I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels, by email or on [twitter](https://twitter.com/chris_belcher_/).
 
 My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
 
