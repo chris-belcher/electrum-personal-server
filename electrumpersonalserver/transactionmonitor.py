@@ -106,6 +106,8 @@ class TransactionMonitor(object):
                     continue
                 if tx["category"] not in ("receive", "send"):
                     continue
+                if tx["confirmations"] == -1:
+                    continue #conflicted
                 if tx["txid"] in obtained_txids:
                     continue
                 self.debug("adding obtained tx=" + str(tx["txid"]))
@@ -319,6 +321,8 @@ class TransactionMonitor(object):
                 continue
             if tx["category"] not in ("receive", "send"):
                 continue
+            if tx["confirmations"] == -1:
+                continue #conflicted
             if tx["txid"] in obtained_txids:
                 continue
             obtained_txids.add(tx["txid"])
@@ -711,6 +715,29 @@ def test():
     assert len(rpc.get_imported_addresses()) == 1
     assert rpc.get_imported_addresses()[0] == test_spk_to_address(
         test_spk9_imported)
+
+    ###conflicted transaction
+    test_spk10 = "deadbeefdeadbeefcccc"
+    test_paying_in_tx10 = {
+        "txid": "placeholder-test-txid10",
+        "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk10}}],
+        "address": test_spk_to_address(test_spk10),
+        "category": "receive",
+        "confirmations": -1,
+        "hex": "placeholder-test-txhex10"
+    }
+    rpc = TestJsonRpc([test_paying_in_tx10], [], {})
+    txmonitor10 = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    assert txmonitor10.build_address_history([test_spk10])
+    assert len(txmonitor10.address_history) == 1
+    assert len(txmonitor10.get_electrum_history(hashes.script_to_scripthash(
+        test_spk10))) == 0 #shouldnt show up after build history
+    rpc.add_transaction(test_paying_in_tx10)
+    assert len(list(txmonitor10.check_for_updated_txes())) == 0
+    assert len(txmonitor10.get_electrum_history(hashes.script_to_scripthash(
+        test_spk10))) == 0 #shouldnt show up after tx is added
+
 
     #other possible stuff to test:
     #finding confirmed and unconfirmed tx, in that order, then both confirm
