@@ -1,8 +1,8 @@
 #! /usr/bin/python3
 
-import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
+import socket, time, json, datetime, struct, binascii, ssl, os, os.path
 from configparser import ConfigParser, NoSectionError, NoOptionError
-import traceback, sys
+import traceback, sys, platform
 
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.hashes as hashes
@@ -336,7 +336,8 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     watch_only_addresses_to_import = []
     if not watch_only_addresses.issubset(imported_addresses):
         import_needed = True
-        watch_only_addresses_to_import = watch_only_addresses - imported_addresses
+        watch_only_addresses_to_import = (watch_only_addresses -
+            imported_addresses)
 
     #if addresses need to be imported then return them
     if import_needed:
@@ -397,19 +398,22 @@ def obtain_rpc_username_password(datadir):
 
 def main():
     global debug_fd
-    if len(sys.argv) == 2 and sys.argv[1] == "--help":
-        print("Usage: ./server.py <path/to/config.cfg>\nRunning without arg"
-            + " defaults to `config.cfg`")
-        return
+    if len(sys.argv) == 2:
+        if sys.argv[1] == "--help":
+            print("Usage: ./server.py <path/to/current/working/dir>\nRunning" +
+                " without arg defaults to the directory you're in right now")
+            return
+        else:
+            os.chdir(sys.argv[1])
+    debug_fd = open("debug.log", "w")
+    debug("current working directory is: " + os.getcwd())
     try:
-        configfile = sys.argv[1] if len(sys.argv) == 2 else "config.cfg"
         config = ConfigParser()
-        config.read(configfile)
+        config.read("config.cfg")
         config.options("master-public-keys")
     except NoSectionError:
         log("Non-existant configuration file `config.cfg`")
         return
-    debug_fd = open("debug.log", "w")
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
         rpc_p = config.get("bitcoin-rpc", "rpc_password")
