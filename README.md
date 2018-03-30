@@ -97,8 +97,6 @@ When trying this, make sure you report any crashes, odd behaviour, transactions
 appearing as `Not Verified` or times when Electrum disconnects (which
 indicates the server behaved unexpectedly).
 
-Someone should try running this on a Raspberry PI.
-
 #### Caveat about pruning
 
 Electrum Personal Server is fully compatible with pruning, except for one thing.

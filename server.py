@@ -2,7 +2,7 @@
 
 import socket, time, json, datetime, struct, binascii, ssl, os.path, platform
 from configparser import ConfigParser, NoSectionError, NoOptionError
-import traceback
+import traceback, sys
 
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.hashes as hashes
@@ -397,9 +397,14 @@ def obtain_rpc_username_password(datadir):
 
 def main():
     global debug_fd
+    if len(sys.argv) == 2 and sys.argv[1] == "--help":
+        print("Usage: ./server.py <path/to/config.cfg>\nRunning without arg"
+            + " defaults to `config.cfg`")
+        return
     try:
+        configfile = sys.argv[1] if len(sys.argv) == 2 else "config.cfg"
         config = ConfigParser()
-        config.read(["config.cfg"])
+        config.read(configfile)
         config.options("master-public-keys")
     except NoSectionError:
         log("Non-existant configuration file `config.cfg`")
