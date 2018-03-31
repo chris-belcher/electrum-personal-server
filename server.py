@@ -166,8 +166,14 @@ def handle_query(sock, line, rpc, txmonitor):
         for i in range(count):
             header = rpc.call("getblockheader", [the_hash])
             #add header hex to result
+            if "previousblockhash" in header:
+                prevblockhash = header["previousblockhash"]
+            else:
+                # this is the genesis block
+                # it does not have a previous block hash
+                prevblockhash = "00"*32
             h1 = struct.pack("<i32s32sIII", header["version"],
-                binascii.unhexlify(header["previousblockhash"])[::-1],
+                binascii.unhexlify(prevblockhash)[::-1],
                 binascii.unhexlify(header["merkleroot"])[::-1],
                 header["time"], int(header["bits"], 16), header["nonce"])
             result.extend(h1)
@@ -220,8 +226,14 @@ def handle_query(sock, line, rpc, txmonitor):
 
 def get_block_header(rpc, blockhash):
     rpc_head = rpc.call("getblockheader", [blockhash])
+    if "previousblockhash" in rpc_head:
+        prevblockhash = rpc_head["previousblockhash"]
+    else:
+        # this is the genesis block
+        # it does not have a previous block hash
+        prevblockhash = "00"*32
     header = {"block_height": rpc_head["height"],
-            "prev_block_hash": rpc_head["previousblockhash"],
+            "prev_block_hash": prevblockhash,
             "timestamp": rpc_head["time"],
             "merkle_root": rpc_head["merkleroot"],
             "version": rpc_head["version"],
