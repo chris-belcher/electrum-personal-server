@@ -1,0 +1,43 @@
+
+# Release v0.1.1 - (1st April 2018)
+
+Bugfix release, thanks to 
+
+* Added option to manually configure rpc_user and rpc_password, instead of using
+  the .cookie file.
+* Made json-rpc error messages have more detail.
+* Added method for user to configure electrum personal server's current working
+  directory, which is useful for running it from systemd or another automated
+  tool.
+* Updated readme file to add information that tripped people up.
+* Now handles conflicted transactions.
+
+
+# Beta release v0.1 - (29th Mar 2018)
+
+Released first beta version.
+
+* Merkle proofs supported using bitcoind's `gettxoutproof` RPC call.
+* Deterministic wallets implemented which support all Electrum master public
+  key formats.
+* Created rescan script which allows rescanning from a given block height
+  instead of scanning the entire blockchain. Also allows the user to input a
+  dd/mm/yyyy timestamp, which is converted to a block height (with 2 weeks
+  safety) to rescan from there.
+* Automated tests created for merkle proofs, deterministic wallets and
+  monitoring of transactions.
+* SSL server socket is used and a default SSL certificate is included in the
+  repository, which users can replace with their own.
+* No longer depends on pybitcointools' transaction code. That package is only
+  used for bip32 support for deterministic wallets. Bech32 addresses now
+  supported.
+* RPC auth details can be obtained from the .cookie file.
+* Bitcoin Core's multi-wallet feature supported.
+
+
+# Alpha release - (8th Feb 2018)
+
+Released first alpha version which builds address history from bitcoin'd
+wallet, monitors addresses for new transactions and accepts connections from
+Electrum wallet.
+
