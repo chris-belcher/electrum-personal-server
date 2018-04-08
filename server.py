@@ -70,6 +70,11 @@ def send_update(sock, update):
     sock.sendall(json.dumps(update).encode('utf-8') + b'\n')
     debug('<= ' + json.dumps(update))
 
+def send_error(sock, nid, error):
+    payload = {"error": error, "jsonrpc": "2.0", "id": nid}
+    sock.sendall(json.dumps(query).encode('utf-8') + b'\n')
+    debug('<= ' + json.dumps(query))
+
 def on_heartbeat_listening(txmonitor):
     debug("on heartbeat listening")
     txmonitor.check_for_updated_txes()
@@ -149,9 +154,15 @@ def handle_query(sock, line, rpc, txmonitor):
         new_bestblockhash, header = get_current_header(rpc)
         send_response(sock, query, header)
     elif method == "blockchain.block.get_header":
-        blockhash = rpc.call("getblockhash", [query["params"][0]])
-        header = get_block_header(rpc, blockhash)
-        send_response(sock, query, header)
+        height = query["params"][0]
+        try:
+            blockhash = rpc.call("getblockhash", [height])
+            header = get_block_header(rpc, blockhash)
+            send_response(sock, query, header)
+        except JsonRpcError:
+            error = {"message": "height " + str(height) + " out of range",
+                "code": -1}
+            send_error(sock, query["id"], error)
     elif method == "blockchain.block.get_chunk":
         RETARGET_INTERVAL = 2016
         index = query["params"][0]
