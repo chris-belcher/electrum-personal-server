@@ -252,7 +252,7 @@ class TransactionMonitor(object):
         return updated_scrhashes
 
     def check_for_confirmations(self):
-        confirmed_txes_scrhashes = []
+        tx_scrhashes_removed_from_mempool = []
         self.debug("check4con unconfirmed_txes = "
             + pprint.pformat(self.unconfirmed_txes))
         for uc_txid, scrhashes in self.unconfirmed_txes.items():
@@ -260,20 +260,24 @@ class TransactionMonitor(object):
             self.debug("uc_txid=" + uc_txid + " => " + str(tx))
             if tx["confirmations"] == 0:
                 continue #still unconfirmed
-            self.log("A transaction confirmed: " + uc_txid)
-            confirmed_txes_scrhashes.append((uc_txid, scrhashes))
-            block = self.rpc.call("getblockheader", [tx["blockhash"]])
+            tx_scrhashes_removed_from_mempool.append((uc_txid, scrhashes))
+            if tx["confirmations"] > 0:
+                self.log("A transaction confirmed: " + uc_txid)
+                block = self.rpc.call("getblockheader", [tx["blockhash"]])
+            elif tx["confirmations"] == -1:
+                self.log("A transaction became conflicted: " + uc_txid)
             for scrhash in scrhashes:
                 #delete the old unconfirmed entry in address_history
                 deleted_entries = [h for h in self.address_history[scrhash][
                     "history"] if h["tx_hash"] == uc_txid]
                 for d_his in deleted_entries:
                     self.address_history[scrhash]["history"].remove(d_his)
-                #create the new confirmed entry in address_history
-                self.address_history[scrhash]["history"].append({"height":
-                    block["height"], "tx_hash": uc_txid})
+                if tx["confirmations"] > 0:
+                    #create the new confirmed entry in address_history
+                    self.address_history[scrhash]["history"].append({"height":
+                        block["height"], "tx_hash": uc_txid})
         updated_scrhashes = set()
-        for tx, scrhashes in confirmed_txes_scrhashes:
+        for tx, scrhashes in tx_scrhashes_removed_from_mempool:
             del self.unconfirmed_txes[tx]
             updated_scrhashes.update(set(scrhashes))
         return updated_scrhashes
@@ -440,8 +444,11 @@ def assert_address_history_tx(address_history, spk, height, txid, subscribed):
     assert history_element["subscribed"] == subscribed
 
 def test():
+    #debugf = lambda x: print("[DEBUG] " + x)
+    #logf = lambda x: print("[  LOG] " + x)
     debugf = lambda x: x
-    logf = lambda x: x
+    logf = debugf
+
     #empty deterministic wallets
     deterministic_wallets = [TestDeterministicWallet()]
     test_spk1 = "deadbeefdeadbeefdeadbeefdeadbeef"
@@ -716,28 +723,71 @@ def test():
     assert rpc.get_imported_addresses()[0] == test_spk_to_address(
         test_spk9_imported)
 
-    ###conflicted transaction
-    test_spk10 = "deadbeefdeadbeefcccc"
-    test_paying_in_tx10 = {
-        "txid": "placeholder-test-txid10",
+    ###conflicted transaction in history being sync'd
+    test_spkA = "deadbeefdeadbeefcccc"
+    test_paying_in_txA = {
+        "txid": "placeholder-test-txidA",
         "vin": [{"txid": "placeholder-unknown-input-txid", "vout": 0}],
-        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spk10}}],
-        "address": test_spk_to_address(test_spk10),
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spkA}}],
+        "address": test_spk_to_address(test_spkA),
         "category": "receive",
         "confirmations": -1,
-        "hex": "placeholder-test-txhex10"
+        "hex": "placeholder-test-txhexA"
     }
-    rpc = TestJsonRpc([test_paying_in_tx10], [], {})
-    txmonitor10 = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
-    assert txmonitor10.build_address_history([test_spk10])
-    assert len(txmonitor10.address_history) == 1
-    assert len(txmonitor10.get_electrum_history(hashes.script_to_scripthash(
-        test_spk10))) == 0 #shouldnt show up after build history
-    rpc.add_transaction(test_paying_in_tx10)
-    assert len(list(txmonitor10.check_for_updated_txes())) == 0
-    assert len(txmonitor10.get_electrum_history(hashes.script_to_scripthash(
-        test_spk10))) == 0 #shouldnt show up after tx is added
+    rpc = TestJsonRpc([test_paying_in_txA], [], {})
+    txmonitorA = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    assert txmonitorA.build_address_history([test_spkA])
+    assert len(txmonitorA.address_history) == 1
+    assert len(txmonitorA.get_electrum_history(hashes.script_to_scripthash(
+        test_spkA))) == 0 #shouldnt show up after build history
+    rpc.add_transaction(test_paying_in_txA)
+    assert len(list(txmonitorA.check_for_updated_txes())) == 0
+    assert len(txmonitorA.get_electrum_history(hashes.script_to_scripthash(
+        test_spkA))) == 0 #shouldnt show up after tx is added
 
+    ###an unconfirmed tx being broadcast, another conflicting tx being
+    ### confirmed, the first tx then becomes conflicted
+    test_spkB = "deadbeefdeadbeefbb"
+    test_containing_blockB = "blockhash-placeholderB"
+    input_utxoB = {"txid": "placeholder-unknown-input-txid", "vout": 0,
+        "value": 1, "confirmations": 1}
+    test_paying_in_txB = {
+        "txid": "placeholder-test-txidB",
+        "vin": [input_utxoB],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spkB}}],
+        "address": test_spk_to_address(test_spkB),
+        "category": "receive",
+        "confirmations": 0,
+        "blockhash": test_containing_blockB,
+        "hex": "placeholder-test-txhexB"
+    }
+    test_paying_in_txB_2 = {
+        "txid": "placeholder-test-txidB_2",
+        "vin": [input_utxoB],
+        "vout": [{"value": 1, "scriptPubKey": {"hex": test_spkB}}],
+        "address": test_spk_to_address(test_spkB),
+        "category": "receive",
+        "confirmations": 0,
+        "blockhash": test_containing_blockB,
+        "hex": "placeholder-test-txhexB"
+    }
+    rpc = TestJsonRpc([test_paying_in_txB], [input_utxoB],
+        {test_containing_blockB: 10})
+    txmonitorB = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    assert txmonitorB.build_address_history([test_spkB])
+    assert len(txmonitorB.address_history) == 1
+    shB = hashes.script_to_scripthash(test_spkB)
+    assert len(txmonitorB.get_electrum_history(shB)) == 1
+    assert_address_history_tx(txmonitorB.address_history, spk=test_spkB,
+        height=0, txid=test_paying_in_txB["txid"], subscribed=False)
+    # a conflicting transaction confirms
+    rpc.add_transaction(test_paying_in_txB_2)
+    test_paying_in_txB["confirmations"] = -1
+    test_paying_in_txB_2["confirmations"] = 1
+    assert len(list(txmonitorB.check_for_updated_txes())) == 0
+    assert len(txmonitorB.get_electrum_history(shB)) == 1
+    assert_address_history_tx(txmonitorB.address_history, spk=test_spkB,
+        height=10, txid=test_paying_in_txB_2["txid"], subscribed=False)
 
     #other possible stuff to test:
     #finding confirmed and unconfirmed tx, in that order, then both confirm
