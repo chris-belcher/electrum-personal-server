@@ -21,7 +21,7 @@ PUBLIC = [  b'\x04\x88\xb2\x1e', #mainnet p2pkh or p2sh xpub
             b'\x02\xaa\x7e\xd3', #mainnet p2wsh Zpub
             b'\x04\x35\x87\xcf', #testnet p2pkh or p2sh tpub
             b'\x04\x4a\x52\x62', #testnet p2wpkh-p2sh upub
-            b'\x02\x42\x85\xef', #testnet p2wsh-p2sh Upub
+            b'\x02\x42\x89\xef', #testnet p2wsh-p2sh Upub
             b'\x04\x5f\x1c\xf6', #testnet p2wpkh vpub
             b'\x02\x57\x54\x83' #testnet p2wsh Vpub
         ]
