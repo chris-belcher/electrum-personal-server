@@ -72,8 +72,8 @@ def send_update(sock, update):
 
 def send_error(sock, nid, error):
     payload = {"error": error, "jsonrpc": "2.0", "id": nid}
-    sock.sendall(json.dumps(query).encode('utf-8') + b'\n')
-    debug('<= ' + json.dumps(query))
+    sock.sendall(json.dumps(payload).encode('utf-8') + b'\n')
+    debug('<= ' + json.dumps(payload))
 
 def on_heartbeat_listening(txmonitor):
     debug("on heartbeat listening")

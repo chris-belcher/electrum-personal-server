@@ -1,25 +1,25 @@
 # Electrum Personal Server
 
-Electrum Personal Server is an implementation of the Electrum server protocol
-which fulfills the specific need of using the Electrum wallet with full node
-verification and privacy, but without the heavyweight server backend, for a
-single user. It allows the user to benefit from all of Bitcoin Core's
-resource-saving features like
+Electrum Personal Server aims to make using Electrum bitcoin wallet more secure
+and more private.
+
+It is an implementation of the Electrum server protocol which fulfills the
+specific need of using the Electrum wallet backed by a full node, but without
+the heavyweight server backend, for a single user. It allows the user to
+benefit from all of Bitcoin Core's resource-saving features like
 [pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning),
 [blocksonly](https://bitcointalk.org/index.php?topic=1377345.0) and disabled
 txindex. All of Electrum's feature-richness like hardware wallet integration,
 [multisignature wallets](http://docs.electrum.org/en/latest/multisig.html),
 [offline signing](http://docs.electrum.org/en/latest/coldstorage.html),
 [mnemonic recovery phrases](https://en.bitcoin.it/wiki/Mnemonic_phrase)
-and so on can still be used, but backed by the user's own full node.
+and so on can still be used, but connected only to the user's own full node.
 
 Full node wallets are important in bitcoin because they are an big part of what
 makes the system be trustless. No longer do people have to trust a financial
 institution like a bank or paypal, they can run software on their own
 computers. If bitcoin is digital gold, then a full node wallet is your own
-personal goldsmith who checks for you that received payments are genuine. You
-wouldn't accept large amounts of cash or gold coins without checking they are
-actually genuine, the same applies for bitcoin.
+personal goldsmith who checks for you that received payments are genuine.
 
 Full node wallets are also important for privacy. Using Electrum under default
 configuration requires it to send all your bitcoin addresses to some server.
@@ -50,11 +50,11 @@ and rename the file `config.cfg_sample` to `config.cfg`.
 wallet master public keys or watch-only addresses to the `[master-public-keys]`
 and `[watch-only-addresses]` sections. Master public keys for an Electrum wallet
 can be found in the Electrum client menu `Wallet` -> `Information`.
-
 * Run `./server.py` on Linux or double-click `run-server.bat` on Windows.
 The first time the server is run it will import all configured addresses as
 watch-only into the Bitcoin node, and then exit. If the wallets contain 
-historical transactions you can use the rescan script to make them appear.
+historical transactions you can use the rescan script (`./rescan-script.py` or
+`rescan-script.bat`) to make them appear.
 
 * Run the server again which will start Electrum Personal Server. Tell Electrum
 wallet to connect to it in `Tools` -> `Server`. By default the server details
@@ -92,6 +92,10 @@ and you may need to rescan, so it loses the "instant on" feature of Electrum
 wallet. Other Electrum server implementations will be able to sync your wallet
 immediately even if you have historical transactions, and they can serve
 multiple Electrum connections at once.
+
+Traditional Electrum servers inherently are not very scalable and use many
+resources which push people towards using centralized solutions. This is what
+we'd like to avoid with Electrum Personal Server.
 
 Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/) if you're interested in this sort of thing.
 
