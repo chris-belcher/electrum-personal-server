@@ -69,7 +69,7 @@ headers. This can be avoided by starting Electrum on the command line with the
 `--oneserver` flag.
 
 By using the `--oneserver --server 127.0.0.1:50002:s` flags, the autoconnect
-button in the GUI disabled to prevent accidentally clicking on it.
+button in the GUI can be disabled to prevent accidentally clicking on it.
 
 Electrum Personal Server also works on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet). The Electrum wallet can be started in testnet mode with the command line flag `--testnet`.
 
