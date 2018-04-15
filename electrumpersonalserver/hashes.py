@@ -1,5 +1,5 @@
 
-import hashlib, binascii
+import hashlib, binascii, math
 
 ## stuff copied from electrum's source
 
@@ -76,4 +76,21 @@ def address_to_script(addr, rpc):
 
 def address_to_scripthash(addr, rpc):
     return script_to_scripthash(address_to_script(addr, rpc))
+
+# doesnt really fit here but i dont want to clutter up server.py
+
+unit_list = list(zip(['B', 'kB', 'MB', 'GB', 'TB', 'PB'], [0, 0, 1, 2, 2, 2]))
+
+def bytes_fmt(num):
+    """Human friendly file size"""
+    if num > 1:
+        exponent = min(int(math.log(num, 1000)), len(unit_list) - 1)
+        quotient = float(num) / 1000**exponent
+        unit, num_decimals = unit_list[exponent]
+        format_string = '{:.%sf} {}' % (num_decimals)
+        return format_string.format(quotient, unit)
+    if num == 0:
+        return '0 bytes'
+    if num == 1:
+        return '1 byte'
 

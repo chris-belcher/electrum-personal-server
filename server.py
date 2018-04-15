@@ -24,6 +24,8 @@ Peers: {peers}
 Uptime: {uptime}
 Blocksonly: {blocksonly}
 Pruning: {pruning}
+Download: {recvbytes}
+Upload: {sentbytes}
 
 https://github.com/chris-belcher/electrum-personal-server
 
@@ -180,9 +182,7 @@ def handle_query(sock, line, rpc, txmonitor):
             if "previousblockhash" in header:
                 prevblockhash = header["previousblockhash"]
             else:
-                # this is the genesis block
-                # it does not have a previous block hash
-                prevblockhash = "00"*32
+                prevblockhash = "00"*32 #genesis block
             h1 = struct.pack("<i32s32sIII", header["version"],
                 binascii.unhexlify(prevblockhash)[::-1],
                 binascii.unhexlify(header["merkleroot"])[::-1],
@@ -215,6 +215,7 @@ def handle_query(sock, line, rpc, txmonitor):
         networkinfo = rpc.call("getnetworkinfo", [])
         blockchaininfo = rpc.call("getblockchaininfo", [])
         uptime = rpc.call("uptime", [])
+        nettotals = rpc.call("getnettotals", [])
         send_response(sock, query, BANNER.format(
             detwallets=len(txmonitor.deterministic_wallets),
             addr=len(txmonitor.address_history),
@@ -223,6 +224,8 @@ def handle_query(sock, line, rpc, txmonitor):
             uptime=str(datetime.timedelta(seconds=uptime)),
             blocksonly=not networkinfo["localrelay"],
             pruning=blockchaininfo["pruned"],
+            recvbytes=hashes.bytes_fmt(nettotals["totalbytesrecv"]),
+            sentbytes=hashes.bytes_fmt(nettotals["totalbytessent"]),
             donationaddr=DONATION_ADDR))
     elif method == "server.donation_address":
         send_response(sock, query, DONATION_ADDR)
@@ -240,9 +243,7 @@ def get_block_header(rpc, blockhash):
     if "previousblockhash" in rpc_head:
         prevblockhash = rpc_head["previousblockhash"]
     else:
-        # this is the genesis block
-        # it does not have a previous block hash
-        prevblockhash = "00"*32
+        prevblockhash = "00"*32 #genesis block
     header = {"block_height": rpc_head["height"],
             "prev_block_hash": prevblockhash,
             "timestamp": rpc_head["time"],
@@ -258,8 +259,6 @@ def get_current_header(rpc):
     return new_bestblockhash, header
 
 def check_for_new_blockchain_tip(rpc):
-    #TODO might not handle more than one block appearing, might need to
-    # use a "last known block" similar to the transaction code
     new_bestblockhash, header = get_current_header(rpc)
     is_tip_new = bestblockhash[0] != new_bestblockhash
     bestblockhash[0] = new_bestblockhash
