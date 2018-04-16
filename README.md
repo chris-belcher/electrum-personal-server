@@ -64,12 +64,11 @@ matches what is written in `config.cfg` (port 50002 by default).
 A guide for installing Electrum Personal Server on a Raspberry Pi can be found
 [here](https://github.com/Stadicus/guides/blob/master/raspibolt/raspibolt_64_electrum.md).
 
-By default Electrum will connect to several Electrum servers to obtain block
-headers. This can be avoided by starting Electrum on the command line with the
-`--oneserver` flag.
-
-By using the `--oneserver --server 127.0.0.1:50002:s` flags, the autoconnect
-button in the GUI can be disabled to prevent accidentally clicking on it.
+Pro Tip: run Electrum wallet with the command line arguments `--oneserver --server localhost:50002:s`.
+This stops Electrum connecting to several other servers to obtain block
+headers; and locks Electrum to connect only to your server, disabling the GUI
+button to stop accidental connections. This helps avoid a user accidentally
+ruining their privacy by connecting to public Electrum servers.
 
 Electrum Personal Server also works on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet). The Electrum wallet can be started in testnet mode with the command line flag `--testnet`.
 

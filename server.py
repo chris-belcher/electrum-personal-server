@@ -196,7 +196,7 @@ def handle_query(sock, line, rpc, txmonitor):
         try:
             result = rpc.call("sendrawtransaction", [query["params"][0]])
         except JsonRpcError as e:
-            result = e.message
+            result = str(e)
         debug("tx broadcast result = " + str(result))
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
