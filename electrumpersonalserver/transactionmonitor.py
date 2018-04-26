@@ -25,6 +25,7 @@ import electrumpersonalserver.hashes as hashes
 # import more addresses
 
 ADDRESSES_LABEL = "electrum-watchonly-addresses"
+CONFIRMATIONS_SAFE_FROM_REORG = 100
 
 def import_addresses(rpc, addrs, debug, log):
     debug("importing addrs = " + str(addrs))
@@ -55,6 +56,7 @@ class TransactionMonitor(object):
         self.last_known_wallet_txid = None
         self.address_history = None
         self.unconfirmed_txes = None
+        self.reorganizable_txes = None
 
     def get_electrum_history_hash(self, scrhash):
         return hashes.get_status_electrum( ((h["tx_hash"], h["height"])
@@ -86,6 +88,7 @@ class TransactionMonitor(object):
             address_history[hashes.script_to_scripthash(spk)] = {'history': [],
                 'subscribed': False}
         wallet_addr_scripthashes = set(address_history.keys())
+        self.reorganizable_txes = []
         #populate history
         #which is a blockheight-ordered list of ("txhash", height)
         #unconfirmed transactions go at the end as ("txhash", 0, fee)
@@ -143,6 +146,10 @@ class TransactionMonitor(object):
                 for scripthash in sh_to_add:
                     address_history[scripthash][
                         "history"].append(new_history_element)
+                if tx["confirmations"] > 0 and (tx["confirmations"] <
+                        CONFIRMATIONS_SAFE_FROM_REORG):
+                    self.reorganizable_txes.append((tx["txid"], tx["blockhash"],
+                        new_history_element["height"], sh_to_add))
                 count += 1
 
         unconfirmed_txes = {}
@@ -154,6 +161,7 @@ class TransactionMonitor(object):
                 else:
                     unconfirmed_txes[u["tx_hash"]] = [scrhash]
         self.debug("unconfirmed_txes = " + str(unconfirmed_txes))
+        self.debug("reorganizable_txes = " + str(self.reorganizable_txes))
         if len(ret) > 0:
             #txid doesnt uniquely identify transactions from listtransactions
             #but the tuple (txid, address) does
@@ -237,18 +245,103 @@ class TransactionMonitor(object):
     def check_for_updated_txes(self):
         updated_scrhashes1 = self.check_for_new_txes()
         updated_scrhashes2 = self.check_for_confirmations()
-        updated_scrhashes = updated_scrhashes1 | updated_scrhashes2
+        updated_scrhashes3 = self.check_for_reorganizations()
+        updated_scrhashes = (updated_scrhashes1 | updated_scrhashes2
+            | updated_scrhashes3)
         for ush in updated_scrhashes:
             his = self.address_history[ush]
             self.sort_address_history_list(his)
         if len(updated_scrhashes) > 0:
             self.debug("new tx address_history =\n"
                 + pprint.pformat(self.address_history))
-            self.debug("unconfirmed txes = " +
-                pprint.pformat(self.unconfirmed_txes))
+            self.debug("unconfirmed txes = "
+                + pprint.pformat(self.unconfirmed_txes))
+            self.debug("self.reorganizable_txes = "
+                + pprint.pformat(self.reorganizable_txes))
             self.debug("updated_scripthashes = " + str(updated_scrhashes))
         updated_scrhashes = filter(lambda sh:self.address_history[sh][
             "subscribed"], updated_scrhashes)
+        return updated_scrhashes
+
+    #tests:
+    #build address history where reorgable txes are found
+    #an unconfirmed tx arrives, gets confirmed, reaches the safe threshold
+    #   and gets removed from list
+    #a confirmed tx arrives, reaches safe threshold and gets removed
+    #an unconfirmed tx arrives, confirms, gets reorgd out, returns to
+    #   unconfirmed
+    #an unconfirmed tx arrives, confirms, gets reorgd out and conflicted
+    #an unconfirmed tx arrives, confirms, gets reorgd out and confirmed at
+    #   a different height
+    #an unconfirmed tx arrives, confirms, gets reorgd out and confirmed in
+    #   the same height
+
+    def check_for_reorganizations(self):
+        elements_removed = []
+        elements_added = []
+        updated_scrhashes = set()
+        self.debug("reorganizable_txes = " + str(self.reorganizable_txes))
+        for reorgable_tx in self.reorganizable_txes:
+            txid, blockhash, height, scrhashes = reorgable_tx
+            tx = self.rpc.call("gettransaction", [txid])
+            if tx["confirmations"] >= CONFIRMATIONS_SAFE_FROM_REORG:
+                elements_removed.append(reorgable_tx)
+                self.debug("Transaction considered safe from reorg: " + txid)
+                continue
+            if tx["confirmations"] < 1:
+                updated_scrhashes.update(scrhashes)
+                if tx["confirmations"] == 0:
+                    #transaction became unconfirmed in a reorg
+                    self.log("A transaction was reorg'd out: " + txid)
+                    elements_removed.append(reorgable_tx)
+                    if txid in self.unconfirmed_txes:
+                        self.unconfirmed_txes[txid].extend(scrhashes)
+                    else:
+                        self.unconfirmed_txes[txid] = list(scrhashes)
+
+                    #add to history as unconfirmed
+                    txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
+                    new_history_element = self.generate_new_history_element(tx,
+                        txd)
+                    for scrhash in scrhashes:
+                        self.address_history[scrhash]["history"].append(
+                            new_history_element)
+
+                elif tx["confirmations"] == -1:
+                    #tx became conflicted in reorg i.e. a double spend
+                    self.log("A transaction was double spent! " + txid)
+                    elements_removed.append(reorgable_tx)
+            elif tx["blockhash"] != blockhash:
+                block = self.rpc.call("getblockheader", [tx["blockhash"]])
+                if block["height"] == height: #reorg but height is the same
+                    continue
+                #reorged but still confirmed at a different height
+                updated_scrhashes.update(scrhashes)
+                self.log("A transaction was reorg'd but still confirmed at " +
+                    "same height: " + txid)
+                #update history with the new height
+                for scrhash in scrhashes:
+                    for h in self.address_history[scrhash]["history"]:
+                        if h["tx_hash"] == txid:
+                            h["height"] = block["height"]
+                #modify the reorgable tx with new hash and height
+                elements_removed.append(reorgable_tx)
+                elements_added.append((txid, tx["blockhash"], block["height"],
+                    scrhashes))
+                continue
+            else:
+                continue #no change to reorgable tx
+            #remove tx from history
+            for scrhash in scrhashes:
+                deleted_entries = [h for h in self.address_history[scrhash][
+                    "history"] if h["tx_hash"] == txid and
+                    h["height"] == height]
+                for d_his in deleted_entries:
+                    self.address_history[scrhash]["history"].remove(d_his)
+
+        for reorged_tx in elements_removed:
+            self.reorganizable_txes.remove(reorged_tx)
+        self.reorganizable_txes.extend(elements_added)
         return updated_scrhashes
 
     def check_for_confirmations(self):
@@ -276,6 +369,9 @@ class TransactionMonitor(object):
                     #create the new confirmed entry in address_history
                     self.address_history[scrhash]["history"].append({"height":
                         block["height"], "tx_hash": uc_txid})
+            if tx["confirmations"] > 0:
+                self.reorganizable_txes.append((tx["txid"], tx["blockhash"],
+                    block["height"], scrhashes))
         updated_scrhashes = set()
         for tx, scrhashes in tx_scrhashes_removed_from_mempool:
             del self.unconfirmed_txes[tx]
@@ -367,7 +463,9 @@ class TransactionMonitor(object):
                         self.unconfirmed_txes[tx["txid"]].append(scrhash)
                     else:
                         self.unconfirmed_txes[tx["txid"]] = [scrhash]
-            #check whether gap limits have been overrun and import more addrs
+            if tx["confirmations"] > 0:
+                self.reorganizable_txes.append((tx["txid"], tx["blockhash"],
+                    new_history_element["height"], matching_scripthashes))
         return set(updated_scripthashes)
 
 
