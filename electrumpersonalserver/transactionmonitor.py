@@ -109,7 +109,7 @@ class TransactionMonitor(object):
                     continue
                 if tx["category"] not in ("receive", "send"):
                     continue
-                if tx["confirmations"] == -1:
+                if tx["confirmations"] < 0:
                     continue #conflicted
                 if tx["txid"] in obtained_txids:
                     continue
@@ -307,7 +307,7 @@ class TransactionMonitor(object):
                         self.address_history[scrhash]["history"].append(
                             new_history_element)
 
-                elif tx["confirmations"] == -1:
+                elif tx["confirmations"] < 0:
                     #tx became conflicted in reorg i.e. a double spend
                     self.log("A transaction was double spent! " + txid)
                     elements_removed.append(reorgable_tx)
@@ -357,7 +357,7 @@ class TransactionMonitor(object):
             if tx["confirmations"] > 0:
                 self.log("A transaction confirmed: " + uc_txid)
                 block = self.rpc.call("getblockheader", [tx["blockhash"]])
-            elif tx["confirmations"] == -1:
+            elif tx["confirmations"] < 0:
                 self.log("A transaction became conflicted: " + uc_txid)
             for scrhash in scrhashes:
                 #delete the old unconfirmed entry in address_history
@@ -421,7 +421,7 @@ class TransactionMonitor(object):
                 continue
             if tx["category"] not in ("receive", "send"):
                 continue
-            if tx["confirmations"] == -1:
+            if tx["confirmations"] < 0:
                 continue #conflicted
             if tx["txid"] in obtained_txids:
                 continue
