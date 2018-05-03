@@ -2,6 +2,7 @@
 
 import socket, time, json, datetime, struct, binascii, ssl, os, os.path
 from configparser import ConfigParser, NoSectionError, NoOptionError
+from collections import defaultdict
 import traceback, sys, platform
 
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
@@ -200,7 +201,29 @@ def handle_query(sock, line, rpc, txmonitor):
         debug("tx broadcast result = " + str(result))
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
-        result = [] #TODO not handling, sending empty
+        mempool = rpc.call("getrawmempool", [True])
+
+        #algorithm copied from the relevant place in ElectrumX
+        #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
+        fee_hist = defaultdict(int)
+        for txid, details in mempool.items():
+            fee_rate = 1e8*details["fee"] // details["size"]
+            fee_hist[fee_rate] += details["size"]
+
+        l = list(reversed(sorted(fee_hist.items())))
+        out = []
+        size = 0
+        r = 0
+        binsize = 100000
+        for fee, s in l:
+            size += s
+            if size + r > binsize:
+                out.append((fee, size))
+                r += size - binsize
+                size = 0
+                binsize *= 1.1
+
+        result = out
         send_response(sock, query, result)
     elif method == "blockchain.estimatefee":
         estimate = rpc.call("estimatesmartfee", [query["params"][0]])
