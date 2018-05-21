@@ -208,14 +208,21 @@ class TransactionMonitor(object):
                     utxo = self.rpc.call("gettxout", [inn["txid"], inn["vout"],
                         False])
                     if utxo is None:
-                        self.debug("utxo not found(!)")
-                        #TODO detect this and figure out how to tell
-                        # electrum that we dont know the fee
-                total_input_value += int(Decimal(utxo["value"]) * Decimal(1e8))
-                unconfirmed_input = (unconfirmed_input or
-                    utxo["confirmations"] == 0)
-            self.debug("total_input_value = " + str(total_input_value))
+                        rawtx = self.rpc.call("getrawtransaction", [inn["txid"],
+                            True])
+                        if rawtx is not None:
+                            utxo = {"confirmations": rawtx["confirmations"],
+                                "value": rawtx["vout"][inn["vout"]]["value"]}
+                if utxo is not None:
+                    total_input_value += int(Decimal(utxo["value"]) *
+                        Decimal(1e8))
+                    unconfirmed_input = (unconfirmed_input or
+                        utxo["confirmations"] == 0)
+                else:
+                    # Electrum will now display a weird negative fee
+                    self.log("WARNING: input utxo not found(!)")
 
+            self.debug("total_input_value = " + str(total_input_value))
             fee = total_input_value - sum([int(Decimal(out["value"])
                 * Decimal(1e8)) for out in txd["vout"]])
             height = -1 if unconfirmed_input else 0
