@@ -35,21 +35,29 @@ For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
 and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198). See also the Bitcoin Wiki [pages](https://en.bitcoin.it/wiki/Clearing_Up_Misconceptions_About_Full_Nodes) on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 
-See also the Electrum bitcoin wallet [website](https://electrum.org/).
-
 ## How To
 
-* Download and install python3 and a Bitcoin full node version 0.16 or higher. Make sure you
+* If you dont already have them, download and install python3 and Bitcoin Core
+version 0.16 or higher. Make sure you
 [verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
-of any binaries before running them, or compile from source. The Bitcoin node must have wallet enabled, and must have the RPC server switched on (`server=1` in bitcoin.conf).
+of any binaries before running them, or compile from source. The Bitcoin node
+must have wallet enabled, and must have the RPC server switched on (`server=1`
+in bitcoin.conf).
 
-* Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases) or clone the git repository. Enter the directory
-and rename the file `config.cfg_sample` to `config.cfg`.
+* If you dont already have it, download and install
+[Electrum bitcoin wallet](https://electrum.org/), and set up your Electrum
+wallet (for example by linking your hardware wallet). To avoid damaging privacy
+by connecting to public Electrum servers, disconnect from the internet first or
+run Electrum with the command line argument `--server localhost:50002:s`.
+
+* Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases) of Electrum Personal Server or clone the git repository.
+Enter the directory and rename the file `config.cfg_sample` to `config.cfg`.
 
 * Edit the file `config.cfg` to configure everything about the server. Add your
 wallet master public keys or watch-only addresses to the `[master-public-keys]`
 and `[watch-only-addresses]` sections. Master public keys for an Electrum wallet
 can be found in the Electrum client menu `Wallet` -> `Information`.
+
 * Run `./server.py` on Linux or double-click `run-server.bat` on Windows.
 The first time the server is run it will import all configured addresses as
 watch-only into the Bitcoin node, and then exit. If the wallets contain 
