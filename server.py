@@ -484,8 +484,7 @@ def main():
             bestblockhash[0] = rpc.call("getbestblockhash", [])
         except JsonRpcError as e:
             if not printed_error_msg:
-                log("Error: " + repr(e))
-                log("Error with bitcoin rpc, check host/port/user/password")
+                log("Error with bitcoin json-rpc: " + repr(e))
                 printed_error_msg = True
             time.sleep(5)
 
