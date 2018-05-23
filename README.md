@@ -78,18 +78,20 @@ headers; and locks Electrum to connect only to your server, disabling the GUI
 button to stop accidental connections. This helps avoid a user accidentally
 ruining their privacy by connecting to public Electrum servers.
 
-Electrum Personal Server also works on [testnet bitcoin](https://en.bitcoin.it/wiki/Testnet). The Electrum wallet can be started in testnet mode with the command line flag `--testnet`.
+Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet) and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The Electrum wallet can be started in testnet mode with the command line flag `--testnet` or `--regtest`.
 
 
 #### Exposure to the Internet
 
 Other people should not be connecting to your server. They won't be
 able to synchronize their wallet, and they could potentially learn all your
-wallet addresses.
+wallet addresses. They should also not be packet sniffing the connection
+because it is not encrypted securely.
 
 By default the server will accept connections only from `localhost` so you
-should either run Electrum wallet from the same computer or use a SSH tunnel
-from another computer.
+should either run Electrum wallet from the same computer, or use an encrypted
+SSH tunnel from another computer, or use the IP address whitelisting feature to
+connect over your own LAN.
 
 #### How is this different from other Electrum servers ?
 

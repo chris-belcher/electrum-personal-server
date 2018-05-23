@@ -48,9 +48,14 @@ gap_limit = 25
 [electrum-server]
 # 0.0.0.0 to accept connections from any IP
 #127.0.0.1 to accept from only localhost
-# recommend you accept localhost only, for connecting remotely use a ssh tunnel
 host = 127.0.0.1
 port = 50002
+
+# space-separated whitelist of IP addresses
+# accepts CIDR notation eg 192.168.0.0/16 or 2a01:4f8:1f1::/120
+# star (*) means all are accepted
+# generally requires host binding (above) to be 0.0.0.0
+ip_whitelist = *
 
 #uses the default one, which is fine because by default nobody should be
 # allowed to connect to your server or scan your packets

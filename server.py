@@ -4,6 +4,7 @@ import socket, time, json, datetime, struct, binascii, ssl, os, os.path
 from configparser import ConfigParser, NoSectionError, NoOptionError
 from collections import defaultdict
 import traceback, sys, platform
+from ipaddress import ip_network, ip_address
 
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.hashes as hashes
@@ -295,8 +296,8 @@ def create_server_socket(hostport):
     log("Listening for Electrum Wallet on " + str(hostport))
     return server_sock
 
-def run_electrum_server(hostport, rpc, txmonitor, poll_interval_listening,
-        poll_interval_connected, certfile, keyfile):
+def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
+        poll_interval_listening, poll_interval_connected, certfile, keyfile):
     log("Starting electrum server")
     server_sock = create_server_socket(hostport)
     server_sock.settimeout(poll_interval_listening)
@@ -306,12 +307,16 @@ def run_electrum_server(hostport, rpc, txmonitor, poll_interval_listening,
             while sock == None:
                 try:
                     sock, addr = server_sock.accept()
+                    if not any([ip_address(addr[0]) in ipnet
+                            for ipnet in ip_whitelist]):
+                        debug(addr[0] + " not in whitelist, closing")
+                        raise ConnectionRefusedError()
                     sock = ssl.wrap_socket(sock, server_side=True,
                         certfile=certfile, keyfile=keyfile,
                         ssl_version=ssl.PROTOCOL_SSLv23)
                 except socket.timeout:
                     on_heartbeat_listening(txmonitor)
-                except ssl.SSLError:
+                except (ConnectionRefusedError, ssl.SSLError):
                     sock.close()
                     sock = None
 
@@ -504,14 +509,22 @@ def main():
             return
         hostport = (config.get("electrum-server", "host"),
                 int(config.get("electrum-server", "port")))
+        ip_whitelist = []
+        for ip in config.get("electrum-server", "ip_whitelist").split(" "):
+            if ip == "*":
+                #matches everything
+                ip_whitelist.append(ip_network("0.0.0.0/0"))
+                ip_whitelist.append(ip_network("::0/0"))
+            else:
+                ip_whitelist.append(ip_network(ip, strict=False))
         poll_interval_listening = int(config.get("bitcoin-rpc",
             "poll_interval_listening"))
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
         certfile = config.get("electrum-server", "certfile")
         keyfile = config.get("electrum-server", "keyfile")
-        run_electrum_server(hostport, rpc, txmonitor, poll_interval_listening,
-            poll_interval_connected, certfile, keyfile)
+        run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
+            poll_interval_listening, poll_interval_connected, certfile, keyfile)
 
 if __name__ == "__main__":
     main()
