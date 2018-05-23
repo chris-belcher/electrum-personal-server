@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/bin/env python3
 
 from configparser import ConfigParser, NoSectionError, NoOptionError
 from electrumpersonalserver.jsonrpc import JsonRpc, JsonRpcError
@@ -69,4 +69,3 @@ def main():
     
 
 main()
-

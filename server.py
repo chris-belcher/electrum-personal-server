@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/bin/env python3
 
 import socket, time, json, datetime, struct, binascii, ssl, os, os.path
 from configparser import ConfigParser, NoSectionError, NoOptionError
