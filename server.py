@@ -354,6 +354,8 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
             time.sleep(0.2)
 
 def get_scriptpubkeys_to_monitor(rpc, config):
+    log("Obtaining bitcoin addresses to monitor . . .")
+    st = time.time()
     imported_addresses = set(rpc.call("getaddressesbyaccount",
         [transactionmonitor.ADDRESSES_LABEL]))
 
@@ -423,6 +425,8 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 
     spks_to_monitor.extend([hashes.address_to_script(addr, rpc)
         for addr in watch_only_addresses])
+    et = time.time()
+    log("Obtained list of addresses to monitor in " + str(et - st) + "sec")
     return False, spks_to_monitor, deterministic_wallets
 
 def obtain_rpc_username_password(datadir):

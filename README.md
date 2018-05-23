@@ -56,7 +56,8 @@ Enter the directory and rename the file `config.cfg_sample` to `config.cfg`.
 * Edit the file `config.cfg` to configure everything about the server. Add your
 wallet master public keys or watch-only addresses to the `[master-public-keys]`
 and `[watch-only-addresses]` sections. Master public keys for an Electrum wallet
-can be found in the Electrum client menu `Wallet` -> `Information`.
+(which start with xpub/ypub/zpub) can be found in the Electrum client menu
+`Wallet` -> `Information`.
 
 * Run `./server.py` on Linux or double-click `run-server.bat` on Windows.
 The first time the server is run it will import all configured addresses as
