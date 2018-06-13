@@ -145,15 +145,29 @@ for Bitcoin Core.
 
 ## Contributing
 
-This is an open source project which happily accepts coding contributions from
+Donate to help make Electrum Personal Server even better: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`.
+
+This is open source project which happily accepts coding contributions from
 anyone. Please keep lines under 80 characters in length and ideally don't add
 any external dependencies to keep this as easy to install as possible.
-
-Donate to help make Electrum Personal Server even better: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`.
 
 I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels, by email or on [twitter](https://twitter.com/chris_belcher_/).
 
 My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
+
+#### Testing
+
+pytest is used for automated testing. On Debian-like systems install with 
+`pip3 install pytest pytest-cov`
+
+Run the tests with:
+
+    $ PYTHONPATH=.:$PYTHONPATH py.test-3
+
+Create the coverage report with:
+
+    $ PYTHONPATH=.:$PYTHONPATH py.test-3 --cov-report=html --cov
+    $ open htmlcov/index.html
 
 ## Media Coverage
 
