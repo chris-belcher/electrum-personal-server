@@ -165,7 +165,8 @@ class TransactionMonitor(object):
         if len(ret) > 0:
             #txid doesnt uniquely identify transactions from listtransactions
             #but the tuple (txid, address) does
-            self.last_known_wallet_txid = (ret[-1]["txid"], ret[-1]["address"])
+            self.last_known_wallet_txid = (ret[-1]["txid"],
+                ret[-1].get("address", None))
         else:
             self.last_known_wallet_txid = None
         self.debug("last_known_wallet_txid = " + str(
@@ -386,7 +387,8 @@ class TransactionMonitor(object):
                 recent_tx_index = len(ret) #=0 means no new txes
                 break
             else:
-                txid_list = [(tx["txid"], tx["address"]) for tx in ret]
+                txid_list = [(tx["txid"], tx.get("address", None))
+                    for tx in ret]
                 recent_tx_index = next((i for i, (txid, addr)
                     in enumerate(txid_list) if
                     txid == self.last_known_wallet_txid[0] and
@@ -400,7 +402,8 @@ class TransactionMonitor(object):
         self.debug("recent tx index = " + str(recent_tx_index) + " ret = " +
             str([(t["txid"], t["address"]) for t in ret]))
         if len(ret) > 0:
-            self.last_known_wallet_txid = (ret[0]["txid"], ret[0]["address"])
+            self.last_known_wallet_txid = (ret[0]["txid"],
+                ret[0].get("address", None))
             self.debug("last_known_wallet_txid = " + str(
                 self.last_known_wallet_txid))
         assert(recent_tx_index != -1)
