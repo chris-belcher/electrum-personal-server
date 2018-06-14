@@ -44,7 +44,7 @@ debug_fd = None
 
 #log for checking up/seeing your wallet, debug for when something has gone wrong
 def debugorlog(line, ttype):
-    timestamp = datetime.datetime.now().strftime("%H:%M:%S,%f")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")
     return timestamp + " [" + ttype + "] " + line
 
 def debug(line):
