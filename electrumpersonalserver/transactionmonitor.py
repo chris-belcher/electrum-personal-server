@@ -212,7 +212,7 @@ class TransactionMonitor(object):
                         rawtx = self.rpc.call("getrawtransaction", [inn["txid"],
                             True])
                         if rawtx is not None:
-                            utxo = {"confirmations": rawtx["confirmations"],
+                            utxo = {"confirmations": 0,
                                 "value": rawtx["vout"][inn["vout"]]["value"]}
                 if utxo is not None:
                     total_input_value += int(Decimal(utxo["value"]) *
