@@ -105,7 +105,11 @@ class DeterministicWallet(object):
 class SingleSigWallet(DeterministicWallet):
     def __init__(self, mpk):
         super(SingleSigWallet, self).__init__()
-        self.branches = (btc.bip32_ckd(mpk, 0), btc.bip32_ckd(mpk, 1))
+        try:
+            self.branches = (btc.bip32_ckd(mpk, 0), btc.bip32_ckd(mpk, 1))
+        except Exception:
+            raise ValueError("Bad master public key format. Get it from " +
+                "Electrum menu `Wallet` -> `Information`")
         #m/change/i
 
     def pubkey_to_scriptpubkey(self, pubkey):
@@ -163,8 +167,12 @@ class MultisigWallet(DeterministicWallet):
     def __init__(self, m, mpk_list):
         super(MultisigWallet, self).__init__()
         self.m = m
-        self.pubkey_branches = [(btc.bip32_ckd(mpk, 0), btc.bip32_ckd(mpk, 1))
-            for mpk in mpk_list]
+        try:
+            self.pubkey_branches = [(btc.bip32_ckd(mpk, 0), btc.bip32_ckd(mpk,
+                1)) for mpk in mpk_list]
+        except Exception:
+            raise ValueError("Bad master public key format. Get it from " +
+                "Electrum menu `Wallet` -> `Information`")
         #derivation path for pubkeys is m/change/index
 
     def redeem_script_to_scriptpubkey(self, redeem_script):
