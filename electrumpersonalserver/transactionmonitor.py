@@ -99,10 +99,13 @@ class TransactionMonitor(object):
         t = 0
         count = 0
         obtained_txids = set()
+        last_tx = None
         while len(ret) == BATCH_SIZE:
             ret = self.rpc.call("listtransactions", ["*", BATCH_SIZE, t, True])
             self.debug("listtransactions skip=" + str(t) + " len(ret)="
                 + str(len(ret)))
+            if t == 0:
+                last_tx = ret[-1]
             t += len(ret)
             for tx in ret:
                 if "txid" not in tx or "category" not in tx:
@@ -165,8 +168,8 @@ class TransactionMonitor(object):
         if len(ret) > 0:
             #txid doesnt uniquely identify transactions from listtransactions
             #but the tuple (txid, address) does
-            self.last_known_wallet_txid = (ret[-1]["txid"],
-                ret[-1].get("address", None))
+            self.last_known_wallet_txid = (last_tx["txid"],
+                last_tx.get("address", None))
         else:
             self.last_known_wallet_txid = None
         self.debug("last_known_wallet_txid = " + str(
