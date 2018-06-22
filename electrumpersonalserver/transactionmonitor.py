@@ -104,7 +104,7 @@ class TransactionMonitor(object):
             ret = self.rpc.call("listtransactions", ["*", BATCH_SIZE, t, True])
             self.debug("listtransactions skip=" + str(t) + " len(ret)="
                 + str(len(ret)))
-            if t == 0:
+            if t == 0 and len(ret) > 0:
                 last_tx = ret[-1]
             t += len(ret)
             for tx in ret:
