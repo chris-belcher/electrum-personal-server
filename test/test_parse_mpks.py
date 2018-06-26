@@ -16,7 +16,11 @@ from electrumpersonalserver import parse_electrum_master_public_key
     "2 tpubD6NzVbkrYhZ4YVMVzC7wZeRfz3bhqcHvV8M3UiULCfzFtLtp5nwvi6LnBQegrkx" +
     "YGPkSzXUEvcPEHcKdda8W1YShVBkhFBGkLxjSQ1Nx3cJ Vpub5fAqpSRkLmvXwqbuR61M" +
     "aKMSwj5z5xUBwanaz3qnJ5MgaBDpFSLUvKTiNK9zHpdvrg2LHHXkKxSXBHNWNpZz9b1Vq" +
-    "ADjmcCs3arSoxN3F3r" #inconsistent magic
+    "ADjmcCs3arSoxN3F3r", #inconsistent magic
+    "e9d4b7866dd1e91c862aebf62a49548c7dbf7bcc6e4b7b8c9da820c7737968df9c09d" +
+    "5a3e271dc814a29981f81b3faaf2737b551ef5dcc6189cf0f8252c442", #wrong length
+    "e9d4b7866dd1e91c862aebf62a49548c7dbf7bcc6e4b7b8c9da820c7737968df9c09d" +
+    "5a3e271dc814a29981f81b3faaf2737b551ef5dcc6189cf0f8252c442ZZ" #not hex
     ]
 )
 

@@ -1,6 +1,7 @@
 
 import time, pprint, math, sys
 from decimal import Decimal
+from collections import defaultdict
 
 from electrumpersonalserver.jsonrpc import JsonRpcError
 import electrumpersonalserver.hashes as hashes
@@ -155,14 +156,11 @@ class TransactionMonitor(object):
                         new_history_element["height"], sh_to_add))
                 count += 1
 
-        unconfirmed_txes = {}
+        unconfirmed_txes = defaultdict(list)
         for scrhash, his in address_history.items():
             uctx = self.sort_address_history_list(his)
             for u in uctx:
-                if u["tx_hash"] in unconfirmed_txes:
-                    unconfirmed_txes[u["tx_hash"]].append(scrhash)
-                else:
-                    unconfirmed_txes[u["tx_hash"]] = [scrhash]
+                unconfirmed_txes[u["tx_hash"]].append(scrhash)
         self.debug("unconfirmed_txes = " + str(unconfirmed_txes))
         self.debug("reorganizable_txes = " + str(self.reorganizable_txes))
         if len(ret) > 0:
@@ -292,10 +290,7 @@ class TransactionMonitor(object):
                     #transaction became unconfirmed in a reorg
                     self.log("A transaction was reorg'd out: " + txid)
                     elements_removed.append(reorgable_tx)
-                    if txid in self.unconfirmed_txes:
-                        self.unconfirmed_txes[txid].extend(scrhashes)
-                    else:
-                        self.unconfirmed_txes[txid] = list(scrhashes)
+                    self.unconfirmed_txes[txid].extend(scrhashes)
 
                     #add to history as unconfirmed
                     txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
@@ -312,11 +307,13 @@ class TransactionMonitor(object):
             elif tx["blockhash"] != blockhash:
                 block = self.rpc.call("getblockheader", [tx["blockhash"]])
                 if block["height"] == height: #reorg but height is the same
+                    self.log("A transaction was reorg'd but still confirmed " +
+                        "at same height: " + txid)
                     continue
                 #reorged but still confirmed at a different height
                 updated_scrhashes.update(scrhashes)
-                self.log("A transaction was reorg'd but still confirmed at " +
-                    "same height: " + txid)
+                self.log("A transaction was reorg'd but still confirmed to " +
+                    "a new block and different height: " + txid)
                 #update history with the new height
                 for scrhash in scrhashes:
                     for h in self.address_history[scrhash]["history"]:
@@ -383,6 +380,12 @@ class TransactionMonitor(object):
         for i in range(max_attempts):
             self.debug("listtransactions tx_request_count="
                 + str(tx_request_count))
+            ##how listtransactions works
+            ##skip and count parameters take most-recent txes first
+            ## so skip=0 count=1 will return the most recent tx
+            ##and skip=0 count=3 will return the 3 most recent txes
+            ##but the actual list returned has the REVERSED order
+            ##skip=0 count=3 will return a list with the most recent tx LAST
             ret = self.rpc.call("listtransactions", ["*", tx_request_count, 0,
                 True])
             ret = ret[::-1]
@@ -459,10 +462,7 @@ class TransactionMonitor(object):
                 self.address_history[scrhash]["history"].append(
                     new_history_element)
                 if new_history_element["height"] == 0:
-                    if tx["txid"] in self.unconfirmed_txes:
-                        self.unconfirmed_txes[tx["txid"]].append(scrhash)
-                    else:
-                        self.unconfirmed_txes[tx["txid"]] = [scrhash]
+                    self.unconfirmed_txes[tx["txid"]].append(scrhash)
             if tx["confirmations"] > 0:
                 self.reorganizable_txes.append((tx["txid"], tx["blockhash"],
                     new_history_element["height"], matching_scripthashes))
