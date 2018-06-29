@@ -358,6 +358,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     st = time.time()
     imported_addresses = set(rpc.call("getaddressesbyaccount",
         [transactionmonitor.ADDRESSES_LABEL]))
+    debug("already-imported addresses = " + str(imported_addresses))
 
     deterministic_wallets = []
     for key in config.options("master-public-keys"):
