@@ -142,7 +142,7 @@ def handle_query(sock, line, rpc, txmonitor):
         if txmonitor.subscribe_address(scrhash):
             history_hash = txmonitor.get_electrum_history_hash(scrhash)
         else:
-            log("WARNING: address scripthash not known to us: " + scrhash)
+            log("WARNING: address scripthash not known to server: " + scrhash)
             history_hash = hashes.get_status_electrum([])
         send_response(sock, query, history_hash)
     elif method == "blockchain.scripthash.get_history":
@@ -150,7 +150,7 @@ def handle_query(sock, line, rpc, txmonitor):
         history = txmonitor.get_electrum_history(scrhash)
         if history == None:
             history = []
-            log("WARNING: address scripthash history not known to us: "
+            log("WARNING: address scripthash history not known to server: "
                 + scrhash)
         send_response(sock, query, history)
     elif method == "blockchain.headers.subscribe":

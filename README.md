@@ -1,7 +1,8 @@
 # Electrum Personal Server
 
 Electrum Personal Server aims to make using Electrum bitcoin wallet more secure
-and more private.
+and more private. It makes it easy to connect your Electrum wallet to your own
+full node.
 
 It is an implementation of the Electrum server protocol which fulfills the
 specific need of using the Electrum wallet backed by a full node, but without
@@ -33,7 +34,9 @@ wallet to a full node.
 
 For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
-and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198). See also the Bitcoin Wiki [pages](https://en.bitcoin.it/wiki/Clearing_Up_Misconceptions_About_Full_Nodes) on [full nodes](https://en.bitcoin.it/wiki/Full_node).
+and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198).
+See also the Bitcoin Wiki [pages](https://en.bitcoin.it/wiki/Clearing_Up_Misconceptions_About_Full_Nodes)
+on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 
 ## How To
 
@@ -50,8 +53,9 @@ wallet (for example by linking your hardware wallet). To avoid damaging privacy
 by connecting to public Electrum servers, disconnect from the internet first or
 run Electrum with the command line argument `--server localhost:50002:s`.
 
-* Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases) of Electrum Personal Server or clone the git repository.
-Enter the directory and rename the file `config.cfg_sample` to `config.cfg`.
+* Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
+of Electrum Personal Server or clone the git repository. Enter the directory
+and rename the file `config.cfg_sample` to `config.cfg`.
 
 * Edit the file `config.cfg` to configure everything about the server. Add your
 wallet master public keys or watch-only addresses to the `[master-public-keys]`
@@ -79,20 +83,30 @@ headers; and locks Electrum to connect only to your server, disabling the GUI
 button to stop accidental connections. This helps avoid a user accidentally
 ruining their privacy by connecting to public Electrum servers.
 
-Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet) and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The Electrum wallet can be started in testnet mode with the command line flag `--testnet` or `--regtest`.
-
+Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
+and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The
+Electrum wallet can be started in testnet mode with the command line flag
+`--testnet` or `--regtest`.
 
 #### Exposure to the Internet
 
 Other people should not be connecting to your server. They won't be
 able to synchronize their wallet, and they could potentially learn all your
-wallet addresses. They should also not be packet sniffing the connection
-because it is not encrypted securely.
+wallet transactions. By default the server will accept connections only from
+`localhost`, though this can be changed in the configuration file.
 
-By default the server will accept connections only from `localhost` so you
-should either run Electrum wallet from the same computer, or use an encrypted
-SSH tunnel from another computer, or use the IP address whitelisting feature to
-connect over your own LAN.
+The whitelisting feature can be used accept only certain IP addresses ranges
+connecting to the server. The Electrum protocol uses SSL for encryption. If
+your wallet connects over the public internet you should generate your own
+SSL certificate instead of using the default one, otherwise your connection
+can be decrypted. See the configuration file for instruction on how to do
+this.
+
+Another option is to use a SSH tunnel to reach Electrum Personal Server. SSH
+connections are encrypted and authenticated. This can be done on the command
+line with: `ssh username@host -L 50002:localhost:50002` or with [Putty](https://www.putty.org/)
+for Windows. Then connect Electrum to localhost, and SSH will forward that
+connection to the server.
 
 #### How is this different from other Electrum servers ?
 
@@ -111,15 +125,6 @@ resources which push people towards using centralized solutions. This is what
 we'd like to avoid with Electrum Personal Server.
 
 Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/) if you're interested in this sort of thing.
-
-## Project Readiness
-
-This project is in beta release. It should be usable by any reasonably-technical
-bitcoin user.
-
-When trying this, make sure you report any crashes, odd behaviour, transactions
-appearing as `Not Verified` or times when Electrum disconnects (which
-indicates the server behaved unexpectedly).
 
 #### Caveat about pruning
 

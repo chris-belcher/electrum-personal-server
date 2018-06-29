@@ -45,7 +45,7 @@ def parse_electrum_master_public_key(keydata, gaplimit):
                 + chunks[0])
         pubkeys = chunks[1:]
         if not all([pubkeys[0][:4] == pub[:4] for pub in pubkeys[1:]]):
-            raise ValueError("inconsistent bip32 pubkey types")
+            raise ValueError("Inconsistent master public key types")
         if pubkeys[0][:4] in ("xpub", "tpub"):
             wallet = MultisigP2SHWallet(m, pubkeys)
         elif pubkeys[0][:4] in ("Zpub", "Vpub"):
