@@ -2,4 +2,4 @@
 *.swp
 config.cfg
 debug.log
-
+.cache/
