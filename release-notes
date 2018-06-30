@@ -1,12 +1,22 @@
 
+# Release v0.1.2 - (30th June 2018)
+
+* Added support for mempool histogram feature
+* Handles conflicted transactions, for when a chain reorg happens
+* Added IP address whitelisting feature
+* Bugfix when Electrum requests block headers out of range
+* Bugfix when listtransactions has more than 1000 entries
+* Added many more tests, which now use py.test
+* Added regtest support
+
 # Release v0.1.1 - (1st April 2018)
 
-Bugfix release, thanks to 
+Bugfix release, thanks to
 
 * Added option to manually configure rpc_user and rpc_password, instead of using
   the .cookie file.
 * Made json-rpc error messages have more detail.
-* Added method for user to configure electrum personal server's current working
+* Added method for user to configure Electrum Personal Server's current working
   directory, which is useful for running it from systemd or another automated
   tool.
 * Updated readme file to add information that tripped people up.
