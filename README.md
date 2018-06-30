@@ -23,14 +23,11 @@ computers. If bitcoin is digital gold, then a full node wallet is your own
 personal goldsmith who checks for you that received payments are genuine.
 
 Full node wallets are also important for privacy. Using Electrum under default
-configuration requires it to send all your bitcoin addresses to some server.
-That server can then easily spy on you. Full node wallets like Electrum Personal
-Server would download the entire blockchain and scan it for the user's own
-addresses, and therefore don't reveal to anyone else which bitcoin addresses
-they are interested in.
-
-Before Electrum Personal Server, there was no easy way to connect a hardware
-wallet to a full node.
+configuration requires it to send (hashes of) all your bitcoin addresses to some
+server. That server can then easily spy on your transactions. Full node
+wallets like Electrum Personal Server would download the entire blockchain and
+scan it for the user's own addresses, and therefore don't reveal to anyone else
+which bitcoin addresses they are interested in.
 
 For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
@@ -83,12 +80,10 @@ headers; and locks Electrum to connect only to your server, disabling the GUI
 button to stop accidental connections. This helps avoid a user accidentally
 ruining their privacy by connecting to public Electrum servers.
 
-Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
-and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The
-Electrum wallet can be started in testnet mode with the command line flag
-`--testnet` or `--regtest`.
-
 #### Exposure to the Internet
+
+Right now, Electrum Personal Server is easiest to use when it, your full node
+and your Electrum wallet are all on the same computer.
 
 Other people should not be connecting to your server. They won't be
 able to synchronize their wallet, and they could potentially learn all your
@@ -161,6 +156,11 @@ I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels, b
 My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
 
 #### Testing
+
+Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
+and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The
+Electrum wallet can be started in testnet mode with the command line flag
+`--testnet` or `--regtest`.
 
 pytest is used for automated testing. On Debian-like systems install with 
 `pip3 install pytest pytest-cov`

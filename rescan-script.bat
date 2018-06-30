@@ -1,3 +1,3 @@
 @echo off
-python3 rescan-script.py
+python rescan-script.py
 pause
