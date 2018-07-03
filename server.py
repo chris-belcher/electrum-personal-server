@@ -171,6 +171,14 @@ def handle_query(sock, line, rpc, txmonitor):
             error = {"message": "height " + str(height) + " out of range",
                 "code": -1}
             send_error(sock, query["id"], error)
+    elif method == "blockchain.block.headers":
+        MAX_CHUNK_SIZE = 2016
+        start_height = query["params"][0]
+        count = query["params"][1]
+        count = min(count, MAX_CHUNK_SIZE)
+        headers_hex, n = get_block_headers_hex(rpc, start_height, count)
+        send_response(sock, query, {'hex': headers_hex, 'count': n, 'max':
+            MAX_CHUNK_SIZE})
     elif method == "blockchain.block.get_chunk":
         RETARGET_INTERVAL = 2016
         index = query["params"][0]
@@ -179,25 +187,8 @@ def handle_query(sock, line, rpc, txmonitor):
         next_height = tip_height + 1
         start_height = min(index*RETARGET_INTERVAL, next_height)
         count = min(next_height - start_height, RETARGET_INTERVAL)
-        #read count number of headers starting from start_height
-        result = bytearray()
-        the_hash = rpc.call("getblockhash", [start_height])
-        for i in range(count):
-            header = rpc.call("getblockheader", [the_hash])
-            #add header hex to result
-            if "previousblockhash" in header:
-                prevblockhash = header["previousblockhash"]
-            else:
-                prevblockhash = "00"*32 #genesis block
-            h1 = struct.pack("<i32s32sIII", header["version"],
-                binascii.unhexlify(prevblockhash)[::-1],
-                binascii.unhexlify(header["merkleroot"])[::-1],
-                header["time"], int(header["bits"], 16), header["nonce"])
-            result.extend(h1)
-            if "nextblockhash" not in header:
-                break
-            the_hash = header["nextblockhash"]
-        send_response(sock, query, binascii.hexlify(result).decode("utf-8"))
+        headers_hex, n = get_block_headers_hex(rpc, start_height, count)
+        send_response(sock, query, headers_hex)
     elif method == "blockchain.transaction.broadcast":
         try:
             result = rpc.call("sendrawtransaction", [query["params"][0]])
@@ -299,6 +290,27 @@ def check_for_new_blockchain_tip(rpc, raw):
     is_tip_new = bestblockhash[0] != new_bestblockhash
     bestblockhash[0] = new_bestblockhash
     return is_tip_new, header
+
+def get_block_headers_hex(rpc, start_height, count):
+    #read count number of headers starting from start_height
+    result = bytearray()
+    the_hash = rpc.call("getblockhash", [start_height])
+    for i in range(count):
+        header = rpc.call("getblockheader", [the_hash])
+        #add header hex to result
+        if "previousblockhash" in header:
+            prevblockhash = header["previousblockhash"]
+        else:
+            prevblockhash = "00"*32 #genesis block
+        h1 = struct.pack("<i32s32sIII", header["version"],
+            binascii.unhexlify(prevblockhash)[::-1],
+            binascii.unhexlify(header["merkleroot"])[::-1],
+            header["time"], int(header["bits"], 16), header["nonce"])
+        result.extend(h1)
+        if "nextblockhash" not in header:
+            break
+        the_hash = header["nextblockhash"]
+    return binascii.hexlify(result).decode("utf-8"), len(result)/80
 
 def create_server_socket(hostport):
     server_sock = socket.socket()
