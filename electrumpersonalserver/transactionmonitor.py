@@ -60,8 +60,8 @@ class TransactionMonitor(object):
         self.reorganizable_txes = None
 
     def get_electrum_history_hash(self, scrhash):
-        return hashes.get_status_electrum( ((h["tx_hash"], h["height"])
-            for h in self.address_history[scrhash]["history"]) )
+        return hashes.get_status_electrum( [(h["tx_hash"], h["height"])
+            for h in self.address_history[scrhash]["history"]] )
 
     def get_electrum_history(self, scrhash):
         if scrhash in self.address_history:

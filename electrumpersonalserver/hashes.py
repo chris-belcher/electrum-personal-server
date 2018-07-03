@@ -34,6 +34,8 @@ def script_to_scripthash(script):
 def get_status_electrum(h):
     if not h:
         return None
+    if len(h) == 0:
+        return None
     status = ''
     for tx_hash, height in h:
         status += tx_hash + ':%d:' % height
