@@ -39,6 +39,7 @@ Donate to help make Electrum Personal Server even better:
 ##python has demented rules for variable scope, so these
 ## global variables are actually mutable lists
 subscribed_to_headers = [False]
+are_headers_raw = [False]
 bestblockhash = [None]
 debug_fd = None
 
@@ -85,7 +86,8 @@ def on_heartbeat_listening(txmonitor):
 
 def on_heartbeat_connected(sock, rpc, txmonitor):
     debug("on heartbeat connected")
-    is_tip_updated, header = check_for_new_blockchain_tip(rpc)
+    is_tip_updated, header = check_for_new_blockchain_tip(rpc,
+        are_headers_raw[0])
     if is_tip_updated:
         debug("Blockchain tip updated")
         if subscribed_to_headers[0]:
@@ -155,7 +157,9 @@ def handle_query(sock, line, rpc, txmonitor):
         send_response(sock, query, history)
     elif method == "blockchain.headers.subscribe":
         subscribed_to_headers[0] = True
-        new_bestblockhash, header = get_current_header(rpc)
+        if len(query["params"]) > 0:
+            are_headers_raw[0] = query["params"][0]
+        new_bestblockhash, header = get_current_header(rpc, are_headers_raw[0])
         send_response(sock, query, header)
     elif method == "blockchain.block.get_header":
         height = query["params"][0]
@@ -262,28 +266,36 @@ def handle_query(sock, line, rpc, txmonitor):
         log("*** BUG! Not handling method: " + method + " query=" + str(query))
         #TODO just send back the same query with result = []
 
-def get_block_header(rpc, blockhash):
+def get_block_header(rpc, blockhash, raw=False):
     rpc_head = rpc.call("getblockheader", [blockhash])
     if "previousblockhash" in rpc_head:
         prevblockhash = rpc_head["previousblockhash"]
     else:
         prevblockhash = "00"*32 #genesis block
-    header = {"block_height": rpc_head["height"],
-            "prev_block_hash": prevblockhash,
-            "timestamp": rpc_head["time"],
-            "merkle_root": rpc_head["merkleroot"],
-            "version": rpc_head["version"],
-            "nonce": rpc_head["nonce"],
-            "bits": int(rpc_head["bits"], 16)}
+    if raw:
+        head_hex = struct.pack("<i32s32sIII", rpc_head["version"],
+            binascii.unhexlify(prevblockhash)[::-1],
+            binascii.unhexlify(rpc_head["merkleroot"])[::-1],
+            rpc_head["time"], int(rpc_head["bits"], 16), rpc_head["nonce"])
+        head_hex = binascii.hexlify(head_hex).decode("utf-8")
+        header = {"hex": head_hex, "height": rpc_head["height"]}
+    else:
+        header = {"block_height": rpc_head["height"],
+                "prev_block_hash": prevblockhash,
+                "timestamp": rpc_head["time"],
+                "merkle_root": rpc_head["merkleroot"],
+                "version": rpc_head["version"],
+                "nonce": rpc_head["nonce"],
+                "bits": int(rpc_head["bits"], 16)}
     return header
 
-def get_current_header(rpc):
+def get_current_header(rpc, raw):
     new_bestblockhash = rpc.call("getbestblockhash", [])
-    header = get_block_header(rpc, new_bestblockhash)
+    header = get_block_header(rpc, new_bestblockhash, raw)
     return new_bestblockhash, header
 
-def check_for_new_blockchain_tip(rpc):
-    new_bestblockhash, header = get_current_header(rpc)
+def check_for_new_blockchain_tip(rpc, raw):
+    new_bestblockhash, header = get_current_header(rpc, raw)
     is_tip_new = bestblockhash[0] != new_bestblockhash
     bestblockhash[0] = new_bestblockhash
     return is_tip_new, header
