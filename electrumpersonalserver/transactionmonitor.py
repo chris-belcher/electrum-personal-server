@@ -406,7 +406,7 @@ class TransactionMonitor(object):
         #TODO low priority: handle a user getting more than 255 new
         # transactions in 15 seconds
         self.debug("recent tx index = " + str(recent_tx_index) + " ret = " +
-            str([(t["txid"], t["address"]) for t in ret]))
+            str([(t["txid"], t.get("address", None)) for t in ret]))
         if len(ret) > 0:
             self.last_known_wallet_txid = (ret[0]["txid"],
                 ret[0].get("address", None))
