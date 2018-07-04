@@ -1,4 +1,15 @@
 
+# Release v0.1.3 - (4th July 2018)
+
+Bugfix release, mainly to correctly support Electrum 3.2
+
+* Added support for raw block headers
+* Implemented protocol method `blockchain.block.headers`
+* Make the address status of a empty address be None
+* Fixed bug involving rare situation where the result of the listtransactions
+  RPC call did not have an `address` field
+
+
 # Release v0.1.2 - (30th June 2018)
 
 * Added support for mempool histogram feature
@@ -8,6 +19,7 @@
 * Bugfix when listtransactions has more than 1000 entries
 * Added many more tests, which now use py.test
 * Added regtest support
+
 
 # Release v0.1.1 - (1st April 2018)
 
