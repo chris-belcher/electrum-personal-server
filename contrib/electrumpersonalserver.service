@@ -4,16 +4,16 @@
 [Unit]
 Description=Electrum Personal Server
 After=bitcoind.service
+Requires=bitcoind.service
 
 [Service]
-ExecStart=/usr/bin/python3 /your-installation-path/server.py  [optional arguments]
+ExecStart=/your-installation-path/server.py  [optional arguments]
 User=bitcoin
 Group=bitcoin
 Type=simple
 Restart=on-failure
 RestartSec=60
 KillMode=process
-TimeoutSec=60
 
 [Install]
 WantedBy=multi-user.target
