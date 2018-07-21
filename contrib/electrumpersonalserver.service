@@ -7,7 +7,7 @@ After=bitcoind.service
 Requires=bitcoind.service
 
 [Service]
-ExecStart=/your-installation-path/server.py  [optional arguments]
+ExecStart=/your-installation-path/server.py /your-workding-dir [optional arguments]
 User=bitcoin
 Group=bitcoin
 Type=simple
