@@ -1,0 +1,4 @@
+include README.md
+include doc/*.md
+include certs/*
+include config.cfg_sample

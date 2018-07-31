@@ -1,6 +1,6 @@
 
-import bitcoin as btc
-from electrumpersonalserver.hashes import bh2u, hash_160, bfh, sha256
+import electrumpersonalserver.bitcoin as btc
+from electrumpersonalserver.server.hashes import bh2u, hash_160, bfh, sha256
 
 # the class hierarchy for deterministic wallets in this file:
 # subclasses are written towards the right

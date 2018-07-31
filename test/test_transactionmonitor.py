@@ -1,8 +1,12 @@
 
 import pytest
 
-from electrumpersonalserver import (DeterministicWallet, TransactionMonitor,
-                                JsonRpcError, script_to_scripthash)
+from electrumpersonalserver.server import (
+    DeterministicWallet,
+    TransactionMonitor,
+    JsonRpcError,
+    script_to_scripthash
+)
 
 class DummyJsonRpc(object):
     """

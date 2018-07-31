@@ -1,7 +1,7 @@
 
 import pytest
 
-from electrumpersonalserver import parse_electrum_master_public_key
+from electrumpersonalserver.server import parse_electrum_master_public_key
 
 # electrum has its own tests here
 #https://github.com/spesmilo/electrum/blob/03b40a3c0a7dd84e76bc0d0ea2ad390dafc92250/lib/tests/test_wallet_vertical.py

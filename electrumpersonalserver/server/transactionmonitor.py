@@ -3,8 +3,12 @@ import time, pprint, math, sys
 from decimal import Decimal
 from collections import defaultdict
 
-from electrumpersonalserver.jsonrpc import JsonRpcError
-import electrumpersonalserver.hashes as hashes
+from electrumpersonalserver.server.jsonrpc import JsonRpcError
+from electrumpersonalserver.server.hashes import (
+    get_status_electrum,
+    script_to_scripthash,
+    script_to_address
+)
 
 #internally this code uses scriptPubKeys, it only converts to bitcoin addresses
 # when importing to bitcoind or checking whether enough addresses have been
@@ -60,7 +64,7 @@ class TransactionMonitor(object):
         self.reorganizable_txes = None
 
     def get_electrum_history_hash(self, scrhash):
-        return hashes.get_status_electrum( [(h["tx_hash"], h["height"])
+        return get_status_electrum( [(h["tx_hash"], h["height"])
             for h in self.address_history[scrhash]["history"]] )
 
     def get_electrum_history(self, scrhash):
@@ -86,7 +90,7 @@ class TransactionMonitor(object):
         st = time.time()
         address_history = {}
         for spk in monitored_scriptpubkeys:
-            address_history[hashes.script_to_scripthash(spk)] = {'history': [],
+            address_history[script_to_scripthash(spk)] = {'history': [],
                 'subscribed': False}
         wallet_addr_scripthashes = set(address_history.keys())
         self.reorganizable_txes = []
@@ -123,11 +127,11 @@ class TransactionMonitor(object):
                 #obtain all the addresses this transaction is involved with
                 output_scriptpubkeys, input_scriptpubkeys, txd = \
                     self.get_input_and_output_scriptpubkeys(tx["txid"])
-                output_scripthashes = [hashes.script_to_scripthash(sc)
+                output_scripthashes = [script_to_scripthash(sc)
                     for sc in output_scriptpubkeys]
                 sh_to_add = wallet_addr_scripthashes.intersection(set(
                     output_scripthashes))
-                input_scripthashes = [hashes.script_to_scripthash(sc)
+                input_scripthashes = [script_to_scripthash(sc)
                     for sc in input_scriptpubkeys]
                 sh_to_add |= wallet_addr_scripthashes.intersection(set(
                     input_scripthashes))
@@ -433,7 +437,7 @@ class TransactionMonitor(object):
                 self.get_input_and_output_scriptpubkeys(tx["txid"])
             matching_scripthashes = []
             for spk in (output_scriptpubkeys + input_scriptpubkeys):
-                scripthash = hashes.script_to_scripthash(spk)
+                scripthash = script_to_scripthash(spk)
                 if scripthash in self.address_history:
                     matching_scripthashes.append(scripthash)
             if len(matching_scripthashes) == 0:
@@ -446,9 +450,9 @@ class TransactionMonitor(object):
                     for change, import_count in overrun_depths.items():
                         spks = wal.get_new_scriptpubkeys(change, import_count)
                         for spk in spks:
-                            self.address_history[hashes.script_to_scripthash(
+                            self.address_history[script_to_scripthash(
                                 spk)] =  {'history': [], 'subscribed': False}
-                        new_addrs = [hashes.script_to_address(s, self.rpc)
+                        new_addrs = [script_to_address(s, self.rpc)
                             for s in spks]
                         self.debug("importing " + str(len(spks)) +
                             " into change=" + str(change))
