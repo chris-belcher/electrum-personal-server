@@ -465,6 +465,26 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     log("Obtained list of addresses to monitor in " + str(et - st) + "sec")
     return False, spks_to_monitor, deterministic_wallets
 
+def get_certs(config):
+    from pathlib import Path
+    import electrumpersonalserver
+    certfile = config.get('electrum-server', 'certfile', fallback=None)
+    keyfile = config.get('electrum-server', 'keyfile', fallback=None)
+    if (certfile and keyfile) and \
+       (os.path.exists(certfile) and os.path.exists(keyfile)):
+        return certfile, keyfile
+    else:
+        # platform independent top directory
+        top = Path(os.path.dirname(electrumpersonalserver.__file__)).parts[:-4]
+        certfile = os.path.join(*top, electrumpersonalserver.__certfile__)
+        keyfile = os.path.join(*top, electrumpersonalserver.__keyfile__)
+        if os.path.exists(certfile) and os.path.exists(keyfile):
+            log('using cert: {}, key: {}'.format(certfile, keyfile))
+            return certfile, keyfile
+        else:
+            raise ValueError('invalid cert: {}, key: {}'.format(
+                certfile, keyfile))
+
 def obtain_rpc_username_password(datadir):
     if len(datadir.strip()) == 0:
         debug("no datadir configuration, checking in default location")
@@ -561,8 +581,7 @@ def main():
             "poll_interval_listening"))
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
-        certfile = config.get("electrum-server", "certfile")
-        keyfile = config.get("electrum-server", "keyfile")
+        certfile, keyfile = get_certs(config)
         run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
             poll_interval_listening, poll_interval_connected, certfile, keyfile)
 
