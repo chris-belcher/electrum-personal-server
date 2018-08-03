@@ -43,7 +43,7 @@ bestblockhash = [None]
 
 #log for checking up/seeing your wallet, debug for when something has gone wrong
 def logger_config(logger, fmt=None, filename=None, logfilemode='w'):
-    formatter = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter(fmt)
     logstream = logging.StreamHandler()
     logstream.setFormatter(formatter)
     logstream.setLevel(logging.INFO)
@@ -470,6 +470,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 def get_certs(config):
     from pkg_resources import resource_filename
     from electrumpersonalserver import __certfile__, __keyfile__
+
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     certfile = config.get('electrum-server', 'certfile', fallback=None)
     keyfile = config.get('electrum-server', 'keyfile', fallback=None)
@@ -510,26 +511,32 @@ def obtain_rpc_username_password(datadir):
 
 def parse_args():
     from argparse import ArgumentParser
+    from tempfile import gettempdir
+
     parser = ArgumentParser(description='Electrum Personal Server daemon')
     parser.add_argument('-c', '--conf', required=True,
                         help='configuration file (mandatory)')
-    parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-l', '--log', help='log file',
-                        default='/tmp/eps-{}.log'.format(os.getenv('USER')))
-    logfmt = '%(name)s:%(levelname)s:%(module)s:%(asctime)s: %(message)s'
+                        default='{}/electrumpersonalserver.log'.format(gettempdir()))
+    parser.add_argument('-a', '--appendlog', action='store_true',
+                        help='append to log file')
+    logfmt = '%(levelname)s:%(asctime)s: %(message)s'
     parser.add_argument('-f', '--logfmt', default=logfmt,
                         help='log format')
-    parser.add_argument('--loglevel', default=20, type=int,
-                        choices=[i*10 for i in range(1, 6)],
-                        help='DEBUG, INFO, WARNING, ERROR, CRITICAL')
+    loglvls = [l for l in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')]
+    parser.add_argument('--loglevel', default='DEBUG', choices=loglvls,
+                        help='log levels')
     return parser.parse_args()
 
 def main():
     opts = parse_args()
 
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log)
-    logger.setLevel(logging.DEBUG if opts.debug else opts.loglevel)
+    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
+                           logfilemode='a' if opts.appendlog else 'w')
+    logger.setLevel(opts.loglevel)
+    logger.info('Starting Electrum Personal Server')
+    logger.info(f'Logging to {opts.log}')
     try:
         config = ConfigParser()
         config.read(opts.conf)
@@ -629,8 +636,11 @@ def rescan():
     opts = parse_args()
 
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log)
-    logger.setLevel(logging.DEBUG if opts.debug else opts.loglevel)
+    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
+                           logfilemode='a' if opts.appendlog else 'w')
+    logger.setLevel(opts.loglevel)
+    logger.info('Starting Electrum Personal Server in rescan mode')
+    logger.info(f'Logging to {opts.log}')
     try:
         config = ConfigParser()
         config.read(opts.conf)
