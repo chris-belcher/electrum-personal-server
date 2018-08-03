@@ -3,6 +3,7 @@ from configparser import ConfigParser, NoSectionError, NoOptionError
 from collections import defaultdict
 import traceback, sys, platform
 from ipaddress import ip_network, ip_address
+import logging
 
 from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes
@@ -39,55 +40,52 @@ Donate to help make Electrum Personal Server even better:
 subscribed_to_headers = [False]
 are_headers_raw = [False]
 bestblockhash = [None]
-debug_fd = None
 
 #log for checking up/seeing your wallet, debug for when something has gone wrong
-def debugorlog(line, ttype):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")
-    return timestamp + " [" + ttype + "] " + line
-
-def debug(line):
-    global debug_fd
-    if debug_fd == None:
-        return
-    debug_fd.write(debugorlog(line, "DEBUG") + "\n")
-    debug_fd.flush()
-
-def log(line):
-    global debug_fd
-    line = debugorlog(line, "  LOG")
-    print(line)
-    if debug_fd == None:
-        return
-    debug_fd.write(line + "\n")
-    debug_fd.flush()
+def logger_config(logger, fmt=None, filename=None, logfilemode='w'):
+    formatter = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+    logstream = logging.StreamHandler()
+    logstream.setFormatter(formatter)
+    logstream.setLevel(logging.INFO)
+    logger.addHandler(logstream)
+    if filename:
+        logfile = logging.FileHandler(filename, mode=logfilemode)
+        logfile.setFormatter(formatter)
+        logfile.setLevel(logging.DEBUG)
+        logger.addHandler(logfile)
+    return logger
 
 def send_response(sock, query, result):
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     query["result"] = result
     query["jsonrpc"] = "2.0"
     sock.sendall(json.dumps(query).encode('utf-8') + b'\n')
-    debug('<= ' + json.dumps(query))
+    logger.debug('<= ' + json.dumps(query))
 
 def send_update(sock, update):
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     update["jsonrpc"] = "2.0"
     sock.sendall(json.dumps(update).encode('utf-8') + b'\n')
-    debug('<= ' + json.dumps(update))
+    logger.debug('<= ' + json.dumps(update))
 
 def send_error(sock, nid, error):
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     payload = {"error": error, "jsonrpc": "2.0", "id": nid}
     sock.sendall(json.dumps(payload).encode('utf-8') + b'\n')
-    debug('<= ' + json.dumps(payload))
+    logger.debug('<= ' + json.dumps(payload))
 
 def on_heartbeat_listening(txmonitor):
-    debug("on heartbeat listening")
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger.debug("on heartbeat listening")
     txmonitor.check_for_updated_txes()
 
 def on_heartbeat_connected(sock, rpc, txmonitor):
-    debug("on heartbeat connected")
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger.debug("on heartbeat connected")
     is_tip_updated, header = check_for_new_blockchain_tip(rpc,
         are_headers_raw[0])
     if is_tip_updated:
-        debug("Blockchain tip updated")
+        logger.debug("Blockchain tip updated")
         if subscribed_to_headers[0]:
             update = {"method": "blockchain.headers.subscribe",
                 "params": [header]}
@@ -104,7 +102,8 @@ def on_disconnect(txmonitor):
     txmonitor.unsubscribe_all_addresses()
 
 def handle_query(sock, line, rpc, txmonitor):
-    debug("=> " + line)
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger.debug("=> " + line)
     try:
         query = json.loads(line)
     except json.decoder.JSONDecodeError as e:
@@ -131,7 +130,7 @@ def handle_query(sock, line, rpc, txmonitor):
             reply = {"block_height": txheader["block_height"], "pos":
                 electrum_proof["pos"], "merkle": electrum_proof["merkle"]}
         except (ValueError, JsonRpcError) as e:
-            log("WARNING: merkle proof failed for " + txid + " err=" + repr(e))
+            logger.warning("merkle proof failed for " + txid + " err=" + repr(e))
             #so reply with an invalid proof which electrum handles without
             # disconnecting us
             #https://github.com/spesmilo/electrum/blob/c8e67e2bd07efe042703bc1368d499c5e555f854/lib/verifier.py#L74
@@ -142,7 +141,7 @@ def handle_query(sock, line, rpc, txmonitor):
         if txmonitor.subscribe_address(scrhash):
             history_hash = txmonitor.get_electrum_history_hash(scrhash)
         else:
-            log("WARNING: address scripthash not known to server: " + scrhash)
+            logger.warning("address scripthash not known to server: " + scrhash)
             history_hash = hashes.get_status_electrum([])
         send_response(sock, query, history_hash)
     elif method == "blockchain.scripthash.get_history":
@@ -150,7 +149,7 @@ def handle_query(sock, line, rpc, txmonitor):
         history = txmonitor.get_electrum_history(scrhash)
         if history == None:
             history = []
-            log("WARNING: address scripthash history not known to server: "
+            logger.warning("address scripthash history not known to server: "
                 + scrhash)
         send_response(sock, query, history)
     elif method == "blockchain.headers.subscribe":
@@ -192,7 +191,7 @@ def handle_query(sock, line, rpc, txmonitor):
             result = rpc.call("sendrawtransaction", [query["params"][0]])
         except JsonRpcError as e:
             result = str(e)
-        debug("tx broadcast result = " + str(result))
+        logger.debug("tx broadcast result = " + str(result))
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
         mempool = rpc.call("getrawmempool", [True])
@@ -252,7 +251,7 @@ def handle_query(sock, line, rpc, txmonitor):
     elif method == "server.peers.subscribe":
         send_response(sock, query, []) #no peers to report
     else:
-        log("*** BUG! Not handling method: " + method + " query=" + str(query))
+        logger.error("*** BUG! Not handling method: " + method + " query=" + str(query))
         #TODO just send back the same query with result = []
 
 def get_block_header(rpc, blockhash, raw=False):
@@ -314,16 +313,18 @@ def get_block_headers_hex(rpc, start_height, count):
     return binascii.hexlify(result).decode("utf-8"), int(len(result)/80)
 
 def create_server_socket(hostport):
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     server_sock = socket.socket()
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_sock.bind(hostport)
     server_sock.listen(1)
-    log("Listening for Electrum Wallet on " + str(hostport))
+    logger.info("Listening for Electrum Wallet on " + str(hostport))
     return server_sock
 
 def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
         poll_interval_listening, poll_interval_connected, certfile, keyfile):
-    log("Starting electrum server")
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger.info("Starting electrum server")
     server_sock = create_server_socket(hostport)
     server_sock.settimeout(poll_interval_listening)
     while True:
@@ -334,7 +335,7 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                     sock, addr = server_sock.accept()
                     if not any([ip_address(addr[0]) in ipnet
                             for ipnet in ip_whitelist]):
-                        debug(addr[0] + " not in whitelist, closing")
+                        logger.debug(addr[0] + " not in whitelist, closing")
                         raise ConnectionRefusedError()
                     sock = ssl.wrap_socket(sock, server_side=True,
                         certfile=certfile, keyfile=keyfile,
@@ -345,7 +346,7 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                     sock.close()
                     sock = None
 
-            log('Electrum connected from ' + str(addr))
+            logger.info('Electrum connected from ' + str(addr))
             sock.settimeout(poll_interval_connected)
             recv_buffer = bytearray()
             while True:
@@ -367,9 +368,9 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                     on_heartbeat_connected(sock, rpc, txmonitor)
         except (IOError, EOFError) as e:
             if isinstance(e, EOFError):
-                log("Electrum wallet disconnected")
+                logger.info("Electrum wallet disconnected")
             else:
-                log("IOError: " + repr(e))
+                logger.error("IOError: " + repr(e))
             try:
                 sock.close()
             except IOError:
@@ -379,12 +380,13 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
             time.sleep(0.2)
 
 def get_scriptpubkeys_to_monitor(rpc, config):
-    log("Obtaining bitcoin addresses to monitor . . .")
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger.info("Obtaining bitcoin addresses to monitor . . .")
     st = time.time()
     try:
         imported_addresses = set(rpc.call("getaddressesbyaccount",
             [transactionmonitor.ADDRESSES_LABEL]))
-        debug("using deprecated accounts interface")
+        logger.debug("using deprecated accounts interface")
     except JsonRpcError:
         #bitcoin core 0.17 deprecates accounts, replaced with labels
         if transactionmonitor.ADDRESSES_LABEL in rpc.call("listlabels", []):
@@ -393,7 +395,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         else:
             #no label, no addresses imported at all
             imported_addresses = set()
-    debug("already-imported addresses = " + str(imported_addresses))
+    logger.debug("already-imported addresses = " + str(imported_addresses))
 
     deterministic_wallets = []
     for key in config.options("master-public-keys"):
@@ -432,7 +434,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         addresses_to_import = [hashes.script_to_address(spk, rpc)
             for spk in spks_to_import]
         #TODO minus imported_addresses
-        log("Importing " + str(wallets_imported) + " wallets and " +
+        logger.info("Importing " + str(wallets_imported) + " wallets and " +
             str(len(watch_only_addresses_to_import)) + " watch-only " +
             "addresses into the Bitcoin node")
         time.sleep(5)
@@ -462,12 +464,13 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     spks_to_monitor.extend([hashes.address_to_script(addr, rpc)
         for addr in watch_only_addresses])
     et = time.time()
-    log("Obtained list of addresses to monitor in " + str(et - st) + "sec")
+    logger.info("Obtained list of addresses to monitor in " + str(et - st) + "sec")
     return False, spks_to_monitor, deterministic_wallets
 
 def get_certs(config):
     from pathlib import Path
     import electrumpersonalserver
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     certfile = config.get('electrum-server', 'certfile', fallback=None)
     keyfile = config.get('electrum-server', 'keyfile', fallback=None)
     if (certfile and keyfile) and \
@@ -479,15 +482,16 @@ def get_certs(config):
         certfile = os.path.join(*top, electrumpersonalserver.__certfile__)
         keyfile = os.path.join(*top, electrumpersonalserver.__keyfile__)
         if os.path.exists(certfile) and os.path.exists(keyfile):
-            log('using cert: {}, key: {}'.format(certfile, keyfile))
+            logger.info('using cert: {}, key: {}'.format(certfile, keyfile))
             return certfile, keyfile
         else:
             raise ValueError('invalid cert: {}, key: {}'.format(
                 certfile, keyfile))
 
 def obtain_rpc_username_password(datadir):
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     if len(datadir.strip()) == 0:
-        debug("no datadir configuration, checking in default location")
+        logger.debug("no datadir configuration, checking in default location")
         systemname = platform.system()
         #paths from https://en.bitcoin.it/wiki/Data_directory
         if systemname == "Linux":
@@ -499,7 +503,7 @@ def obtain_rpc_username_password(datadir):
                 "~/Library/Application Support/Bitcoin/")
     cookie_path = os.path.join(datadir, ".cookie")
     if not os.path.exists(cookie_path):
-        log("Unable to find .cookie file, try setting `datadir` config")
+        logger.warning("Unable to find .cookie file, try setting `datadir` config")
         return None, None
     fd = open(cookie_path)
     username, password = fd.read().strip().split(":")
@@ -507,7 +511,6 @@ def obtain_rpc_username_password(datadir):
     return username, password
 
 def main():
-    global debug_fd
     if len(sys.argv) == 2:
         if sys.argv[1] == "--help":
             print("Usage: ./server.py <path/to/current/working/dir>\nRunning" +
@@ -515,23 +518,26 @@ def main():
             return
         else:
             os.chdir(sys.argv[1])
-    debug_fd = open("debug.log", "w")
-    debug("current working directory is: " + os.getcwd())
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logfmt = '%(name)s:%(levelname)s:%(module)s:%(asctime)s: %(message)s'
+    logger = logger_config(logger, fmt=logfmt, filename='/tmp/electrumpersonalserver.log')
+    logger.setLevel(logging.DEBUG)
+    logger.debug("current working directory is: " + os.getcwd())
     try:
         config = ConfigParser()
         config.read("config.cfg")
         config.options("master-public-keys")
     except NoSectionError:
-        log("Non-existant configuration file `config.cfg`")
+        logger.error("Non-existant configuration file `config.cfg`")
         return
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
         rpc_p = config.get("bitcoin-rpc", "rpc_password")
-        debug("obtaining auth from rpc_user/pass")
+        logger.debug("obtaining auth from rpc_user/pass")
     except NoOptionError:
         rpc_u, rpc_p = obtain_rpc_username_password(config.get(
             "bitcoin-rpc", "datadir"))
-        debug("obtaining auth from .cookie")
+        logger.debug("obtaining auth from .cookie")
     if rpc_u == None:
         return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
@@ -549,22 +555,21 @@ def main():
             bestblockhash[0] = rpc.call("getbestblockhash", [])
         except JsonRpcError as e:
             if not printed_error_msg:
-                log("Error with bitcoin json-rpc: " + repr(e))
+                logger.error("Error with bitcoin json-rpc: " + repr(e))
                 printed_error_msg = True
             time.sleep(5)
 
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
-        transactionmonitor.import_addresses(rpc, relevant_spks_addrs, debug,
-            log)
-        log("Done.\nIf recovering a wallet which already has existing " +
+        transactionmonitor.import_addresses(rpc, relevant_spks_addrs)
+        logger.info("Done.\nIf recovering a wallet which already has existing " +
             "transactions, then\nrun the rescan script. If you're confident " +
             "that the wallets are new\nand empty then there's no need to " +
             "rescan, just restart this script")
     else:
         txmonitor = transactionmonitor.TransactionMonitor(rpc,
-            deterministic_wallets, debug, log)
+            deterministic_wallets)
         if not txmonitor.build_address_history(relevant_spks_addrs):
             return
         hostport = (config.get("electrum-server", "host"),
@@ -586,15 +591,16 @@ def main():
             poll_interval_listening, poll_interval_connected, certfile, keyfile)
 
 def search_for_block_height_of_date(datestr, rpc):
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     target_time = datetime.datetime.strptime(datestr, "%d/%m/%Y")
     bestblockhash = rpc.call("getbestblockhash", [])
     best_head = rpc.call("getblockheader", [bestblockhash])
     if target_time > datetime.datetime.fromtimestamp(best_head["time"]):
-        print("ERROR: date in the future")
+        logger.error("date in the future")
         return -1
     genesis_block = rpc.call("getblockheader", [rpc.call("getblockhash", [0])])
     if target_time < datetime.datetime.fromtimestamp(genesis_block["time"]):
-        print("WARNING: date is before the creation of bitcoin")
+        logger.warning("date is before the creation of bitcoin")
         return 0
     first_height = 0
     last_height = best_head["height"]
@@ -613,12 +619,14 @@ def search_for_block_height_of_date(datestr, rpc):
             return -1
 
 def rescan():
+    logger = logger_config(logging.getLogger('ELECTRUMPERSONALSERVER'))
+    logger.setLevel(logging.DEBUG)
     try:
         config = ConfigParser()
         config.read(["config.cfg"])
         config.options("master-public-keys")
     except NoSectionError:
-        print("Non-existant configuration file `config.cfg`")
+        logger.error("Non-existant configuration file `config.cfg`")
         return
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
@@ -645,4 +653,4 @@ def rescan():
     if input("Rescan from block height " + str(height) + " ? (y/n):") != 'y':
         return
     rpc.call("rescanblockchain", [height])
-    print("end")
+    logger.info("end")

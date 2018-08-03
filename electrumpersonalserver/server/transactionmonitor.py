@@ -2,6 +2,7 @@
 import time, pprint, math, sys
 from decimal import Decimal
 from collections import defaultdict
+import logging
 
 from electrumpersonalserver.server.jsonrpc import JsonRpcError
 from electrumpersonalserver.server.hashes import (
@@ -32,9 +33,10 @@ from electrumpersonalserver.server.hashes import (
 ADDRESSES_LABEL = "electrum-watchonly-addresses"
 CONFIRMATIONS_SAFE_FROM_REORG = 100
 
-def import_addresses(rpc, addrs, debug, log):
-    debug("importing addrs = " + str(addrs))
-    log("Importing " + str(len(addrs)) + " addresses in total")
+def import_addresses(rpc, addrs, logger=None):
+    logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger.debug("importing addrs = " + str(addrs))
+    logger.info("Importing " + str(len(addrs)) + " addresses in total")
     addr_i = iter(addrs)
     notifications = 10
     for i in range(notifications):
@@ -46,22 +48,21 @@ def import_addresses(rpc, addrs, debug, log):
     for a in addr_i: #import the reminder of addresses
         rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
     print("[100%]")
-    log("Importing done")
+    logger.info("Importing done")
 
 class TransactionMonitor(object):
     """
     Class which monitors the bitcoind wallet for new transactions
     and builds a history datastructure for sending to electrum
     """
-    def __init__(self, rpc, deterministic_wallets, debug, log):
+    def __init__(self, rpc, deterministic_wallets, logger=None):
         self.rpc = rpc
         self.deterministic_wallets = deterministic_wallets
-        self.debug = debug
-        self.log = log
         self.last_known_wallet_txid = None
         self.address_history = None
         self.unconfirmed_txes = None
         self.reorganizable_txes = None
+        self.logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
 
     def get_electrum_history_hash(self, scrhash):
         return get_status_electrum( [(h["tx_hash"], h["height"])
@@ -85,7 +86,8 @@ class TransactionMonitor(object):
             his["subscribed"] = False
 
     def build_address_history(self, monitored_scriptpubkeys):
-        self.log("Building history with " + str(len(monitored_scriptpubkeys)) +
+        logger = self.logger
+        logger.info("Building history with " + str(len(monitored_scriptpubkeys)) +
             " addresses . . .")
         st = time.time()
         address_history = {}
@@ -107,7 +109,7 @@ class TransactionMonitor(object):
         last_tx = None
         while len(ret) == BATCH_SIZE:
             ret = self.rpc.call("listtransactions", ["*", BATCH_SIZE, t, True])
-            self.debug("listtransactions skip=" + str(t) + " len(ret)="
+            logger.debug("listtransactions skip=" + str(t) + " len(ret)="
                 + str(len(ret)))
             if t == 0 and len(ret) > 0:
                 last_tx = ret[-1]
@@ -121,7 +123,7 @@ class TransactionMonitor(object):
                     continue #conflicted
                 if tx["txid"] in obtained_txids:
                     continue
-                self.debug("adding obtained tx=" + str(tx["txid"]))
+                logger.debug("adding obtained tx=" + str(tx["txid"]))
                 obtained_txids.add(tx["txid"])
 
                 #obtain all the addresses this transaction is involved with
@@ -142,8 +144,8 @@ class TransactionMonitor(object):
                     overrun_depths = wal.have_scriptpubkeys_overrun_gaplimit(
                         output_scriptpubkeys)
                     if overrun_depths != None:
-                        self.log("ERROR: Not enough addresses imported.")
-                        self.log("Delete wallet.dat and increase the value " +
+                        logger.error("Not enough addresses imported.")
+                        logger.error("Delete wallet.dat and increase the value " +
                             "of `initial_import_count` in the file " + 
                             "`config.cfg` then reimport and rescan")
                         #TODO make it so users dont have to delete wallet.dat
@@ -165,8 +167,8 @@ class TransactionMonitor(object):
             uctx = self.sort_address_history_list(his)
             for u in uctx:
                 unconfirmed_txes[u["tx_hash"]].append(scrhash)
-        self.debug("unconfirmed_txes = " + str(unconfirmed_txes))
-        self.debug("reorganizable_txes = " + str(self.reorganizable_txes))
+        logger.debug("unconfirmed_txes = " + str(unconfirmed_txes))
+        logger.debug("reorganizable_txes = " + str(self.reorganizable_txes))
         if len(ret) > 0:
             #txid doesnt uniquely identify transactions from listtransactions
             #but the tuple (txid, address) does
@@ -174,12 +176,12 @@ class TransactionMonitor(object):
                 last_tx.get("address", None))
         else:
             self.last_known_wallet_txid = None
-        self.debug("last_known_wallet_txid = " + str(
+        logger.debug("last_known_wallet_txid = " + str(
             self.last_known_wallet_txid))
 
         et = time.time()
-        self.debug("address_history =\n" + pprint.pformat(address_history))
-        self.log("Found " + str(count) + " txes. History built in "
+        logger.debug("address_history =\n" + pprint.pformat(address_history))
+        logger.info("Found " + str(count) + " txes. History built in "
             + str(et - st) + "sec")
         self.address_history = address_history
         self.unconfirmed_txes = unconfirmed_txes
@@ -204,6 +206,7 @@ class TransactionMonitor(object):
         return output_scriptpubkeys, input_scriptpubkeys, txd
 
     def generate_new_history_element(self, tx, txd):
+        logger = self.logger
         if tx["confirmations"] == 0:
             unconfirmed_input = False
             total_input_value = 0
@@ -226,9 +229,9 @@ class TransactionMonitor(object):
                         utxo["confirmations"] == 0)
                 else:
                     # Electrum will now display a weird negative fee
-                    self.log("WARNING: input utxo not found(!)")
+                    logger.warning("input utxo not found(!)")
 
-            self.debug("total_input_value = " + str(total_input_value))
+            logger.debug("total_input_value = " + str(total_input_value))
             fee = total_input_value - sum([int(Decimal(out["value"])
                 * Decimal(1e8)) for out in txd["vout"]])
             height = -1 if unconfirmed_input else 0
@@ -256,6 +259,7 @@ class TransactionMonitor(object):
         return unconfirm_txes
 
     def check_for_updated_txes(self):
+        logger = self.logger
         updated_scrhashes1 = self.check_for_new_txes()
         updated_scrhashes2 = self.check_for_confirmations()
         updated_scrhashes3 = self.check_for_reorganizations()
@@ -265,34 +269,35 @@ class TransactionMonitor(object):
             his = self.address_history[ush]
             self.sort_address_history_list(his)
         if len(updated_scrhashes) > 0:
-            self.debug("new tx address_history =\n"
+            logger.debug("new tx address_history =\n"
                 + pprint.pformat(self.address_history))
-            self.debug("unconfirmed txes = "
+            logger.debug("unconfirmed txes = "
                 + pprint.pformat(self.unconfirmed_txes))
-            self.debug("self.reorganizable_txes = "
+            logger.debug("self.reorganizable_txes = "
                 + pprint.pformat(self.reorganizable_txes))
-            self.debug("updated_scripthashes = " + str(updated_scrhashes))
+            logger.debug("updated_scripthashes = " + str(updated_scrhashes))
         updated_scrhashes = filter(lambda sh:self.address_history[sh][
             "subscribed"], updated_scrhashes)
         return updated_scrhashes
 
     def check_for_reorganizations(self):
+        logger = self.logger
         elements_removed = []
         elements_added = []
         updated_scrhashes = set()
-        self.debug("reorganizable_txes = " + str(self.reorganizable_txes))
+        logger.debug("reorganizable_txes = " + str(self.reorganizable_txes))
         for reorgable_tx in self.reorganizable_txes:
             txid, blockhash, height, scrhashes = reorgable_tx
             tx = self.rpc.call("gettransaction", [txid])
             if tx["confirmations"] >= CONFIRMATIONS_SAFE_FROM_REORG:
                 elements_removed.append(reorgable_tx)
-                self.debug("Transaction considered safe from reorg: " + txid)
+                logger.debug("Transaction considered safe from reorg: " + txid)
                 continue
             if tx["confirmations"] < 1:
                 updated_scrhashes.update(scrhashes)
                 if tx["confirmations"] == 0:
                     #transaction became unconfirmed in a reorg
-                    self.log("A transaction was reorg'd out: " + txid)
+                    logger.warning("A transaction was reorg'd out: " + txid)
                     elements_removed.append(reorgable_tx)
                     self.unconfirmed_txes[txid].extend(scrhashes)
 
@@ -306,17 +311,17 @@ class TransactionMonitor(object):
 
                 elif tx["confirmations"] < 0:
                     #tx became conflicted in reorg i.e. a double spend
-                    self.log("A transaction was double spent! " + txid)
+                    logger.error("A transaction was double spent! " + txid)
                     elements_removed.append(reorgable_tx)
             elif tx["blockhash"] != blockhash:
                 block = self.rpc.call("getblockheader", [tx["blockhash"]])
                 if block["height"] == height: #reorg but height is the same
-                    self.log("A transaction was reorg'd but still confirmed " +
+                    logger.warning("A transaction was reorg'd but still confirmed " +
                         "at same height: " + txid)
                     continue
                 #reorged but still confirmed at a different height
                 updated_scrhashes.update(scrhashes)
-                self.log("A transaction was reorg'd but still confirmed to " +
+                logger.warning("A transaction was reorg'd but still confirmed to " +
                     "a new block and different height: " + txid)
                 #update history with the new height
                 for scrhash in scrhashes:
@@ -344,20 +349,21 @@ class TransactionMonitor(object):
         return updated_scrhashes
 
     def check_for_confirmations(self):
+        logger = self.logger
         tx_scrhashes_removed_from_mempool = []
-        self.debug("check4con unconfirmed_txes = "
+        logger.debug("check4con unconfirmed_txes = "
             + pprint.pformat(self.unconfirmed_txes))
         for uc_txid, scrhashes in self.unconfirmed_txes.items():
             tx = self.rpc.call("gettransaction", [uc_txid])
-            self.debug("uc_txid=" + uc_txid + " => " + str(tx))
+            logger.debug("uc_txid=" + uc_txid + " => " + str(tx))
             if tx["confirmations"] == 0:
                 continue #still unconfirmed
             tx_scrhashes_removed_from_mempool.append((uc_txid, scrhashes))
             if tx["confirmations"] > 0:
-                self.log("A transaction confirmed: " + uc_txid)
+                logger.info("A transaction confirmed: " + uc_txid)
                 block = self.rpc.call("getblockheader", [tx["blockhash"]])
             elif tx["confirmations"] < 0:
-                self.log("A transaction became conflicted: " + uc_txid)
+                logger.warning("A transaction became conflicted: " + uc_txid)
             for scrhash in scrhashes:
                 #delete the old unconfirmed entry in address_history
                 deleted_entries = [h for h in self.address_history[scrhash][
@@ -378,11 +384,12 @@ class TransactionMonitor(object):
         return updated_scrhashes
 
     def check_for_new_txes(self):
+        logger = self.logger
         MAX_TX_REQUEST_COUNT = 256 
         tx_request_count = 2
         max_attempts = int(math.log(MAX_TX_REQUEST_COUNT, 2))
         for i in range(max_attempts):
-            self.debug("listtransactions tx_request_count="
+            logger.debug("listtransactions tx_request_count="
                 + str(tx_request_count))
             ##how listtransactions works
             ##skip and count parameters take most-recent txes first
@@ -409,18 +416,18 @@ class TransactionMonitor(object):
 
         #TODO low priority: handle a user getting more than 255 new
         # transactions in 15 seconds
-        self.debug("recent tx index = " + str(recent_tx_index) + " ret = " +
+        logger.debug("recent tx index = " + str(recent_tx_index) + " ret = " +
             str([(t["txid"], t.get("address", None)) for t in ret]))
         if len(ret) > 0:
             self.last_known_wallet_txid = (ret[0]["txid"],
                 ret[0].get("address", None))
-            self.debug("last_known_wallet_txid = " + str(
+            logger.debug("last_known_wallet_txid = " + str(
                 self.last_known_wallet_txid))
         assert(recent_tx_index != -1)
         if recent_tx_index == 0:
             return set()
         new_txes = ret[:recent_tx_index][::-1]
-        self.debug("new txes = " + str(new_txes))
+        logger.debug("new txes = " + str(new_txes))
         obtained_txids = set()
         updated_scripthashes = []
         for tx in new_txes:
@@ -454,14 +461,13 @@ class TransactionMonitor(object):
                                 spk)] =  {'history': [], 'subscribed': False}
                         new_addrs = [script_to_address(s, self.rpc)
                             for s in spks]
-                        self.debug("importing " + str(len(spks)) +
+                        logger.debug("importing " + str(len(spks)) +
                             " into change=" + str(change))
-                        import_addresses(self.rpc, new_addrs, self.debug,
-                            self.log)
+                        import_addresses(self.rpc, new_addrs, logger)
 
             updated_scripthashes.extend(matching_scripthashes)
             new_history_element = self.generate_new_history_element(tx, txd)
-            self.log("Found new tx: " + str(new_history_element))
+            logger.info("Found new tx: " + str(new_history_element))
             for scrhash in matching_scripthashes:
                 self.address_history[scrhash]["history"].append(
                     new_history_element)

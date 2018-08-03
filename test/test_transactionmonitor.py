@@ -1,5 +1,6 @@
 
 import pytest
+import logging
 
 from electrumpersonalserver.server import (
     DeterministicWallet,
@@ -7,6 +8,8 @@ from electrumpersonalserver.server import (
     JsonRpcError,
     script_to_scripthash
 )
+
+logger = logging.getLogger('ELECTRUMPERSONALSERVER-TEST')
 
 class DummyJsonRpc(object):
     """
@@ -34,18 +37,18 @@ class DummyJsonRpc(object):
             for t in self.txlist:
                 if t["hex"] == params[0]:
                     return t
-            debugf(params[0])
+            logger.debug(params[0])
             assert 0
         elif method == "gettxout":
             for u in self.utxoset:
                 if u["txid"] == params[0] and u["vout"] == params[1]:
                     return u
-            debugf("txid = " + params[0] + " vout = " + str(params[1]))
+            logger.debug("txid = " + params[0] + " vout = " + str(params[1]))
             assert 0
         elif method == "getblockheader":
             if params[0] in self.block_heights:
                 return {"height": self.block_heights[params[0]]}
-            debugf(params[0])
+            logger.debug(params[0])
             assert 0
         elif method == "decodescript":
             return {"addresses": [dummy_spk_to_address(params[0])]}
@@ -77,9 +80,6 @@ def dummy_spk_to_address(spk):
     ##spk is short for scriptPubKey
     return spk + "-address"
 
-debugf = lambda x: print("[DEBUG] " + x)
-logf = lambda x: print("[  LOG] " + x)
-
 deterministic_wallets = [DummyDeterministicWallet()]
 dummy_id_g = [1000]
 
@@ -110,7 +110,7 @@ def create_dummy_funding_tx(confirmations=1, output_spk=None,
         "blockhash": dummy_containing_block,
         "hex": "placeholder-test-txhex" + str(dummy_id)
     }
-    debugf("created dummy tx: " + str(dummy_tx))
+    logger.debug("created dummy tx: " + str(dummy_tx))
     return dummy_spk, containing_block_height, dummy_tx
 
 def assert_address_history_tx(address_history, spk, height, txid, subscribed):
@@ -129,7 +129,7 @@ def test_single_tx():
 
     rpc = DummyJsonRpc([dummy_tx], [],
         {dummy_tx["blockhash"]: containing_block_height})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk])
     assert len(txmonitor.address_history) == 1
     assert_address_history_tx(txmonitor.address_history, spk=dummy_spk,
@@ -143,7 +143,7 @@ def test_two_txes():
     rpc = DummyJsonRpc([dummy_tx1, dummy_tx2], [],
         {dummy_tx1["blockhash"]: containing_block_height1,
         dummy_tx2["blockhash"]: containing_block_height2})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1, dummy_spk2])
     assert len(txmonitor.address_history) == 2
     assert_address_history_tx(txmonitor.address_history, spk=dummy_spk1,
@@ -171,7 +171,7 @@ def test_many_txes():
     assert len(txes) == INITIAL_TX_COUNT
 
     rpc = DummyJsonRpc(txes, [dummy_tx["vin"][0]], {})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk])
     assert len(txmonitor.address_history) == 1
     assert len(list(txmonitor.check_for_updated_txes())) == 0
@@ -197,7 +197,7 @@ def test_non_subscribed_confirmation():
 
     rpc = DummyJsonRpc([dummy_tx], [dummy_tx["vin"][0]],
         {dummy_tx["blockhash"]: containing_block_height})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk])
     assert len(txmonitor.address_history) == 1
     assert_address_history_tx(txmonitor.address_history, spk=dummy_spk,
@@ -217,7 +217,7 @@ def test_tx_arrival_then_confirmation():
 
     rpc = DummyJsonRpc([], [dummy_tx["vin"][0]], {dummy_tx["blockhash"]:
         containing_block_height})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk])
     assert len(txmonitor.address_history) == 1
     sh = script_to_scripthash(dummy_spk)
@@ -243,7 +243,7 @@ def test_unrelated_tx():
 
     rpc = DummyJsonRpc([dummy_tx], [], {dummy_tx["blockhash"]:
         containing_block_height})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([our_dummy_spk])
     assert len(txmonitor.address_history) == 1
     assert len(txmonitor.get_electrum_history(script_to_scripthash(
@@ -261,7 +261,7 @@ def test_duplicate_txid():
     sh = script_to_scripthash(dummy_spk)
     rpc = DummyJsonRpc([dummy_tx1, dummy_tx2], [], {dummy_tx1["blockhash"]:
         containing_block_height1, dummy_tx2["blockhash"]: containing_block_height2, dummy_tx3["blockhash"]: containing_block_height3})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk])
     assert len(txmonitor.get_electrum_history(sh)) == 1
     txmonitor.subscribe_address(sh)
@@ -280,7 +280,7 @@ def test_address_reuse():
     rpc = DummyJsonRpc([dummy_tx1], [], {dummy_tx1["blockhash"]:
         containing_block_height1, dummy_tx2["blockhash"]:
         containing_block_height2})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1])
     sh = script_to_scripthash(dummy_spk1)
     assert len(txmonitor.get_electrum_history(sh)) == 1
@@ -298,7 +298,7 @@ def test_from_address():
     rpc = DummyJsonRpc([input_tx, spending_tx], [],
         {input_tx["blockhash"]: containing_block_height1,
         spending_tx["blockhash"]: containing_block_height2})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1])
     sh = script_to_scripthash(dummy_spk1)
     assert len(txmonitor.get_electrum_history(sh)) == 2
@@ -312,7 +312,7 @@ def test_tx_within_wallet():
     rpc = DummyJsonRpc([dummy_tx1, dummy_tx2], [],
         {dummy_tx1["blockhash"]: containing_block_height1,
         dummy_tx2["blockhash"]: containing_block_height2})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1, dummy_spk2])
     assert len(txmonitor.get_electrum_history(script_to_scripthash(
         dummy_spk1))) == 2
@@ -336,7 +336,7 @@ def test_overrun_gap_limit():
 
     rpc = DummyJsonRpc([], [], {dummy_tx["blockhash"]: containing_block_height})
     txmonitor = TransactionMonitor(rpc, [DummyImportDeterministicWallet()],
-        debugf, logf)
+                                   logger)
     assert txmonitor.build_address_history([dummy_spk])
     assert len(txmonitor.address_history) == 1
     assert len(list(txmonitor.check_for_updated_txes())) == 0
@@ -357,7 +357,7 @@ def test_conflicted_tx():
     dummy_spk, containing_block_height, dummy_tx = create_dummy_funding_tx(
         confirmations=-1)
     rpc = DummyJsonRpc([dummy_tx], [], {})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     sh = script_to_scripthash(dummy_spk)
 
     assert txmonitor.build_address_history([dummy_spk])
@@ -385,7 +385,7 @@ def test_reorg_finney_attack():
     rpc = DummyJsonRpc([dummy_tx1], [dummy_tx1["vin"][0]],
         {dummy_tx1["blockhash"]: containing_block_height1,
         dummy_tx2["blockhash"]: containing_block_height2})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1, dummy_spk2])
     assert len(txmonitor.address_history) == 2
     sh1 = script_to_scripthash(dummy_spk1)
@@ -415,7 +415,7 @@ def test_reorg_race_attack():
     rpc = DummyJsonRpc([dummy_tx1], [],
         {dummy_tx1["blockhash"]: containing_block_height1,
         dummy_tx2["blockhash"]: containing_block_height2})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1, dummy_spk2])
     assert len(txmonitor.address_history) == 2
     sh1 = script_to_scripthash(dummy_spk1)
@@ -442,7 +442,7 @@ def test_reorg_censor_tx():
 
     rpc = DummyJsonRpc([dummy_tx1], [dummy_tx1["vin"][0]],
         {dummy_tx1["blockhash"]: containing_block_height1})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1])
     assert len(txmonitor.address_history) == 1
     sh = script_to_scripthash(dummy_spk1)
@@ -464,7 +464,7 @@ def test_reorg_different_block():
     rpc = DummyJsonRpc([dummy_tx1], [],
         {dummy_tx1["blockhash"]: containing_block_height1,
         dummy_tx2["blockhash"]: containing_block_height2})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1])
     assert len(txmonitor.address_history) == 1
     sh = script_to_scripthash(dummy_spk1)
@@ -486,7 +486,7 @@ def test_tx_safe_from_reorg():
     dummy_spk1, containing_block_height1, dummy_tx1 = create_dummy_funding_tx()
     rpc = DummyJsonRpc([dummy_tx1], [],
         {dummy_tx1["blockhash"]: containing_block_height1})
-    txmonitor = TransactionMonitor(rpc, deterministic_wallets, debugf, logf)
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk1])
     assert len(list(txmonitor.check_for_updated_txes())) == 0
     assert len(txmonitor.reorganizable_txes) == 1
