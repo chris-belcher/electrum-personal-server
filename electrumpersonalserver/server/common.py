@@ -510,25 +510,34 @@ def obtain_rpc_username_password(datadir):
     fd.close()
     return username, password
 
-def main():
-    if len(sys.argv) == 2:
-        if sys.argv[1] == "--help":
-            print("Usage: ./server.py <path/to/current/working/dir>\nRunning" +
-                " without arg defaults to the directory you're in right now")
-            return
-        else:
-            os.chdir(sys.argv[1])
-    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+def parse_args():
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description='Electrum Personal Server daemon')
+    parser.add_argument('-c', '--conf', required=True,
+                        help='configuration file (mandatory)')
+    parser.add_argument('-d', '--debug', action='store_true')
+    parser.add_argument('-l', '--log', help='log file',
+                        default='/tmp/eps-{}.log'.format(os.getenv('USER')))
     logfmt = '%(name)s:%(levelname)s:%(module)s:%(asctime)s: %(message)s'
-    logger = logger_config(logger, fmt=logfmt, filename='/tmp/electrumpersonalserver.log')
-    logger.setLevel(logging.DEBUG)
-    logger.debug("current working directory is: " + os.getcwd())
+    parser.add_argument('-f', '--logfmt', default=logfmt,
+                        help='log format')
+    parser.add_argument('--loglevel', default=20, type=int,
+                        choices=[i*10 for i in range(1, 6)],
+                        help='DEBUG, INFO, WARNING, ERROR, CRITICAL')
+    return parser.parse_args()
+
+def main():
+    opts = parse_args()
+
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log)
+    logger.setLevel(logging.DEBUG if opts.debug else opts.loglevel)
     try:
         config = ConfigParser()
-        config.read("config.cfg")
+        config.read(opts.conf)
         config.options("master-public-keys")
     except NoSectionError:
-        logger.error("Non-existant configuration file `config.cfg`")
+        logger.error("Non-existant configuration file {}".format(opts.conf))
         return
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
@@ -619,14 +628,17 @@ def search_for_block_height_of_date(datestr, rpc):
             return -1
 
 def rescan():
-    logger = logger_config(logging.getLogger('ELECTRUMPERSONALSERVER'))
-    logger.setLevel(logging.DEBUG)
+    opts = parse_args()
+
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log)
+    logger.setLevel(logging.DEBUG if opts.debug else opts.loglevel)
     try:
         config = ConfigParser()
-        config.read(["config.cfg"])
+        config.read(opts.conf)
         config.options("master-public-keys")
     except NoSectionError:
-        logger.error("Non-existant configuration file `config.cfg`")
+        logger.error("Non-existant configuration file {}".format(opts.conf))
         return
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
