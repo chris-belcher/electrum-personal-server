@@ -10,7 +10,7 @@ import electrumpersonalserver.server.hashes as hashes
 import electrumpersonalserver.server.merkleproof as merkleproof
 import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
-from electrumpersonalserver.server.tor  import start_tor_hidden_service
+from electrumpersonalserver.server.tor import start_tor_hidden_service, hs_store
 
 SERVER_VERSION_NUMBER = "0.1.6"
 
@@ -702,8 +702,10 @@ def main():
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
         if config.has_section('tor-hidden-service') or opts.torfirstrun:
-            # TODO: if opts.torfirstrun: save privkey and auth creds
             ctrlr, hsv = start_tor_hidden_service(config, opts.torfirstrun)
+            # test for `hsv` to check if tor hidden service is running
+            if opts.torfirstrun and hsv:
+                hs_store(hsv, config, opts.conf)
         else:
             ctrlr, hsv = None, None
         certfile, keyfile = get_certs(config)

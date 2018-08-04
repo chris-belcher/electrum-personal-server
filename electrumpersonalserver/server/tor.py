@@ -58,14 +58,26 @@ def hs_restore(config):
     return res
 
 
-def hs_store(key, store):
+def hs_store(hsv, config, filename):
     """Save the private key and authentication credentials
 
     On first run, the private key and authentication credentials are stored in
     a sub pickle file on disk.  `store` is the path to the pickle file.
 
     """
-    return NotImplemented
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    config.read_dict({
+        'tor-hidden-service': {
+            # keys should match options in `tor.hs_restore`
+            'private_key_type': hsv.private_key_type,
+            'private_key': hsv.private_key,
+            'auth': hsv.client_auth['bob']
+        }
+    })
+    # writing to a new file to preserve comments in original
+    with open(filename + '_updated', mode='w') as newfile:
+        config.write(newfile)
+        logger.info('writing updated conf: {}'.format(newfile.name))
 
 
 def start_tor_hidden_service(config, firstrun=False):
