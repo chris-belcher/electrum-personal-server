@@ -7,7 +7,6 @@
 
 import os
 import logging
-from configparser import ConfigParser
 from importlib import import_module
 
 def _from_stem_import_cls(module, cls):
@@ -89,29 +88,51 @@ def start_tor_hidden_service(config, firstrun=False):
     else:
         version = _from_stem_import_cls(module='stem', cls='__version__')
         majv, minv = version.split('.', 3)[:2]
-        ControlError = _from_stem_import_cls(module='stem', cls='ControlError')
-        if majv >= 1 and minv >= 7:  # new in 1.7
+        SocketError = _from_stem_import_cls(module='stem', cls='SocketError')
+        ControllerError = _from_stem_import_cls(module='stem', cls='ControllerError')
+        AuthenticationFailure = _from_stem_import_cls(
+            module='stem.connection', cls='AuthenticationFailure')
+        MissingPassword = _from_stem_import_cls(
+            module='stem.connection', cls='MissingPassword')
+
+        if int(majv) >= 1 and int(minv) >= 7:  # new in 1.7
             Timeout = _from_stem_import_cls(module='stem', cls='Timeout')
-            errs = (ControlError, Timeout)
+            errs = (ControllerError, Timeout)
         else:
-            errs = ControlError
+            errs = ControllerError
 
-    # TODO: check if tor is running
-    with Controller.from_port(port=9051) as ctrlr:
-        # TODO: multiple authentication methods
-        ctrlr.authenticate()
+    try:
+        with Controller.from_port(port=9051) as ctrlr:
+            try:
+                # TODO: multiple authentication methods
+                ctrlr.authenticate()
+            except MissingPassword as err:
+                logger.debug('', exc_info=True)
+                logger.error('incorrect authentication method')
+                ctrlr.close()
+                return None, None
+            except (SocketError, AuthenticationFailure) as err:
+                logger.debug('', exc_info=True)
+                logger.error('authentication with Tor failed')
+                ctrlr.close()
+                return None, None
 
-        opts = hs_options([] if firstrun else hs_restore(config))
-        try:
-            hsv = ctrlr.create_ephemeral_hidden_service(50002, **opts)
-        except errs as err:
-            logger.debug('', exc_info=True)
-            logger.info('could not create hidden service, cleaning up')
-            ctrlr.close()
-            return None, None
-        else:
-            logger.info('hidden service onion: {}.onion'.format(hsv.service_id))
-            # ADD_ONION response does not include auth when provided in options
-            logger.info('hidden service auth: {}'.format(
-                hsv.client_auth.get('bob', opts['basic_auth'].get('bob'))))
-            return ctrlr, hsv
+            opts = hs_options([] if firstrun else hs_restore(config))
+            try:
+                hsv = ctrlr.create_ephemeral_hidden_service(50002, **opts)
+            except errs as err:
+                logger.debug('', exc_info=True)
+                logger.info('could not create hidden service, cleaning up')
+                ctrlr.close()
+                return None, None
+            else:
+                logger.info('hidden service onion: {}.onion'.format(
+                    hsv.service_id))
+                # ADD_ONION response does not include auth when provided in options
+                logger.info('hidden service auth: {}'.format(
+                    hsv.client_auth.get('bob', opts['basic_auth'].get('bob'))))
+                return ctrlr, hsv
+    except SocketError as err:
+        logger.debug('', exc_info=True)
+        logger.error('could not connect to Tor control port 9051')
+        return None, None
