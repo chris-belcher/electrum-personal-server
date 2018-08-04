@@ -16,8 +16,8 @@ setup(
             "electrum-personal-server-rescan = electrumpersonalserver.server.common:rescan",
         ]
     },
+    package_data={"electrumpersonalserver": ["certs/*"]},
     data_files=[
-        ('etc/electrumpersonalserver/certs', ['certs/cert.crt', 'certs/cert.key'])
         ("etc/electrum-personal-server", ["config.cfg_sample"]),
         ("share/doc/electrum-personal-server", ["README.md"]),
     ],

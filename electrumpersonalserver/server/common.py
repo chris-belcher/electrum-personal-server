@@ -468,8 +468,8 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     return False, spks_to_monitor, deterministic_wallets
 
 def get_certs(config):
-    from pathlib import Path
-    import electrumpersonalserver
+    from pkg_resources import resource_filename
+    from electrumpersonalserver import __certfile__, __keyfile__
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     certfile = config.get('electrum-server', 'certfile', fallback=None)
     keyfile = config.get('electrum-server', 'keyfile', fallback=None)
@@ -477,10 +477,8 @@ def get_certs(config):
        (os.path.exists(certfile) and os.path.exists(keyfile)):
         return certfile, keyfile
     else:
-        # platform independent top directory
-        top = Path(os.path.dirname(electrumpersonalserver.__file__)).parts[:-4]
-        certfile = os.path.join(*top, electrumpersonalserver.__certfile__)
-        keyfile = os.path.join(*top, electrumpersonalserver.__keyfile__)
+        certfile = resource_filename('electrumpersonalserver', __certfile__)
+        keyfile = resource_filename('electrumpersonalserver', __keyfile__)
         if os.path.exists(certfile) and os.path.exists(keyfile):
             logger.info('using cert: {}, key: {}'.format(certfile, keyfile))
             return certfile, keyfile
