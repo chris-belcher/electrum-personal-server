@@ -10,6 +10,7 @@ import electrumpersonalserver.server.hashes as hashes
 import electrumpersonalserver.server.merkleproof as merkleproof
 import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
+from electrumpersonalserver.server.tor  import start_tor_hidden_service
 
 SERVER_VERSION_NUMBER = "0.1.6"
 
@@ -599,7 +600,7 @@ def obtain_rpc_username_password(datadir):
     fd.close()
     return username, password
 
-def parse_args():
+def parse_args(withtor):
     from argparse import ArgumentParser
     from tempfile import gettempdir
 
@@ -617,10 +618,13 @@ def parse_args():
     loglvls = [l for l in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')]
     parser.add_argument('--loglevel', default='DEBUG', choices=loglvls,
                         help='log levels')
+    if withtor:
+        parser.add_argument('-t', '--torfirstrun', action='store_true',
+                            help='Enable Tor first run')
     return parser.parse_args()
 
 def main():
-    opts = parse_args()
+    opts = parse_args(withtor=True)
 
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
@@ -697,11 +701,20 @@ def main():
             "poll_interval_listening"))
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
+        if config.has_section('tor-hidden-service') or opts.torfirstrun:
+            # TODO: if opts.torfirstrun: save privkey and auth creds
+            ctrlr, hsv = start_tor_hidden_service(config, opts.torfirstrun)
+        else:
+            ctrlr, hsv = None, None
         certfile, keyfile = get_certs(config)
         try:
             run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                                 poll_interval_listening,
                                 poll_interval_connected, certfile, keyfile)
+            if hsv:
+                logger.info('stopping hidden service')
+                code = ctrlr.remove_ephemeral_hidden_service(hsv.service_id)
+                logger.debug('hidden service return code: {}'.format(code))
         except KeyboardInterrupt:
             logger.info('Received KeyboardInterrupt, quitting')
 
@@ -734,7 +747,7 @@ def search_for_block_height_of_date(datestr, rpc):
             return -1
 
 def rescan():
-    opts = parse_args()
+    opts = parse_args(withtor=False)
 
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
