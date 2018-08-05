@@ -112,6 +112,10 @@ line with: `ssh username@host -L 50002:localhost:50002` or with [Putty](https://
 for Windows. Then connect Electrum to localhost, and SSH will forward that
 connection to the server.
 
+Electrum Personal Server is now capable of creating an ephemeral Tor
+hidden service so that you may access it remotely.  You can find
+specific instructions [here](doc/tor.md).
+
 #### How is this different from other Electrum servers ?
 
 They are different approaches with different tradeoffs. Electrum Personal

@@ -19,7 +19,7 @@ setup(
     package_data={"electrumpersonalserver": ["certs/*"]},
     data_files=[
         ("etc/electrum-personal-server", ["config.cfg_sample"]),
-        ("share/doc/electrum-personal-server", ["README.md"]),
+        ("share/doc/electrum-personal-server", ["README.md", "doc/tor.md"]),
     ],
     install_requires=[
         'wheel'
