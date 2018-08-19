@@ -294,7 +294,10 @@ def check_for_new_blockchain_tip(rpc, raw):
 def get_block_headers_hex(rpc, start_height, count):
     #read count number of headers starting from start_height
     result = bytearray()
-    the_hash = rpc.call("getblockhash", [start_height])
+    try:
+        the_hash = rpc.call("getblockhash", [start_height])
+    except JsonRpcError as e:
+        return "", 0
     for i in range(count):
         header = rpc.call("getblockheader", [the_hash])
         #add header hex to result
@@ -310,7 +313,7 @@ def get_block_headers_hex(rpc, start_height, count):
         if "nextblockhash" not in header:
             break
         the_hash = header["nextblockhash"]
-    return binascii.hexlify(result).decode("utf-8"), len(result)/80
+    return binascii.hexlify(result).decode("utf-8"), int(len(result)/80)
 
 def create_server_socket(hostport):
     server_sock = socket.socket()
