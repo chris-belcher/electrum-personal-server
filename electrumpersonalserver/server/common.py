@@ -601,8 +601,12 @@ def main():
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
         certfile, keyfile = get_certs(config)
-        run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
-            poll_interval_listening, poll_interval_connected, certfile, keyfile)
+        try:
+            run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
+                                poll_interval_listening,
+                                poll_interval_connected, certfile, keyfile)
+        except KeyboardInterrupt:
+            logger.info('Received KeyboardInterrupt, quitting')
 
 def search_for_block_height_of_date(datestr, rpc):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
