@@ -383,8 +383,14 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
 def get_scriptpubkeys_to_monitor(rpc, config):
     log("Obtaining bitcoin addresses to monitor . . .")
     st = time.time()
-    imported_addresses = set(rpc.call("getaddressesbyaccount",
-        [transactionmonitor.ADDRESSES_LABEL]))
+    try:
+        imported_addresses = set(rpc.call("getaddressesbyaccount",
+            [transactionmonitor.ADDRESSES_LABEL]))
+        debug("using deprecated accounts interface")
+    except JsonRpcError:
+        #bitcoin core 0.17 deprecates accounts, replaced with labels
+        imported_addresses = set(rpc.call("getaddressesbylabel",
+            [transactionmonitor.ADDRESSES_LABEL]).keys())
     debug("already-imported addresses = " + str(imported_addresses))
 
     deterministic_wallets = []
