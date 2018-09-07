@@ -389,8 +389,12 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         debug("using deprecated accounts interface")
     except JsonRpcError:
         #bitcoin core 0.17 deprecates accounts, replaced with labels
-        imported_addresses = set(rpc.call("getaddressesbylabel",
-            [transactionmonitor.ADDRESSES_LABEL]).keys())
+        if transactionmonitor.ADDRESSES_LABEL in rpc.call("listlabels", []):
+            imported_addresses = set(rpc.call("getaddressesbylabel",
+                [transactionmonitor.ADDRESSES_LABEL]).keys())
+        else:
+            #no label, no addresses imported at all
+            imported_addresses = set()
     debug("already-imported addresses = " + str(imported_addresses))
 
     deterministic_wallets = []
