@@ -1,9 +1,15 @@
+# Release v0.1.5 - (7th September 2018)
+
+Bugfix release
+
+* Fixed crash bug caused by behavour of getaddressesbylabel
 
 # Release v0.1.4 - (5th September 2018)
 
 * Used 127.0.0.1 instead of localhost to help improve windows support
 * Fixed crash bug if the client requests an out-of-range header
 * Supported Bitcoin Core 0.17 which deprecates accounts
+
 
 # Release v0.1.3 - (4th July 2018)
 
