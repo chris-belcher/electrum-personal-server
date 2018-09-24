@@ -60,11 +60,16 @@ and `[watch-only-addresses]` sections. Master public keys for an Electrum wallet
 (which start with xpub/ypub/zpub) can be found in the Electrum client menu
 `Wallet` -> `Information`.
 
-* Run `./server.py` on Linux or double-click `run-server.bat` on Windows.
-The first time the server is run it will import all configured addresses as
-watch-only into the Bitcoin node, and then exit. If the wallets contain 
-historical transactions you can use the rescan script (`./rescan-script.py` or
-`rescan-script.bat`) to make them appear.
+* Install Electrum Personal Server in your home directory with
+  `pip3 install --user .`.  On Linux the scripts
+  (`electrum-personal-server` and `electrum-personal-server-rescan`) will be
+  installed in `~/.local/bin`.
+
+* Run `electrum-personal-server -c /path/to/config.cfg` to start Electrum
+  Personal Server. The first time the server is run it will import all
+  configured addresses as watch-only into the Bitcoin node, and then exit.
+  If the wallets contain historical transactions you can use the rescan script
+  (`electrum-personal-server-rescan -c /path/to/config.cfg`) to make them appear.
 
 * Run the server again which will start Electrum Personal Server. Tell Electrum
 wallet to connect to it in `Tools` -> `Server`. By default the server details
@@ -155,6 +160,18 @@ I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels, b
 
 My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
 
+### Notes for developers
+
+To seamlessly work on the codebase while using `pip`, you need to
+install in the `develop`/`editable` mode.  You can do that with:
+
+    $ pip3 install --user -e /path/to/repo
+
+`/path/to/repo` can also be a relative path, so if you are in the
+source directory, just use `.`.  This installs the scripts in the
+usual places, but imports the package from the source directory.  This
+way, any changes you make are immediately visible.
+
 #### Testing
 
 Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
@@ -162,7 +179,7 @@ and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The
 Electrum wallet can be started in testnet mode with the command line flag
 `--testnet` or `--regtest`.
 
-pytest is used for automated testing. On Debian-like systems install with 
+pytest is used for automated testing. On Debian-like systems install with
 `pip3 install pytest pytest-cov`
 
 Run the tests with:
@@ -173,6 +190,11 @@ Create the coverage report with:
 
     $ PYTHONPATH=.:$PYTHONPATH py.test-3 --cov-report=html --cov
     $ open htmlcov/index.html
+
+If you have installed Electrum Personal Server with pip, there is no
+need to set `PYTHONPATH`.  You could also run the tests with:
+
+    $ python3 setup.py test
 
 ## Media Coverage
 
