@@ -1,8 +1,10 @@
 
 import pytest
 
-from electrumpersonalserver import (convert_core_to_electrum_merkle_proof,
-                                    hash_merkle_root)
+from electrumpersonalserver.server import (
+    convert_core_to_electrum_merkle_proof,
+    hash_merkle_root
+)
 
 '''
 # code for printing out proofs not longer than 80 per line

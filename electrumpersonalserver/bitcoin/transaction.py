@@ -1,12 +1,11 @@
 #!/usr/bin/python
 import binascii, re, json, copy, sys
-from bitcoin.secp256k1_main import *
+from electrumpersonalserver.bitcoin.main import *
 from _functools import reduce
-import os
-
-is_python2 = sys.version_info.major == 2
 
 ### Hex to bin converter and vice versa for objects
+
+
 def json_is_base(obj, base):
     if not is_python2 and isinstance(obj, bytes):
         return False
@@ -125,7 +124,10 @@ def serialize(txobj):
 SIGHASH_ALL = 1
 SIGHASH_NONE = 2
 SIGHASH_SINGLE = 3
-SIGHASH_ANYONECANPAY = 0x80
+# this works like SIGHASH_ANYONECANPAY | SIGHASH_ALL, might as well make it explicit while
+# we fix the constant
+SIGHASH_ANYONECANPAY = 0x81
+
 
 def signature_form(tx, i, script, hashcode=SIGHASH_ALL):
     i, hashcode = int(i), int(hashcode)
@@ -135,27 +137,46 @@ def signature_form(tx, i, script, hashcode=SIGHASH_ALL):
     for inp in newtx["ins"]:
         inp["script"] = ""
     newtx["ins"][i]["script"] = script
-    if hashcode & 0x1f == SIGHASH_NONE:
+    if hashcode == SIGHASH_NONE:
         newtx["outs"] = []
-        for j, inp in enumerate(newtx["ins"]):
-            if j != i:
-                inp["sequence"] = 0
-    elif hashcode & 0x1f == SIGHASH_SINGLE:
-        if len(newtx["ins"]) > len(newtx["outs"]):
-            raise Exception(
-                "Transactions with sighash single should have len in <= len out")
-        newtx["outs"] = newtx["outs"][:i+1]
-        for out in newtx["outs"][:i]:
-            out['value'] = 2**64 - 1
-            out['script'] = ""
-        for j, inp in enumerate(newtx["ins"]):
-            if j != i:
-                inp["sequence"] = 0
-    if hashcode & SIGHASH_ANYONECANPAY:
+    elif hashcode == SIGHASH_SINGLE:
+        newtx["outs"] = newtx["outs"][:len(newtx["ins"])]
+        for out in range(len(newtx["ins"]) - 1):
+            out.value = 2**64 - 1
+            out.script = ""
+    elif hashcode == SIGHASH_ANYONECANPAY:
         newtx["ins"] = [newtx["ins"][i]]
     else:
         pass
     return newtx
+
+# Making the actual signatures
+
+
+def der_encode_sig(v, r, s):
+    """Takes (vbyte, r, s) as ints and returns hex der encode sig"""
+    #See https://github.com/vbuterin/pybitcointools/issues/89
+    #See https://github.com/simcity4242/pybitcointools/
+    s = N - s if s > N // 2 else s  # BIP62 low s
+    b1, b2 = encode(r, 256), encode(s, 256)
+    if bytearray(b1)[
+            0] & 0x80:  # add null bytes if leading byte interpreted as negative
+        b1 = b'\x00' + b1
+    if bytearray(b2)[0] & 0x80:
+        b2 = b'\x00' + b2
+    left = b'\x02' + encode(len(b1), 256, 1) + b1
+    right = b'\x02' + encode(len(b2), 256, 1) + b2
+    return safe_hexlify(b'\x30' + encode(
+        len(left + right), 256, 1) + left + right)
+
+
+def der_decode_sig(sig):
+    leftlen = decode(sig[6:8], 16) * 2
+    left = sig[8:8 + leftlen]
+    rightlen = decode(sig[10 + leftlen:12 + leftlen], 16) * 2
+    right = sig[12 + leftlen:12 + leftlen + rightlen]
+    return (None, decode(left, 16), decode(right, 16))
+
 
 def txhash(tx, hashcode=None):
     if isinstance(tx, str) and re.match('^[0-9a-fA-F]*$', tx):
@@ -171,26 +192,15 @@ def bin_txhash(tx, hashcode=None):
     return binascii.unhexlify(txhash(tx, hashcode))
 
 
-def ecdsa_tx_sign(tx, priv, hashcode=SIGHASH_ALL, usenonce=None):
-    sig = ecdsa_raw_sign(
-        txhash(tx, hashcode),
-        priv,
-        True,
-        rawmsg=True,
-        usenonce=usenonce)
-    return sig + encode(hashcode, 16, 2)
+def ecdsa_tx_sign(tx, priv, hashcode=SIGHASH_ALL):
+    rawsig = ecdsa_raw_sign(bin_txhash(tx, hashcode), priv)
+    return der_encode_sig(*rawsig) + encode(hashcode, 16, 2)
 
 
 def ecdsa_tx_verify(tx, sig, pub, hashcode=SIGHASH_ALL):
-    return ecdsa_raw_verify(
-        txhash(tx, hashcode),
-        pub,
-        sig[:-2],
-        True,
-        rawmsg=True)
+    return ecdsa_raw_verify(bin_txhash(tx, hashcode), der_decode_sig(sig), pub)
 
 # Scripts
-
 
 def mk_pubkey_script(addr):
     # Keep the auxiliary functions around for altcoins' sake
@@ -322,24 +332,22 @@ def verify_tx_input(tx, i, script, sig, pub):
         script = binascii.unhexlify(script)
     if not re.match('^[0-9a-fA-F]*$', sig):
         sig = safe_hexlify(sig)
-    if not re.match('^[0-9a-fA-F]*$', pub):
-        pub = safe_hexlify(pub)
     hashcode = decode(sig[-2:], 16)
     modtx = signature_form(tx, int(i), script, hashcode)
     return ecdsa_tx_verify(modtx, sig, pub, hashcode)
 
 
-def sign(tx, i, priv, hashcode=SIGHASH_ALL, usenonce=None):
+def sign(tx, i, priv, hashcode=SIGHASH_ALL):
     i = int(i)
     if (not is_python2 and isinstance(re, bytes)) or not re.match(
             '^[0-9a-fA-F]*$', tx):
         return binascii.unhexlify(sign(safe_hexlify(tx), i, priv))
     if len(priv) <= 33:
         priv = safe_hexlify(priv)
-    pub = privkey_to_pubkey(priv, True)
+    pub = privkey_to_pubkey(priv)
     address = pubkey_to_address(pub)
     signing_tx = signature_form(tx, i, mk_pubkey_script(address), hashcode)
-    sig = ecdsa_tx_sign(signing_tx, priv, hashcode, usenonce=usenonce)
+    sig = ecdsa_tx_sign(signing_tx, priv, hashcode)
     txobj = deserialize(tx)
     txobj["ins"][i]["script"] = serialize_script([sig, pub])
     return serialize(txobj)
@@ -450,3 +458,33 @@ def select(unspent, value):
     if tv < value:
         raise Exception("Not enough funds")
     return low[:i]
+
+# Only takes inputs of the form { "output": blah, "value": foo }
+
+
+def mksend(*args):
+    argz, change, fee = args[:-2], args[-2], int(args[-1])
+    ins, outs = [], []
+    for arg in argz:
+        if isinstance(arg, list):
+            for a in arg:
+                (ins if is_inp(a) else outs).append(a)
+        else:
+            (ins if is_inp(arg) else outs).append(arg)
+
+    isum = sum([i["value"] for i in ins])
+    osum, outputs2 = 0, []
+    for o in outs:
+        if isinstance(o, string_types):
+            o2 = {"address": o[:o.find(':')], "value": int(o[o.find(':') + 1:])}
+        else:
+            o2 = o
+        outputs2.append(o2)
+        osum += o2["value"]
+
+    if isum < osum + fee:
+        raise Exception("Not enough money")
+    elif isum > osum + fee + 5430:
+        outputs2 += [{"address": change, "value": isum - osum - fee}]
+
+    return mktx(ins, outputs2)

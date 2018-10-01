@@ -1,10 +1,9 @@
 
-import bitcoin as btc
+import electrumpersonalserver.bitcoin as btc
 import binascii
 from math import ceil, log
 
-from electrumpersonalserver.hashes import hash_encode, hash_decode
-from electrumpersonalserver.hashes import Hash
+from electrumpersonalserver.server.hashes import Hash, hash_encode, hash_decode
 
 #lots of ideas and code taken from bitcoin core and breadwallet
 #https://github.com/bitcoin/bitcoin/blob/master/src/merkleblock.h

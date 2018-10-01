@@ -1,7 +1,7 @@
 
 import pytest
 
-from electrumpersonalserver import parse_electrum_master_public_key
+from electrumpersonalserver.server import parse_electrum_master_public_key
 
 
 @pytest.mark.parametrize(
