@@ -536,7 +536,7 @@ def main():
                            logfilemode='a' if opts.appendlog else 'w')
     logger.setLevel(opts.loglevel)
     logger.info('Starting Electrum Personal Server')
-    logger.info(f'Logging to {opts.log}')
+    logger.info('Logging to ' + opts.log)
     try:
         config = ConfigParser()
         config.read(opts.conf)
@@ -644,7 +644,7 @@ def rescan():
                            logfilemode='a' if opts.appendlog else 'w')
     logger.setLevel(opts.loglevel)
     logger.info('Starting Electrum Personal Server in rescan mode')
-    logger.info(f'Logging to {opts.log}')
+    logger.info('Logging to ' + opts.log)
     try:
         config = ConfigParser()
         config.read(opts.conf)
