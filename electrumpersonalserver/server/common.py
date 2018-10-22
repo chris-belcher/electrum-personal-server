@@ -44,6 +44,7 @@ protocol_version = [0]
 subscribed_to_headers = [False]
 are_headers_raw = [False]
 bestblockhash = [None]
+txid_blockhash_map = {}
 
 #log for checking up/seeing your wallet, debug for when something has gone wrong
 def logger_config(logger, fmt=None, filename=None, logfilemode='w'):
@@ -116,8 +117,18 @@ def handle_query(sock, line, rpc, txmonitor):
     #protocol documentation
     #https://github.com/kyuupichan/electrumx/blob/master/docs/PROTOCOL.rst
     if method == "blockchain.transaction.get":
-        tx = rpc.call("gettransaction", [query["params"][0]])
-        send_response(sock, query, tx["hex"])
+        txid = query["params"][0]
+        tx = None
+        try:
+            tx = rpc.call("gettransaction", [txid])["hex"]
+        except JsonRpcError:
+            if txid in txid_blockhash_map:
+                tx = rpc.call("getrawtransaction", [txid, False,
+                    txid_blockhash_map[txid]])
+        if tx is not None:
+            send_response(sock, query, tx)
+        else:
+            send_error(sock, query["id"], {"message": "txid not found"})
     elif method == "blockchain.transaction.get_merkle":
         txid = query["params"][0]
         try:
@@ -282,6 +293,28 @@ def handle_query(sock, line, rpc, txmonitor):
             + SERVER_VERSION_NUMBER, protocol_version[0]])
     elif method == "server.peers.subscribe":
         send_response(sock, query, []) #no peers to report
+    elif method == "blockchain.transaction.id_from_pos":
+        height = query["params"][0]
+        tx_pos = query["params"][1]
+        merkle = False
+        if len(query["params"]) > 2:
+            merkle = query["params"][2]
+        try:
+            blockhash = rpc.call("getblockhash", [height])
+            block = rpc.call("getblock", [blockhash, 1])
+            txid = block["tx"][tx_pos]
+            txid_blockhash_map[txid] = blockhash
+            if not merkle:
+                result = txid
+            else:
+                core_proof = rpc.call("gettxoutproof", [[txid], blockhash])
+                electrum_proof = merkleproof.convert_core_to_electrum_merkle_proof(
+                    core_proof)
+                result = {"tx_hash": txid, "merkle": electrum_proof["merkle"]}
+            send_response(sock, query, result)
+        except JsonRpcError as e:
+            error = {"message": repr(e)}
+            send_error(sock, query["id"], error)
     else:
         logger.error("*** BUG! Not handling method: " + method + " query=" +
             str(query))
