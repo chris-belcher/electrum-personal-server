@@ -11,12 +11,12 @@ import electrumpersonalserver.server.merkleproof as merkleproof
 import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
 
-VERSION_NUMBER = "0.1"
+SERVER_VERSION_NUMBER = "0.1.6"
 
 DONATION_ADDR = "bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz"
 
 BANNER = \
-"""Welcome to Electrum Personal Server
+"""Welcome to Electrum Personal Server {serverversion}
 
 Monitoring {detwallets} deterministic wallets, in total {addr} addresses.
 
@@ -35,8 +35,12 @@ Donate to help make Electrum Personal Server even better:
 
 """
 
+SERVER_PROTOCOL_VERSION_MAX = 1.4
+SERVER_PROTOCOL_VERSION_MIN = 1.1
+
 ##python has demented rules for variable scope, so these
 ## global variables are actually mutable lists
+protocol_version = [0]
 subscribed_to_headers = [False]
 are_headers_raw = [False]
 bestblockhash = [None]
@@ -57,10 +61,9 @@ def logger_config(logger, fmt=None, filename=None, logfilemode='w'):
 
 def send_response(sock, query, result):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    query["result"] = result
-    query["jsonrpc"] = "2.0"
-    sock.sendall(json.dumps(query).encode('utf-8') + b'\n')
-    logger.debug('<= ' + json.dumps(query))
+    response = {"jsonrpc": "2.0", "result": result, "id": query["id"]}
+    sock.sendall(json.dumps(response).encode('utf-8') + b'\n')
+    logger.debug('<= ' + json.dumps(response))
 
 def send_update(sock, update):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
@@ -126,11 +129,12 @@ def handle_query(sock, line, rpc, txmonitor):
                 electrum_proof["merkle"], txid, electrum_proof["pos"])
             if implied_merkle_root != electrum_proof["merkleroot"]:
                 raise ValueError
-            txheader = get_block_header(rpc, tx["blockhash"])
+            txheader = get_block_header(rpc, tx["blockhash"], False)
             reply = {"block_height": txheader["block_height"], "pos":
                 electrum_proof["pos"], "merkle": electrum_proof["merkle"]}
         except (ValueError, JsonRpcError) as e:
-            logger.warning("merkle proof failed for " + txid + " err=" + repr(e))
+            logger.warning("merkle proof failed for " + txid + " err=" +
+                repr(e))
             #so reply with an invalid proof which electrum handles without
             # disconnecting us
             #https://github.com/spesmilo/electrum/blob/c8e67e2bd07efe042703bc1368d499c5e555f854/lib/verifier.py#L74
@@ -141,7 +145,8 @@ def handle_query(sock, line, rpc, txmonitor):
         if txmonitor.subscribe_address(scrhash):
             history_hash = txmonitor.get_electrum_history_hash(scrhash)
         else:
-            logger.warning("address scripthash not known to server: " + scrhash)
+            logger.warning("address scripthash not known to server: " +
+                scrhash)
             history_hash = hashes.get_status_electrum([])
         send_response(sock, query, history_hash)
     elif method == "blockchain.scripthash.get_history":
@@ -152,18 +157,36 @@ def handle_query(sock, line, rpc, txmonitor):
             logger.warning("address scripthash history not known to server: "
                 + scrhash)
         send_response(sock, query, history)
+    elif method == "server.ping":
+        send_response(sock, query, None)
     elif method == "blockchain.headers.subscribe":
+        if protocol_version[0] in (1.2, 1.3):
+            if len(query["params"]) > 0:
+                are_headers_raw[0] = query["params"][0]
+            else:
+                are_headers_raw[0] = (False if protocol_version[0] == 1.2
+                    else True)
+        elif protocol_version[0] == 1.4:
+            are_headers_raw[0] = True
         subscribed_to_headers[0] = True
-        if len(query["params"]) > 0:
-            are_headers_raw[0] = query["params"][0]
         new_bestblockhash, header = get_current_header(rpc, are_headers_raw[0])
         send_response(sock, query, header)
     elif method == "blockchain.block.get_header":
         height = query["params"][0]
         try:
             blockhash = rpc.call("getblockhash", [height])
-            header = get_block_header(rpc, blockhash)
+            header = get_block_header(rpc, blockhash, are_headers_raw[0])
             send_response(sock, query, header)
+        except JsonRpcError:
+            error = {"message": "height " + str(height) + " out of range",
+                "code": -1}
+            send_error(sock, query["id"], error)
+    elif method == "blockchain.block.header":
+        height = query["params"][0]
+        try:
+            blockhash = rpc.call("getblockhash", [height])
+            header = get_block_header(rpc, blockhash, True)
+            send_response(sock, query, header["hex"])
         except JsonRpcError:
             error = {"message": "height " + str(height) + " out of range",
                 "code": -1}
@@ -195,14 +218,12 @@ def handle_query(sock, line, rpc, txmonitor):
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
         mempool = rpc.call("getrawmempool", [True])
-
         #algorithm copied from the relevant place in ElectrumX
         #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
         fee_hist = defaultdict(int)
         for txid, details in mempool.items():
             fee_rate = 1e8*details["fee"] // details["size"]
             fee_hist[fee_rate] += details["size"]
-
         l = list(reversed(sorted(fee_hist.items())))
         out = []
         size = 0
@@ -215,7 +236,6 @@ def handle_query(sock, line, rpc, txmonitor):
                 r += size - binsize
                 size = 0
                 binsize *= 1.1
-
         result = out
         send_response(sock, query, result)
     elif method == "blockchain.estimatefee":
@@ -233,6 +253,7 @@ def handle_query(sock, line, rpc, txmonitor):
         uptime = rpc.call("uptime", [])
         nettotals = rpc.call("getnettotals", [])
         send_response(sock, query, BANNER.format(
+            serverversion=SERVER_VERSION_NUMBER,
             detwallets=len(txmonitor.deterministic_wallets),
             addr=len(txmonitor.address_history),
             useragent=networkinfo["subversion"],
@@ -246,12 +267,24 @@ def handle_query(sock, line, rpc, txmonitor):
     elif method == "server.donation_address":
         send_response(sock, query, DONATION_ADDR)
     elif method == "server.version":
+        client_protocol_version = query["params"][1]
+        if isinstance(client_protocol_version, list):
+            client_min, client_max = float(client_min)
+        else:
+            client_min = float(query["params"][1])
+            client_max = client_min
+        protocol_version[0] = min(client_max, SERVER_PROTOCOL_VERSION_MAX)
+        if protocol_version[0] < max(client_min, SERVER_PROTOCOL_VERSION_MIN):
+            logging.error("*** Client protocol version " + str(
+                client_protocol_version) + " not supported, update needed")
+            raise ConnectionRefusedError()
         send_response(sock, query, ["ElectrumPersonalServer "
-            + VERSION_NUMBER, VERSION_NUMBER])
+            + SERVER_VERSION_NUMBER, protocol_version[0]])
     elif method == "server.peers.subscribe":
         send_response(sock, query, []) #no peers to report
     else:
-        logger.error("*** BUG! Not handling method: " + method + " query=" + str(query))
+        logger.error("*** BUG! Not handling method: " + method + " query=" +
+            str(query))
         #TODO just send back the same query with result = []
 
 def get_block_header(rpc, blockhash, raw=False):
@@ -310,7 +343,7 @@ def get_block_headers_hex(rpc, start_height, count):
         if "nextblockhash" not in header:
             break
         the_hash = header["nextblockhash"]
-    return binascii.hexlify(result).decode("utf-8"), int(len(result)/80)
+    return binascii.hexlify(result).decode("utf-8"), len(result)//80
 
 def create_server_socket(hostport):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
@@ -367,7 +400,7 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                 except socket.timeout:
                     on_heartbeat_connected(sock, rpc, txmonitor)
         except (IOError, EOFError) as e:
-            if isinstance(e, EOFError):
+            if isinstance(e, (EOFError, ConnectionRefusedError)):
                 logger.info("Electrum wallet disconnected")
             else:
                 logger.error("IOError: " + repr(e))
@@ -481,7 +514,7 @@ def get_certs(config):
         certfile = resource_filename('electrumpersonalserver', __certfile__)
         keyfile = resource_filename('electrumpersonalserver', __keyfile__)
         if os.path.exists(certfile) and os.path.exists(keyfile):
-            logger.info('using cert: {}, key: {}'.format(certfile, keyfile))
+            logger.debug('using cert: {}, key: {}'.format(certfile, keyfile))
             return certfile, keyfile
         else:
             raise ValueError('invalid cert: {}, key: {}'.format(
