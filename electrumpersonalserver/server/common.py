@@ -709,7 +709,7 @@ def rescan():
     logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
                            logfilemode='a' if opts.appendlog else 'w')
     logger.setLevel(opts.loglevel)
-    logger.info('Starting Electrum Personal Server in rescan mode')
+    logger.info('Starting the Electrum Personal Server rescan script')
     logger.info('Logging to ' + opts.log)
     try:
         config = ConfigParser()
@@ -742,5 +742,7 @@ def rescan():
 
     if input("Rescan from block height " + str(height) + " ? (y/n):") != 'y':
         return
+    logger.info("Rescanning. . . for progress indicator see the bitcoin node's"
+        + " debug.log file")
     rpc.call("rescanblockchain", [height])
     logger.info("end")
