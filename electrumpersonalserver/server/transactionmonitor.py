@@ -38,7 +38,7 @@ def import_addresses(rpc, addrs, logger=None):
     logger.debug("importing addrs = " + str(addrs))
     logger.info("Importing " + str(len(addrs)) + " addresses in total")
     addr_i = iter(addrs)
-    notifications = 10
+    notifications = 20
     for i in range(notifications):
         pc = int(100.0 * i / notifications)
         sys.stdout.write("[" + str(pc) + "%]... ")

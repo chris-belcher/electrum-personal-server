@@ -40,7 +40,7 @@ poll_interval_connected = 5
 
 # Parameters for dealing with deterministic wallets
 # how many addresses to import first time, should be big because if you import too little you may have to rescan again
-initial_import_count = 100
+initial_import_count = 1000
 # number of unused addresses kept at the head of the wallet
 gap_limit = 25
 

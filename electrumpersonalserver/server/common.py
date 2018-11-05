@@ -484,13 +484,13 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         first_spks = wal.get_scriptpubkeys(change=0, from_index=0,
             count=TEST_ADDR_COUNT)
         first_addrs = [hashes.script_to_address(s, rpc) for s in first_spks]
+        logger.info(" " + config_mpk_key + " => " + " ".join(first_addrs))
         if not set(first_addrs).issubset(imported_addresses):
             import_needed = True
             wallets_imported += 1
             for change in [0, 1]:
                 spks_to_import.extend(wal.get_scriptpubkeys(change, 0,
                     int(config.get("bitcoin-rpc", "initial_import_count"))))
-        logger.info(" " + config_mpk_key + " => " + " ".join(first_addrs))
     #check whether watch-only addresses have been imported
     watch_only_addresses = []
     for key in config.options("watch-only-addresses"):
@@ -538,7 +538,8 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     spks_to_monitor.extend([hashes.address_to_script(addr, rpc)
         for addr in watch_only_addresses])
     et = time.time()
-    logger.info("Obtained list of addresses to monitor in " + str(et - st) + "sec")
+    logger.info("Obtained list of addresses to monitor in " + str(et - st)
+        + "sec")
     return False, spks_to_monitor, deterministic_wallets
 
 def get_certs(config):
@@ -576,7 +577,8 @@ def obtain_rpc_username_password(datadir):
                 "~/Library/Application Support/Bitcoin/")
     cookie_path = os.path.join(datadir, ".cookie")
     if not os.path.exists(cookie_path):
-        logger.warning("Unable to find .cookie file, try setting `datadir` config")
+        logger.warning("Unable to find .cookie file, try setting `datadir`" +
+            " config")
         return None, None
     fd = open(cookie_path)
     username, password = fd.read().strip().split(":")
