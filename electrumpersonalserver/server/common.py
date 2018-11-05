@@ -648,7 +648,12 @@ def main():
                 logger.error("Error with bitcoin json-rpc: " + repr(e))
                 printed_error_msg = True
             time.sleep(5)
-
+    try:
+        rpc.call("listunspent", [])
+    except JsonRpcError:
+        logger.error("Wallet related RPC calls not found, looks like the " +
+            "bitcoin node was compiled with the disable wallet flag")
+        return
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
