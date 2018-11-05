@@ -476,15 +476,21 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     import_needed = False
     wallets_imported = 0
     spks_to_import = []
-    for wal in deterministic_wallets:
-        first_addr = hashes.script_to_address(wal.get_scriptpubkeys(change=0,
-            from_index=0, count=1)[0], rpc)
-        if first_addr not in imported_addresses:
+    TEST_ADDR_COUNT = 3
+    logger.info("Displaying first " + str(TEST_ADDR_COUNT) + " addresses of " +
+        "each master public key:")
+    for config_mpk_key, wal in zip(config.options("master-public-keys"),
+            deterministic_wallets):
+        first_spks = wal.get_scriptpubkeys(change=0, from_index=0,
+            count=TEST_ADDR_COUNT)
+        first_addrs = [hashes.script_to_address(s, rpc) for s in first_spks]
+        if not set(first_addrs).issubset(imported_addresses):
             import_needed = True
             wallets_imported += 1
             for change in [0, 1]:
                 spks_to_import.extend(wal.get_scriptpubkeys(change, 0,
                     int(config.get("bitcoin-rpc", "initial_import_count"))))
+        logger.info(" " + config_mpk_key + " => " + " ".join(first_addrs))
     #check whether watch-only addresses have been imported
     watch_only_addresses = []
     for key in config.options("watch-only-addresses"):
@@ -645,10 +651,10 @@ def main():
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
         transactionmonitor.import_addresses(rpc, relevant_spks_addrs)
-        logger.info("Done.\nIf recovering a wallet which already has existing " +
-            "transactions, then\nrun the rescan script. If you're confident " +
-            "that the wallets are new\nand empty then there's no need to " +
-            "rescan, just restart this script")
+        logger.info("Done.\nIf recovering a wallet which already has existing" +
+            " transactions, then\nrun the rescan script. If you're confident" +
+            " that the wallets are new\nand empty then there's no need to" +
+            " rescan, just restart this script")
     else:
         txmonitor = transactionmonitor.TransactionMonitor(rpc,
             deterministic_wallets)
