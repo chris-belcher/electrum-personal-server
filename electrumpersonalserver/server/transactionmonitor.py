@@ -62,7 +62,8 @@ class TransactionMonitor(object):
         self.address_history = None
         self.unconfirmed_txes = None
         self.reorganizable_txes = None
-        self.logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
+        self.logger = (logger if logger else
+            logging.getLogger('ELECTRUMPERSONALSERVER'))
 
     def get_electrum_history_hash(self, scrhash):
         return get_status_electrum( [(h["tx_hash"], h["height"])
@@ -87,8 +88,8 @@ class TransactionMonitor(object):
 
     def build_address_history(self, monitored_scriptpubkeys):
         logger = self.logger
-        logger.info("Building history with " + str(len(monitored_scriptpubkeys)) +
-            " addresses . . .")
+        logger.info("Building history with " +
+            str(len(monitored_scriptpubkeys)) + " addresses . . .")
         st = time.time()
         address_history = {}
         for spk in monitored_scriptpubkeys:
@@ -117,7 +118,8 @@ class TransactionMonitor(object):
             for tx in ret:
                 if "txid" not in tx or "category" not in tx:
                     continue
-                if tx["category"] not in ("receive", "send", "generate", "immature"):
+                if tx["category"] not in ("receive", "send", "generate",
+                        "immature"):
                     continue
                 if tx["confirmations"] < 0:
                     continue #conflicted
@@ -145,9 +147,9 @@ class TransactionMonitor(object):
                         output_scriptpubkeys)
                     if overrun_depths != None:
                         logger.error("Not enough addresses imported.")
-                        logger.error("Delete wallet.dat and increase the value " +
-                            "of `initial_import_count` in the file " + 
-                            "`config.cfg` then reimport and rescan")
+                        logger.error("Delete wallet.dat and increase the value"
+                            + " of `initial_import_count` in the file"
+                            + " `config.cfg` then reimport and rescan")
                         #TODO make it so users dont have to delete wallet.dat
                         # check whether all initial_import_count addresses are
                         # imported rather than just the first one
@@ -318,13 +320,13 @@ class TransactionMonitor(object):
             elif tx["blockhash"] != blockhash:
                 block = self.rpc.call("getblockheader", [tx["blockhash"]])
                 if block["height"] == height: #reorg but height is the same
-                    logger.warning("A transaction was reorg'd but still confirmed " +
-                        "at same height: " + txid)
+                    logger.warning("A transaction was reorg'd but still " +
+                        "confirmed at same height: " + txid)
                     continue
                 #reorged but still confirmed at a different height
                 updated_scrhashes.update(scrhashes)
-                logger.warning("A transaction was reorg'd but still confirmed to " +
-                    "a new block and different height: " + txid)
+                logger.warning("A transaction was reorg'd but still confirmed"
+                    + " to a new block and different height: " + txid)
                 #update history with the new height
                 for scrhash in scrhashes:
                     for h in self.address_history[scrhash]["history"]:
@@ -435,7 +437,8 @@ class TransactionMonitor(object):
         for tx in new_txes:
             if "txid" not in tx or "category" not in tx:
                 continue
-            if tx["category"] not in ("receive", "send", "generate", "immature"):
+            if tx["category"] not in ("receive", "send", "generate",
+                    "immature"):
                 continue
             if tx["confirmations"] < 0:
                 continue #conflicted
