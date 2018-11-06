@@ -117,7 +117,7 @@ class TransactionMonitor(object):
             for tx in ret:
                 if "txid" not in tx or "category" not in tx:
                     continue
-                if tx["category"] not in ("receive", "send"):
+                if tx["category"] not in ("receive", "send", "generate", "immature"):
                     continue
                 if tx["confirmations"] < 0:
                     continue #conflicted
@@ -194,6 +194,8 @@ class TransactionMonitor(object):
             for out in txd["vout"]]
         input_scriptpubkeys = []
         for inn in txd["vin"]:
+            if "coinbase" in inn:
+                break
             try:
                 wallet_tx = self.rpc.call("gettransaction", [inn["txid"]])
             except JsonRpcError:
@@ -433,7 +435,7 @@ class TransactionMonitor(object):
         for tx in new_txes:
             if "txid" not in tx or "category" not in tx:
                 continue
-            if tx["category"] not in ("receive", "send"):
+            if tx["category"] not in ("receive", "send", "generate", "immature"):
                 continue
             if tx["confirmations"] < 0:
                 continue #conflicted
