@@ -36,6 +36,7 @@ CONFIRMATIONS_SAFE_FROM_REORG = 100
 def import_addresses(rpc, addrs, logger=None):
     logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.debug("importing addrs = " + str(addrs))
+    logger.debug("into label \"" + ADDRESSES_LABEL + "\"")
     logger.info("Importing " + str(len(addrs)) + " addresses in total")
     addr_i = iter(addrs)
     notifications = 20
