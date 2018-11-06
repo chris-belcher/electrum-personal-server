@@ -260,7 +260,9 @@ def test_duplicate_txid():
     dummy_tx3["txid"] = dummy_tx1["txid"]
     sh = script_to_scripthash(dummy_spk)
     rpc = DummyJsonRpc([dummy_tx1, dummy_tx2], [], {dummy_tx1["blockhash"]:
-        containing_block_height1, dummy_tx2["blockhash"]: containing_block_height2, dummy_tx3["blockhash"]: containing_block_height3})
+        containing_block_height1, dummy_tx2["blockhash"]:
+        containing_block_height2, dummy_tx3["blockhash"]:
+        containing_block_height3})
     txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
     assert txmonitor.build_address_history([dummy_spk])
     assert len(txmonitor.get_electrum_history(sh)) == 1
@@ -423,7 +425,8 @@ def test_reorg_race_attack():
     assert len(txmonitor.get_electrum_history(sh1)) == 1
     assert len(txmonitor.get_electrum_history(sh2)) == 0
     assert_address_history_tx(txmonitor.address_history, spk=dummy_spk1,
-        height=containing_block_height1, txid=dummy_tx1["txid"], subscribed=False)
+        height=containing_block_height1, txid=dummy_tx1["txid"],
+        subscribed=False)
     #race attack happens
     #dummy_tx1 goes to -1 confirmations, dummy_tx2 gets confirmed
     rpc.add_transaction(dummy_tx2)
@@ -448,7 +451,8 @@ def test_reorg_censor_tx():
     sh = script_to_scripthash(dummy_spk1)
     assert len(txmonitor.get_electrum_history(sh)) == 1
     assert_address_history_tx(txmonitor.address_history, spk=dummy_spk1,
-        height=containing_block_height1, txid=dummy_tx1["txid"], subscribed=False)
+        height=containing_block_height1, txid=dummy_tx1["txid"],
+        subscribed=False)
     #blocks appear which reorg out the tx, making it unconfirmed
     dummy_tx1["confirmations"] = 0
     assert len(list(txmonitor.check_for_updated_txes())) == 0
@@ -470,7 +474,8 @@ def test_reorg_different_block():
     sh = script_to_scripthash(dummy_spk1)
     assert len(txmonitor.get_electrum_history(sh)) == 1
     assert_address_history_tx(txmonitor.address_history, spk=dummy_spk1,
-        height=containing_block_height1, txid=dummy_tx1["txid"], subscribed=False)
+        height=containing_block_height1, txid=dummy_tx1["txid"],
+        subscribed=False)
 
     #tx gets reorged into another block (so still confirmed)
     dummy_tx1["blockhash"] = dummy_tx2["blockhash"]
@@ -497,4 +502,20 @@ def test_tx_safe_from_reorg():
 #other possible stuff to test:
 #finding confirmed and unconfirmed tx, in that order, then both confirm
 #finding unconfirmed and confirmed tx, in that order, then both confirm
+
+def test_single_tx_no_address_key():
+    ### same as test_single_tx() but the result of listtransactions has no
+    ### address field, see the github issue #31
+    dummy_spk, containing_block_height, dummy_tx = create_dummy_funding_tx()
+    del dummy_tx["address"]
+    logger.info("dummy_tx with no address = " + str(dummy_tx))
+    print("pdummy_tx with no address = " + str(dummy_tx))
+
+    rpc = DummyJsonRpc([dummy_tx], [],
+        {dummy_tx["blockhash"]: containing_block_height})
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
+    assert txmonitor.build_address_history([dummy_spk])
+    assert len(txmonitor.address_history) == 1
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk,
+        height=containing_block_height, txid=dummy_tx["txid"], subscribed=False)
 
