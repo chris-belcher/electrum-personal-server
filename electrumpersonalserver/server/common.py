@@ -181,6 +181,7 @@ def handle_query(sock, line, rpc, txmonitor):
                     else True)
         elif protocol_version[0] == 1.4:
             are_headers_raw[0] = True
+        logger.debug("are_headers_raw = " + str(are_headers_raw[0]))
         subscribed_to_headers[0] = True
         new_bestblockhash, header = get_current_header(rpc, are_headers_raw[0])
         send_response(sock, query, header)
@@ -188,7 +189,8 @@ def handle_query(sock, line, rpc, txmonitor):
         height = query["params"][0]
         try:
             blockhash = rpc.call("getblockhash", [height])
-            header = get_block_header(rpc, blockhash, are_headers_raw[0])
+            #this deprecated method (as of 1.3) can only return non-raw headers
+            header = get_block_header(rpc, blockhash, False)
             send_response(sock, query, header)
         except JsonRpcError:
             error = {"message": "height " + str(height) + " out of range",
