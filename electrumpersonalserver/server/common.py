@@ -488,7 +488,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         first_spks = wal.get_scriptpubkeys(change=0, from_index=0,
             count=TEST_ADDR_COUNT)
         first_addrs = [hashes.script_to_address(s, rpc) for s in first_spks]
-        logger.info(" " + config_mpk_key + " => " + " ".join(first_addrs))
+        logger.info("\n" + config_mpk_key + " =>\n\t" + "\n\t".join(first_addrs))
         if not set(first_addrs).issubset(imported_addresses):
             import_needed = True
             wallets_imported += 1
