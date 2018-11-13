@@ -225,11 +225,13 @@ def handle_query(sock, line, rpc, txmonitor):
         headers_hex, n = get_block_headers_hex(rpc, start_height, count)
         send_response(sock, query, headers_hex)
     elif method == "blockchain.transaction.broadcast":
-        try:
-            result = rpc.call("sendrawtransaction", [query["params"][0]])
-        except JsonRpcError as e:
-            result = str(e)
-        logger.debug("tx broadcast result = " + str(result))
+        if not rpc.call("getnetworkinfo", [])["localrelay"]:
+            result = "Broadcast disabled when using blocksonly"
+        else:
+            try:
+                result = rpc.call("sendrawtransaction", [query["params"][0]])
+            except JsonRpcError as e:
+                result = str(e)
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
         mempool = rpc.call("getrawmempool", [True])
