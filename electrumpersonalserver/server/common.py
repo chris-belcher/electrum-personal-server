@@ -170,6 +170,14 @@ def handle_query(sock, line, rpc, txmonitor):
             logger.warning("Address history not known to server, " +
                 "hash(address) = " + scrhash)
         send_response(sock, query, history)
+    elif method == "blockchain.scripthash.get_balance":
+        scrhash = query["params"][0]
+        balance = txmonitor.get_address_balance(scrhash)
+        if balance == None:
+            logger.warning("Address history not known to server, " +
+                "hash(address) = " + scrhash)
+            balance = {"confirmed": 0, "unconfirmed": 0}
+        send_response(sock, query, balance)
     elif method == "server.ping":
         send_response(sock, query, None)
     elif method == "blockchain.headers.subscribe":
@@ -314,7 +322,8 @@ def handle_query(sock, line, rpc, txmonitor):
                 result = txid
             else:
                 core_proof = rpc.call("gettxoutproof", [[txid], blockhash])
-                electrum_proof = merkleproof.convert_core_to_electrum_merkle_proof(
+                electrum_proof =\
+                    merkleproof.convert_core_to_electrum_merkle_proof(
                     core_proof)
                 result = {"tx_hash": txid, "merkle": electrum_proof["merkle"]}
             send_response(sock, query, result)

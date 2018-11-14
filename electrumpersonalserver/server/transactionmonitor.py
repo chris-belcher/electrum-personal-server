@@ -76,6 +76,35 @@ class TransactionMonitor(object):
         else:
             return None
 
+    def get_address_balance(self, scrhash):
+        history = self.get_electrum_history(scrhash)
+        if history == None:
+            return None
+        utxos = {}
+        for tx_info in history:
+            tx = self.rpc.call("gettransaction", [tx_info["tx_hash"]])
+            txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
+            for index, output in enumerate(txd["vout"]):
+                if script_to_scripthash(output["scriptPubKey"]["hex"]
+                    ) != scrhash:
+                    continue
+                utxos[txd["txid"] + ":" + str(index)] = (output["value"],
+                    tx["confirmations"])
+            for inputt in txd["vin"]:
+                outpoint = inputt["txid"] + ":" + str(inputt["vout"])
+                if outpoint in utxos:
+                    del utxos[outpoint]
+        confirmed_balance = 0
+        unconfirmed_balance = 0
+        for utxo in utxos.values():
+            value = int(Decimal(utxo[0]) * Decimal(1e8))
+            if utxo[1] > 0:
+                confirmed_balance += value
+            else:
+                unconfirmed_balance += value
+        return {"confirmed": confirmed_balance, "unconfirmed":
+            unconfirmed_balance}
+
     def subscribe_address(self, scrhash):
         if scrhash in self.address_history:
             self.address_history[scrhash]["subscribed"] = True
