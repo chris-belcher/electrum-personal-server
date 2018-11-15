@@ -1,8 +1,25 @@
+# Release v0.1.6 - (15th November 2018)
+
+New release, thanks to code contributions by suvayu and andrewtoth
+And thanks to everyone else who contributed to issues and discussion
+
+* Made installable with pip, thanks to suvayu
+* Fix bug where coinbase transactions would be ignored, thanks to andrewtoth
+* Support Electrum protocol version 1.4
+* Support blockchain.transaction.id_from_pos which is necessary for
+  Lightning support in Electrum
+* Increase default initial_import_count to 1000
+* Added or clarified various error and info messages
+* Disabled transaction broadcasting when blocksonly is enabled for privacy
+* Fixed various small bugs
+
+
 # Release v0.1.5 - (7th September 2018)
 
 Bugfix release
 
 * Fixed crash bug caused by behavour of getaddressesbylabel
+
 
 # Release v0.1.4 - (5th September 2018)
 
