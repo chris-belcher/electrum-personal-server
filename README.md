@@ -13,7 +13,7 @@ benefit from all of Bitcoin Core's resource-saving features like
 txindex. All of Electrum's feature-richness like hardware wallet integration,
 [multisignature wallets](http://docs.electrum.org/en/latest/multisig.html),
 [offline signing](http://docs.electrum.org/en/latest/coldstorage.html),
-[mnemonic recovery phrases](https://en.bitcoin.it/wiki/Mnemonic_phrase)
+[seed recovery phrases](https://en.bitcoin.it/wiki/Seed_phrase), coin control
 and so on can still be used, but connected only to the user's own full node.
 
 Full node wallets are important in bitcoin because they are an big part of what
@@ -38,38 +38,45 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 ## How To
 
 * If you dont already have them, download and install python3 and Bitcoin Core
-version 0.16 or higher. Make sure you
-[verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
-of any binaries before running them, or compile from source. The Bitcoin node
-must have wallet enabled, and must have the RPC server switched on (`server=1`
-in bitcoin.conf).
+  version 0.16 or higher. Make sure you
+  [verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
+  of any binaries before running them, or compile from source. The Bitcoin node
+  must have wallet enabled, and must have the RPC server switched on (`server=1`
+  in bitcoin.conf).
 
 * If you dont already have it, download and install
-[Electrum bitcoin wallet](https://electrum.org/), and set up your Electrum
-wallet (for example by linking your hardware wallet). To avoid damaging privacy
-by connecting to public Electrum servers, disconnect from the internet first or
-run Electrum with the command line argument `--server localhost:50002:s`.
+  [Electrum bitcoin wallet](https://electrum.org/), and set up your Electrum
+  wallet (for example by linking your hardware wallet). To avoid damaging
+  privacy by connecting to public Electrum servers, disconnect from the
+  internet first or run Electrum with the command line argument
+  `--server localhost:50002:s`.
 
 * Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
-of Electrum Personal Server or clone the git repository. Enter the directory
-and rename the file `config.cfg_sample` to `config.cfg`.
+  of Electrum Personal Server. Enter the directory and rename the file
+  `config.cfg_sample` to `config.cfg`.
 
 * Edit the file `config.cfg` to configure everything about the server. Add your
-wallet master public keys or watch-only addresses to the `[master-public-keys]`
-and `[watch-only-addresses]` sections. Master public keys for an Electrum wallet
-(which start with xpub/ypub/zpub) can be found in the Electrum client menu
-`Wallet` -> `Information`.
+  wallet master public keys or watch-only addresses to the
+  `[master-public-keys]` and `[watch-only-addresses]` sections. Master public
+  keys for an Electrum wallet (which start with xpub/ypub/zpub) can be found
+  in the Electrum client menu `Wallet` -> `Information`.
 
-* Run `./server.py` on Linux or double-click `run-server.bat` on Windows.
-The first time the server is run it will import all configured addresses as
-watch-only into the Bitcoin node, and then exit. If the wallets contain 
-historical transactions you can use the rescan script (`./rescan-script.py` or
-`rescan-script.bat`) to make them appear.
+* Install Electrum Personal Server in your home directory with
+  `pip3 install --user .`.  On Linux the scripts
+  (`electrum-personal-server` and `electrum-personal-server-rescan`) will be
+  installed in `~/.local/bin`.
 
-* Run the server again which will start Electrum Personal Server. Tell Electrum
-wallet to connect to it in `Tools` -> `Server`. By default the server details
-are `localhost` if running on the same machine. Make sure the port number
-matches what is written in `config.cfg` (port 50002 by default).
+* Run `electrum-personal-server /path/to/config.cfg` to start Electrum
+  Personal Server. The first time the server is run it will import all
+  configured addresses as watch-only into the Bitcoin node, and then exit.
+  If the wallets contain historical transactions you can use the rescan script
+  (`electrum-personal-server-rescan /path/to/config.cfg`) to make them appear.
+
+* Run the server again which will start Electrum Personal Server. Wait until
+  the message `Listening for Electrum Wallet ...` appears and then tell
+  Electrum to connect to the server in `Tools` -> `Server`. By default the
+  server details are `localhost` if running on the same machine. Make sure the
+  port number matches what is written in `config.cfg` (port 50002 by default).
 
 A guide for installing Electrum Personal Server on a Raspberry Pi can be found
 [here](https://github.com/Stadicus/guides/blob/master/raspibolt/raspibolt_64_electrum.md).
@@ -155,6 +162,18 @@ I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels, b
 
 My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
 
+### Notes for developers
+
+To seamlessly work on the codebase while using `pip`, you need to
+install in the `develop`/`editable` mode.  You can do that with:
+
+    $ pip3 install --user -e /path/to/repo
+
+`/path/to/repo` can also be a relative path, so if you are in the
+source directory, just use `.`.  This installs the scripts in the
+usual places, but imports the package from the source directory.  This
+way, any changes you make are immediately visible.
+
 #### Testing
 
 Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
@@ -162,7 +181,7 @@ and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The
 Electrum wallet can be started in testnet mode with the command line flag
 `--testnet` or `--regtest`.
 
-pytest is used for automated testing. On Debian-like systems install with 
+pytest is used for automated testing. On Debian-like systems install with
 `pip3 install pytest pytest-cov`
 
 Run the tests with:
@@ -174,6 +193,16 @@ Create the coverage report with:
     $ PYTHONPATH=.:$PYTHONPATH py.test-3 --cov-report=html --cov
     $ open htmlcov/index.html
 
-## Media Coverage
+If you have installed Electrum Personal Server with pip, there is no
+need to set `PYTHONPATH`.  You could also run the tests with:
+
+    $ python3 setup.py test
+
+## Media Coverage and Talks
 
 * https://bitcoinmagazine.com/articles/electrum-personal-server-will-give-users-full-node-security-they-need/
+
+* [Discussion at Building on Bitcoin 2018](https://youtu.be/XORDEX-RrAI?t=4980) [transcript](http://diyhpl.us/wiki/transcripts/building-on-bitcoin/2018/current-and-future-state-of-wallets/)
+
+* [Electrum Personal Server talk at London Bitcoin Developer Meetup](https://www.youtube.com/watch?v=uKMXYdfm-is)
+

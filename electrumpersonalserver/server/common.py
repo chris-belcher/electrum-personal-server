@@ -633,7 +633,8 @@ def main():
         config.read(opts.config_file)
         config.options("master-public-keys")
     except NoSectionError:
-        logger.error("Non-existant configuration file {}".format(opts.conf))
+        logger.error("Non-existant configuration file {}".format(
+            opts.config_file))
         return
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
@@ -743,10 +744,11 @@ def rescan():
     logger.info('Logging to ' + opts.log)
     try:
         config = ConfigParser()
-        config.read(opts.conf)
+        config.read(opts.config_file)
         config.options("master-public-keys")
     except NoSectionError:
-        logger.error("Non-existant configuration file {}".format(opts.conf))
+        logger.error("Non-existant configuration file {}".format(
+            opts.config_file))
         return
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
