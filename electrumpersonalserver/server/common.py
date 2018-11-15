@@ -604,10 +604,11 @@ def parse_args():
     from tempfile import gettempdir
 
     parser = ArgumentParser(description='Electrum Personal Server daemon')
-    parser.add_argument('-c', '--conf', required=True,
+    parser.add_argument('config_file',
                         help='configuration file (mandatory)')
     parser.add_argument('-l', '--log', help='log file',
-                        default='{}/electrumpersonalserver.log'.format(gettempdir()))
+                        default='{}/electrumpersonalserver.log'.format(
+                        gettempdir()))
     parser.add_argument('-a', '--appendlog', action='store_true',
                         help='append to log file')
     logfmt = '%(levelname)s:%(asctime)s: %(message)s'
@@ -629,7 +630,7 @@ def main():
     logger.info('Logging to ' + opts.log)
     try:
         config = ConfigParser()
-        config.read(opts.conf)
+        config.read(opts.config_file)
         config.options("master-public-keys")
     except NoSectionError:
         logger.error("Non-existant configuration file {}".format(opts.conf))
