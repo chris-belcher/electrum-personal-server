@@ -335,13 +335,15 @@ class TransactionMonitor(object):
                     elements_removed.append(reorgable_tx)
                     self.unconfirmed_txes[txid].extend(scrhashes)
 
-                    #add to history as unconfirmed
-                    txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
-                    new_history_element = self.generate_new_history_element(tx,
-                        txd)
-                    for scrhash in scrhashes:
-                        self.address_history[scrhash]["history"].append(
-                            new_history_element)
+                    #don't add orphans back into history
+                    if tx["category"] != "orphan":
+                        #add to history as unconfirmed
+                        txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
+                        new_history_element = self.generate_new_history_element(tx,
+                            txd)
+                        for scrhash in scrhashes:
+                            self.address_history[scrhash]["history"].append(
+                                new_history_element)
 
                 elif tx["confirmations"] < 0:
                     #tx became conflicted in reorg i.e. a double spend
