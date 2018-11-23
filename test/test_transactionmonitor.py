@@ -89,7 +89,7 @@ def create_dummy_spk(): #script pub key
     return "deadbeef" + str(dummy_id)
 
 def create_dummy_funding_tx(confirmations=1, output_spk=None,
-        input_txid="placeholder-unknown-input-txid"):
+        input_txid="placeholder-unknown-input-txid", coinbase=False):
     dummy_id = dummy_id_g[0]
     dummy_id_g[0] += 1
 
@@ -99,13 +99,23 @@ def create_dummy_funding_tx(confirmations=1, output_spk=None,
         dummy_spk = output_spk
     dummy_containing_block = "blockhash-placeholder" + str(dummy_id)
     containing_block_height = dummy_id
+    category = "receive"
+    vin = [{"txid": input_txid, "vout": 0, "value": 1,
+            "confirmations": 1}]
+    if coinbase:
+        vin = [{"coinbase": "nonce"}]
+        if confirmations < 1:
+            category = "orphan"
+        elif confirmations <= 100:
+            category = "immature"
+        else:
+            category = "generate"
     dummy_tx = {
         "txid": "placeholder-test-txid" + str(dummy_id),
-        "vin": [{"txid": input_txid, "vout": 0, "value": 1,
-            "confirmations": 1}],
+        "vin": vin,
         "vout": [{"value": 1, "scriptPubKey": {"hex": dummy_spk}}],
         "address": dummy_spk_to_address(dummy_spk),
-        "category": "receive",
+        "category": category,
         "confirmations": confirmations,
         "blockhash": dummy_containing_block,
         "hex": "placeholder-test-txhex" + str(dummy_id)
@@ -152,6 +162,63 @@ def test_two_txes():
     assert_address_history_tx(txmonitor.address_history, spk=dummy_spk2,
         height=containing_block_height2, txid=dummy_tx2["txid"],
         subscribed=False)
+
+def test_coinbase_txs():
+    ###two coinbase txs (mature and immature) in wallet, addr history built
+    ## two more coinbase txs added, addr history updated
+    ## orphaned coinbase txs not added to addr history
+    dummy_spk1, containing_block_height1, dummy_tx1 = create_dummy_funding_tx(
+        coinbase=True, confirmations=1)
+    dummy_spk2, containing_block_height2, dummy_tx2 = create_dummy_funding_tx(
+        coinbase=True, confirmations=101)
+    dummy_spk3, containing_block_height3, dummy_tx3 = create_dummy_funding_tx(
+        coinbase=True, confirmations=0)
+    dummy_spk4, containing_block_height4, dummy_tx4 = create_dummy_funding_tx(
+        coinbase=True, confirmations=1)
+    dummy_spk5, containing_block_height5, dummy_tx5 = create_dummy_funding_tx(
+        coinbase=True, confirmations=101)
+    dummy_spk6, containing_block_height6, dummy_tx6 = create_dummy_funding_tx(
+        coinbase=True, confirmations=0)
+
+    rpc = DummyJsonRpc([dummy_tx1, dummy_tx2, dummy_tx3], [],
+                       {dummy_tx1["blockhash"]: containing_block_height1,
+                        dummy_tx2["blockhash"]: containing_block_height2,
+                        dummy_tx3["blockhash"]: containing_block_height3,
+                        dummy_tx4["blockhash"]: containing_block_height4,
+                        dummy_tx5["blockhash"]: containing_block_height5,
+                        dummy_tx6["blockhash"]: containing_block_height6})
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
+    assert txmonitor.build_address_history([dummy_spk1, dummy_spk2, dummy_spk3,
+                                            dummy_spk4, dummy_spk5, dummy_spk6])
+    assert len(txmonitor.address_history) == 6
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk1,
+        height=containing_block_height1, txid=dummy_tx1["txid"],
+        subscribed=False)
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk2,
+        height=containing_block_height2, txid=dummy_tx2["txid"],
+        subscribed=False)
+    sh3 = script_to_scripthash(dummy_spk3)
+    assert len(txmonitor.get_electrum_history(sh3)) == 0
+
+    rpc.add_transaction(dummy_tx4)
+    rpc.add_transaction(dummy_tx5)
+    rpc.add_transaction(dummy_tx6)
+    assert len(list(txmonitor.check_for_updated_txes())) == 0
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk4,
+        height=containing_block_height4, txid=dummy_tx4["txid"],
+        subscribed=False)
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk5,
+        height=containing_block_height5, txid=dummy_tx5["txid"],
+        subscribed=False)
+    sh6 = script_to_scripthash(dummy_spk6)
+    assert len(txmonitor.get_electrum_history(sh6)) == 0
+
+    #test orphan tx is removed from history
+    dummy_tx1["confirmations"] = 0
+    dummy_tx1["category"] = "orphan"
+    assert len(list(txmonitor.check_for_updated_txes())) == 0
+    sh1 = script_to_scripthash(dummy_spk1)
+    assert len(txmonitor.get_electrum_history(sh1)) == 0
 
 def test_many_txes():
     ##many txes in wallet and many more added,, intended to test the loop
