@@ -21,7 +21,7 @@ setup(
         ("etc/electrum-personal-server", ["config.cfg_sample"]),
         ("share/doc/electrum-personal-server", ["README.md"]),
     ],
-    # install_requires=[
-    #     'secp256k1'
-    # ]
+    install_requires=[
+        'wheel'
+    ]
 )
