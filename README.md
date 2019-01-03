@@ -64,7 +64,9 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 * Install Electrum Personal Server in your home directory with
   `pip3 install --user .`.  On Linux the scripts
   (`electrum-personal-server` and `electrum-personal-server-rescan`) will be
-  installed in `~/.local/bin`.
+  installed in `~/.local/bin`.  Please note, if for some reason, you want to
+  make a system-wide install, simply run `pip3 install .` as root (e.g. if
+  you have `sudo` setup, you could use: `sudo pip3 install .`)
 
 * Run `electrum-personal-server /path/to/config.cfg` to start Electrum
   Personal Server. The first time the server is run it will import all
