@@ -59,7 +59,12 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   wallet master public keys or watch-only addresses to the
   `[master-public-keys]` and `[watch-only-addresses]` sections. Master public
   keys for an Electrum wallet (which start with xpub/ypub/zpub) can be found
-  in the Electrum client menu `Wallet` -> `Information`.
+  in the Electrum client menu `Wallet` -> `Information`.  You can add multiple
+  master public keys or watch-only addresses by adding separate lines for the
+  different keys/addresses:
+  
+      wallet1 = xpub661MyMwAqRbcF...
+      wallet2 = xpub7712KLsfsg46G...
 
 * Install Electrum Personal Server in your home directory with
   `pip3 install --user .`.  On Linux the scripts
