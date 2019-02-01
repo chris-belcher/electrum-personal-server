@@ -8,9 +8,11 @@
 
 #any_name_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
+# Multiple master public keys maybe added by simply adding another line
+#my_second_wallet = xpubanotherkey
+
 # Multisig wallets use format `required-signatures [list of master pub keys]`
 #multisig_wallet = 2 xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
-
 
 [watch-only-addresses]
 ## Add addresses to this section
@@ -18,6 +20,9 @@
 #addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
 # A space separated list is accepted
 #my_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq
+
+# multiple addresses may also be added in separate lines (like master public keys above)
+#addr2 = 3anotheraddress
 
 [bitcoin-rpc]
 host = 127.0.0.1
