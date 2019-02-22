@@ -18,7 +18,6 @@ setup(
     },
     package_data={"electrumpersonalserver": ["certs/*"]},
     data_files=[
-        ("etc/electrum-personal-server", ["config.cfg_sample"]),
         ("share/doc/electrum-personal-server", ["README.md"]),
     ],
     install_requires=[
