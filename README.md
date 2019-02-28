@@ -52,7 +52,7 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   `--server localhost:50002:s`.
 
 * Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
-  of Electrum Personal Server. Enter the directory and rename the file
+  of Electrum Personal Server. Enter the directory and copy the file
   `config.cfg_sample` to `config.cfg`.
 
 * Edit the file `config.cfg` to configure everything about the server. Add your
@@ -62,7 +62,7 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   in the Electrum client menu `Wallet` -> `Information`.  You can add multiple
   master public keys or watch-only addresses by adding separate lines for the
   different keys/addresses:
-  
+
       wallet1 = xpub661MyMwAqRbcF...
       wallet2 = xpub7712KLsfsg46G...
 
