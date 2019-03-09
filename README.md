@@ -49,7 +49,8 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   wallet (for example by linking your hardware wallet). To avoid damaging
   privacy by connecting to public Electrum servers, disconnect from the
   internet first or run Electrum with the command line argument
-  `--server localhost:50002:s`.
+  `--server localhost:50002:s`. To avoid accidentally connecting to public
+  electrum servers, also use the command line argument `--oneserver`.
 
 * Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
   of Electrum Personal Server. Enter the directory and copy the file
