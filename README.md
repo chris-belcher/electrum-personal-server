@@ -85,8 +85,11 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   server details are `localhost` if running on the same machine. Make sure the
   port number matches what is written in `config.cfg` (port 50002 by default).
 
-A guide for installing Electrum Personal Server on a Raspberry Pi can be found
-[here](https://github.com/Stadicus/guides/blob/master/raspibolt/raspibolt_64_electrum.md).
+Linked here are guides for installing Electrum Personal Server on a
+[Raspberry Pi](https://github.com/Stadicus/guides/blob/master/raspibolt/raspibolt_64_electrum.md),
+[Windows](https://github.com/HelgeHunding/guides/blob/master/hodl-guide/hodl-guide_63_eps-win.md)
+and
+[Mac OS](https://github.com/HelgeHunding/guides/blob/master/hodl-guide/hodl-guide_64_eps-mac.md).
 
 Pro Tip: run Electrum wallet with the command line arguments `--oneserver --server localhost:50002:s`.
 This stops Electrum connecting to several other servers to obtain block
@@ -117,6 +120,10 @@ line with: `ssh username@host -L 50002:localhost:50002` or with [Putty](https://
 for Windows. Then connect Electrum to localhost, and SSH will forward that
 connection to the server.
 
+##### Number of connections
+
+Right now Electrum Personal Server can only accept one connection at a time.
+
 #### How is this different from other Electrum servers ?
 
 They are different approaches with different tradeoffs. Electrum Personal
@@ -135,17 +142,10 @@ we'd like to avoid with Electrum Personal Server.
 
 Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/) if you're interested in this sort of thing.
 
-#### Caveat about pruning
-
-Electrum Personal Server is fully compatible with pruning, except for one thing.
-Merkle proofs are read from disk. If pruning is enabled and if that specific
-block has been deleted from disk, then no merkle proof can be sent to Electrum
-which will display the transaction as `Not Verified` in the wallet interface.
-
-One day this may be improved on by writing new code for Bitcoin Core. See the
-discussion [here](https://bitcointalk.org/index.php?topic=3167572.0).
-
 #### Further ideas for work
+
+* Packaging up the application using pyinstaller so that it would be much
+easier to set up.
 
 * It would be cool to have a GUI front-end for this. So less technical users
 can set up a personal server helped by a GUI wizard for configuring that
@@ -154,8 +154,9 @@ explains everything. With the rescan script built-in.
 * An option to broadcast transactions over tor, so that transaction broadcasting
 doesn't leak the user's IP address.
 
-* The above mentioned caveat about pruning could be improved by writing new code
-for Bitcoin Core.
+* Developing some way for Electrum servers to authenticate clients, so that
+Electrum Personal Server can accept connections from the entire internet but
+without a fear of privacy loss.
 
 ## Contributing
 
