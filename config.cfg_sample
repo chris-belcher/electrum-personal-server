@@ -27,9 +27,10 @@
 [bitcoin-rpc]
 host = 127.0.0.1
 port = 8332
-#empty means look in the default location
+#add the bitcoin datadir to search for the .cookie file created by the node, which avoids the
+# need to configure rpc_user/pass, leave empty to have it look in the default location
 datadir = 
-#if you dont want to use the .cookie method, uncomment to config u/p here
+#if you dont want to use the .cookie method with datadir, uncomment to config u/p here
 #rpc_user =
 #rpc_password =
 

@@ -133,24 +133,30 @@ def handle_query(sock, line, rpc, txmonitor):
         txid = query["params"][0]
         try:
             tx = rpc.call("gettransaction", [txid])
-            core_proof = rpc.call("gettxoutproof", [[txid], tx["blockhash"]])
-            electrum_proof = merkleproof.convert_core_to_electrum_merkle_proof(
-                core_proof)
-            implied_merkle_root = hashes.hash_merkle_root(
-                electrum_proof["merkle"], txid, electrum_proof["pos"])
-            if implied_merkle_root != electrum_proof["merkleroot"]:
-                raise ValueError
             txheader = get_block_header(rpc, tx["blockhash"], False)
-            reply = {"block_height": txheader["block_height"], "pos":
-                electrum_proof["pos"], "merkle": electrum_proof["merkle"]}
-        except (ValueError, JsonRpcError) as e:
-            logger.warning("merkle proof failed for " + txid + " err=" +
-                repr(e))
-            #so reply with an invalid proof which electrum handles without
-            # disconnecting us
-            #https://github.com/spesmilo/electrum/blob/c8e67e2bd07efe042703bc1368d499c5e555f854/lib/verifier.py#L74
-            reply = {"block_height": 1, "pos": 0, "merkle": [txid]}
-        send_response(sock, query, reply)
+        except JsonRpcError as e:
+            send_error(sock, query["id"], {"message": "txid not found"})
+        else:
+            try:
+                core_proof = rpc.call("gettxoutproof", [[txid],
+                    tx["blockhash"]])
+                electrum_proof = merkleproof.\
+                    convert_core_to_electrum_merkle_proof(core_proof)
+                implied_merkle_root = hashes.hash_merkle_root(
+                    electrum_proof["merkle"], txid, electrum_proof["pos"])
+                if implied_merkle_root != electrum_proof["merkleroot"]:
+                    raise ValueError
+                reply = {"block_height": txheader["block_height"], "pos":
+                    electrum_proof["pos"], "merkle": electrum_proof["merkle"]}
+            except (ValueError, JsonRpcError) as e:
+                logger.notice("merkle proof not found for " + txid + " sending"
+                    + " a dummy, Electrum client should be run with "
+                    + "--skipmerklecheck")
+                #reply with a proof that the client with accept if
+                # its configured to not check the merkle proof
+                reply = {"block_height": txheader["block_height"], "pos": 0,
+                    "merkle": [txid]}
+            send_response(sock, query, reply)
     elif method == "blockchain.scripthash.subscribe":
         scrhash = query["params"][0]
         if txmonitor.subscribe_address(scrhash):
