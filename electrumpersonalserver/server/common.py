@@ -105,7 +105,7 @@ def on_disconnect(txmonitor):
     subscribed_to_headers[0] = False
     txmonitor.unsubscribe_all_addresses()
 
-def handle_query(sock, line, rpc, txmonitor):
+def handle_query(sock, line, rpc, txmonitor, disable_fee_histogram):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.debug("=> " + line)
     try:
@@ -248,26 +248,30 @@ def handle_query(sock, line, rpc, txmonitor):
                 result = str(e)
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
-        mempool = rpc.call("getrawmempool", [True])
-        #algorithm copied from the relevant place in ElectrumX
-        #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
-        fee_hist = defaultdict(int)
-        for txid, details in mempool.items():
-            fee_rate = 1e8*details["fee"] // details["size"]
-            fee_hist[fee_rate] += details["size"]
-        l = list(reversed(sorted(fee_hist.items())))
-        out = []
-        size = 0
-        r = 0
-        binsize = 100000
-        for fee, s in l:
-            size += s
-            if size + r > binsize:
-                out.append((fee, size))
-                r += size - binsize
-                size = 0
-                binsize *= 1.1
-        result = out
+        if disable_fee_histogram:
+            result = [[0, 0]]
+            logger.debug("fee histogram disabled, sending back empty mempool")
+        else:
+            mempool = rpc.call("getrawmempool", [True])
+            #algorithm copied from the relevant place in ElectrumX
+            #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
+            fee_hist = defaultdict(int)
+            for txid, details in mempool.items():
+                fee_rate = 1e8*details["fee"] // details["size"]
+                fee_hist[fee_rate] += details["size"]
+            l = list(reversed(sorted(fee_hist.items())))
+            out = []
+            size = 0
+            r = 0
+            binsize = 100000
+            for fee, s in l:
+                size += s
+                if size + r > binsize:
+                    out.append((fee, size))
+                    r += size - binsize
+                    size = 0
+                    binsize *= 1.1
+            result = out
         send_response(sock, query, result)
     elif method == "blockchain.estimatefee":
         estimate = rpc.call("estimatesmartfee", [query["params"][0]])
@@ -409,7 +413,8 @@ def create_server_socket(hostport):
     return server_sock
 
 def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
-        poll_interval_listening, poll_interval_connected, certfile, keyfile):
+        poll_interval_listening, poll_interval_connected, certfile, keyfile,
+        disable_fee_histogram):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.info("Starting electrum server")
     server_sock = create_server_socket(hostport)
@@ -450,7 +455,7 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                         recv_buffer = recv_buffer[lb + 1:]
                         lb = recv_buffer.find(b'\n')
                         handle_query(sock, line.decode("utf-8"), rpc,
-                            txmonitor)
+                            txmonitor, disable_fee_histogram)
                 except socket.timeout:
                     on_heartbeat_connected(sock, rpc, txmonitor)
         except (IOError, EOFError) as e:
@@ -686,7 +691,7 @@ def main():
             " rescan, just restart this script")
     else:
         txmonitor = transactionmonitor.TransactionMonitor(rpc,
-            deterministic_wallets)
+            deterministic_wallets, logger)
         if not txmonitor.build_address_history(relevant_spks_addrs):
             return
         hostport = (config.get("electrum-server", "host"),
@@ -704,10 +709,13 @@ def main():
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
         certfile, keyfile = get_certs(config)
+        disable_fee_histogram = config.getboolean("electrum-server",
+            "disable_fee_histogram", fallback=False)
         try:
             run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                                 poll_interval_listening,
-                                poll_interval_connected, certfile, keyfile)
+                                poll_interval_connected, certfile, keyfile,
+                                disable_fee_histogram)
         except KeyboardInterrupt:
             logger.info('Received KeyboardInterrupt, quitting')
 

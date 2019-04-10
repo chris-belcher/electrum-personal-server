@@ -1,12 +1,12 @@
 
-## Electrum Personal Server configuration file
-## Comments start with #
+# Electrum Personal Server configuration file
+# Comments start with #
 
 [master-public-keys]
-## Add electrum master public keys to this section
-## Create a wallet in electrum then go Wallet -> Information to get the mpk
+# Add electrum wallet master public keys to this section
+# In electrum then go Wallet -> Information to get the mpk
 
-#any_name_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
+# any_name_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
 # Multiple master public keys maybe added by simply adding another line
 #my_second_wallet = xpubanotherkey
@@ -15,10 +15,11 @@
 #multisig_wallet = 2 xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
 [watch-only-addresses]
-## Add addresses to this section
+#Add individual addresses to this section, for example paper wallets
 
 #addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
-# A space separated list is accepted
+
+# A space separated list is also accepted
 #my_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq
 
 # multiple addresses may also be added in separate lines (like master public keys above)
@@ -27,8 +28,9 @@
 [bitcoin-rpc]
 host = 127.0.0.1
 port = 8332
-#add the bitcoin datadir to search for the .cookie file created by the node, which avoids the
-# need to configure rpc_user/pass, leave empty to have it look in the default location
+#add the bitcoin datadir to search for the .cookie file created by the
+# node, which avoids the need to configure rpc_user/pass, leave empty to
+# have it look in the default location
 datadir = 
 #if you dont want to use the .cookie method with datadir, uncomment to config u/p here
 #rpc_user =
@@ -69,3 +71,6 @@ ip_whitelist = *
 certfile = certs/cert.crt
 keyfile = certs/cert.key
 
+# Option for disabling the fee histogram
+# This is useful on low powered devices at times when the mempool is large
+disable_fee_histogram = false
