@@ -105,7 +105,7 @@ def on_disconnect(txmonitor):
     subscribed_to_headers[0] = False
     txmonitor.unsubscribe_all_addresses()
 
-def handle_query(sock, line, rpc, txmonitor, disable_fee_histogram):
+def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.debug("=> " + line)
     try:
@@ -241,6 +241,7 @@ def handle_query(sock, line, rpc, txmonitor, disable_fee_histogram):
     elif method == "blockchain.transaction.broadcast":
         if not rpc.call("getnetworkinfo", [])["localrelay"]:
             result = "Broadcast disabled when using blocksonly"
+            logger.info("Transaction broadcasting disabled when blocksonly")
         else:
             try:
                 result = rpc.call("sendrawtransaction", [query["params"][0]])
@@ -248,11 +249,18 @@ def handle_query(sock, line, rpc, txmonitor, disable_fee_histogram):
                 result = str(e)
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
-        if disable_fee_histogram:
+        if disable_mempool_fee_histogram:
             result = [[0, 0]]
             logger.debug("fee histogram disabled, sending back empty mempool")
         else:
+            st = time.time()
             mempool = rpc.call("getrawmempool", [True])
+            et = time.time()
+            MEMPOOL_WARNING_DURATION = 10 #seconds
+            if et - st > MEMPOOL_WARNING_DURATION:
+                logger.warning("Mempool very large resulting in slow response" +
+                    " by server. Consider setting " +
+                    "`disable_mempool_fee_histogram = true`")
             #algorithm copied from the relevant place in ElectrumX
             #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
             fee_hist = defaultdict(int)
@@ -414,7 +422,7 @@ def create_server_socket(hostport):
 
 def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
         poll_interval_listening, poll_interval_connected, certfile, keyfile,
-        disable_fee_histogram):
+        disable_mempool_fee_histogram):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.info("Starting electrum server")
     server_sock = create_server_socket(hostport)
@@ -455,7 +463,7 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                         recv_buffer = recv_buffer[lb + 1:]
                         lb = recv_buffer.find(b'\n')
                         handle_query(sock, line.decode("utf-8"), rpc,
-                            txmonitor, disable_fee_histogram)
+                            txmonitor, disable_mempool_fee_histogram)
                 except socket.timeout:
                     on_heartbeat_connected(sock, rpc, txmonitor)
         except (IOError, EOFError) as e:
@@ -709,13 +717,13 @@ def main():
         poll_interval_connected = int(config.get("bitcoin-rpc",
             "poll_interval_connected"))
         certfile, keyfile = get_certs(config)
-        disable_fee_histogram = config.getboolean("electrum-server",
-            "disable_fee_histogram", fallback=False)
+        disable_mempool_fee_histogram = config.getboolean("electrum-server",
+            "disable_mempool_fee_histogram", fallback=False)
         try:
             run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                                 poll_interval_listening,
                                 poll_interval_connected, certfile, keyfile,
-                                disable_fee_histogram)
+                                disable_mempool_fee_histogram)
         except KeyboardInterrupt:
             logger.info('Received KeyboardInterrupt, quitting')
 

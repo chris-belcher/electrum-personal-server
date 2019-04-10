@@ -12,6 +12,7 @@
 #my_second_wallet = xpubanotherkey
 
 # Multisig wallets use format `required-signatures [list of master pub keys]`
+# this example is a 2-of-3 multisig wallet
 #multisig_wallet = 2 xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
 [watch-only-addresses]
@@ -71,6 +72,7 @@ ip_whitelist = *
 certfile = certs/cert.crt
 keyfile = certs/cert.key
 
-# Option for disabling the fee histogram
-# This is useful on low powered devices at times when the mempool is large
-disable_fee_histogram = false
+# Option for disabling the fee histogram calculation
+# It improves server responsiveness but stops mempool-based Electrum features
+# This is useful on low powered devices at times when the node mempool is large
+disable_mempool_fee_histogram = false
