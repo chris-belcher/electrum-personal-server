@@ -46,20 +46,6 @@ are_headers_raw = [False]
 bestblockhash = [None]
 txid_blockhash_map = {}
 
-#log for checking up/seeing your wallet, debug for when something has gone wrong
-def logger_config(logger, fmt=None, filename=None, logfilemode='w'):
-    formatter = logging.Formatter(fmt)
-    logstream = logging.StreamHandler()
-    logstream.setFormatter(formatter)
-    logstream.setLevel(logging.INFO)
-    logger.addHandler(logstream)
-    if filename:
-        logfile = logging.FileHandler(filename, mode=logfilemode)
-        logfile.setFormatter(formatter)
-        logfile.setLevel(logging.DEBUG)
-        logger.addHandler(logfile)
-    return logger
-
 def send_response(sock, query, result):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     response = {"jsonrpc": "2.0", "result": result, "id": query["id"]}
@@ -634,17 +620,33 @@ def parse_args():
     parser.add_argument('-f', '--logfmt', default=logfmt,
                         help='log format')
     loglvls = [l for l in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')]
-    parser.add_argument('--loglevel', default='DEBUG', choices=loglvls,
-                        help='log levels')
+    parser.add_argument('--loglevel', default='INFO', choices=loglvls,
+                        help='Log level when echoing to terminal. Log file '
+                        + 'is always at DEBUG level')
     return parser.parse_args()
+
+#log for checking up/seeing your wallet, debug for when something has gone wrong
+def logger_config(logger, fmt, filename, logfilemode, stdout_loglevel):
+    formatter = logging.Formatter(fmt)
+    logstream = logging.StreamHandler()
+    logstream.setFormatter(formatter)
+    logstream.setLevel(stdout_loglevel)
+    logger.addHandler(logstream)
+    if filename:
+        logfile = logging.FileHandler(filename, mode=logfilemode)
+        logfile.setFormatter(formatter)
+        logfile.setLevel(logging.DEBUG)
+        logger.addHandler(logfile)
+    logger.setLevel(logging.DEBUG)
+    return logger
 
 def main():
     opts = parse_args()
 
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
-                           logfilemode='a' if opts.appendlog else 'w')
-    logger.setLevel(opts.loglevel)
+                           logfilemode='a' if opts.appendlog else 'w',
+                           stdout_loglevel=opts.loglevel)
     logger.info('Starting Electrum Personal Server')
     logger.info('Logging to ' + opts.log)
     try:
@@ -760,7 +762,8 @@ def rescan():
 
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
-                           logfilemode='a' if opts.appendlog else 'w')
+                           logfilemode='a' if opts.appendlog else 'w',
+                           stdout_loglevel=opts.loglevel)
     logger.setLevel(opts.loglevel)
     logger.info('Starting the Electrum Personal Server rescan script')
     logger.info('Logging to ' + opts.log)
