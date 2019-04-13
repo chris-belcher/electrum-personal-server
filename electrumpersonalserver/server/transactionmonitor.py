@@ -278,8 +278,8 @@ class TransactionMonitor(object):
         return new_history_element
 
     def sort_address_history_list(self, his):
-        unconfirm_txes = list(filter(lambda h:h["height"] == 0, his["history"]))
-        confirm_txes = filter(lambda h:h["height"] != 0, his["history"])
+        unconfirm_txes = list(filter(lambda h:h["height"] <= 0, his["history"]))
+        confirm_txes = filter(lambda h:h["height"] > 0, his["history"])
         #TODO txes must be "in blockchain order"
         # the order they appear in the block
         # it might be "blockindex" in listtransactions and gettransaction
@@ -307,7 +307,7 @@ class TransactionMonitor(object):
                 + pprint.pformat(self.address_history))
             logger.debug("unconfirmed txes = "
                 + pprint.pformat(self.unconfirmed_txes))
-            logger.debug("self.reorganizable_txes = "
+            logger.debug("reorganizable_txes = "
                 + pprint.pformat(self.reorganizable_txes))
             logger.debug("updated_scripthashes = " + str(updated_scrhashes))
         updated_scrhashes = filter(lambda sh:self.address_history[sh][
@@ -339,8 +339,8 @@ class TransactionMonitor(object):
                     if tx["category"] != "orphan":
                         #add to history as unconfirmed
                         txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
-                        new_history_element = self.generate_new_history_element(tx,
-                            txd)
+                        new_history_element = self.generate_new_history_element(
+                            tx, txd)
                         for scrhash in scrhashes:
                             self.address_history[scrhash]["history"].append(
                                 new_history_element)
@@ -387,7 +387,7 @@ class TransactionMonitor(object):
     def check_for_confirmations(self):
         logger = self.logger
         tx_scrhashes_removed_from_mempool = []
-        logger.debug("check4con unconfirmed_txes = "
+        logger.debug("unconfirmed_txes = "
             + pprint.pformat(self.unconfirmed_txes))
         for uc_txid, scrhashes in self.unconfirmed_txes.items():
             tx = self.rpc.call("gettransaction", [uc_txid])
@@ -508,7 +508,7 @@ class TransactionMonitor(object):
             for scrhash in matching_scripthashes:
                 self.address_history[scrhash]["history"].append(
                     new_history_element)
-                if new_history_element["height"] == 0:
+                if new_history_element["height"] <= 0:
                     self.unconfirmed_txes[tx["txid"]].append(scrhash)
             if tx["confirmations"] > 0:
                 self.reorganizable_txes.append((tx["txid"], tx["blockhash"],
