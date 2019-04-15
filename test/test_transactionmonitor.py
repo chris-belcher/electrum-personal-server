@@ -10,6 +10,7 @@ from electrumpersonalserver.server import (
 )
 
 logger = logging.getLogger('ELECTRUMPERSONALSERVER-TEST')
+logger.setLevel(logging.DEBUG)
 
 class DummyJsonRpc(object):
     """
@@ -89,7 +90,8 @@ def create_dummy_spk(): #script pub key
     return "deadbeef" + str(dummy_id)
 
 def create_dummy_funding_tx(confirmations=1, output_spk=None,
-        input_txid="placeholder-unknown-input-txid", coinbase=False):
+        input_txid="placeholder-unknown-input-txid", coinbase=False,
+        input_confirmations=1):
     dummy_id = dummy_id_g[0]
     dummy_id_g[0] += 1
 
@@ -101,7 +103,7 @@ def create_dummy_funding_tx(confirmations=1, output_spk=None,
     containing_block_height = dummy_id
     category = "receive"
     vin = [{"txid": input_txid, "vout": 0, "value": 1,
-            "confirmations": 1}]
+            "confirmations": input_confirmations}]
     if coinbase:
         vin = [{"coinbase": "nonce"}]
         if confirmations < 1:
@@ -387,6 +389,51 @@ def test_tx_within_wallet():
         dummy_spk1))) == 2
     assert len(txmonitor.get_electrum_history(script_to_scripthash(
         dummy_spk2))) == 1
+
+def test_tx_with_unconfirmed_input():
+    ###unconfirmed tx arrives with unconfirmed input, which then both confirm
+
+    dummy_spk1, containing_block_height1, dummy_tx1 = create_dummy_funding_tx(
+        confirmations=0)
+    dummy_spk2, containing_block_height2, dummy_tx2 = create_dummy_funding_tx(
+        confirmations=0, input_txid=dummy_tx1["txid"], input_confirmations=0)
+
+    rpc = DummyJsonRpc([], [dummy_tx1["vin"][0], dummy_tx2["vin"][0]],
+        {dummy_tx1["blockhash"]: containing_block_height1,
+        dummy_tx2["blockhash"]: containing_block_height2})
+    txmonitor = TransactionMonitor(rpc, deterministic_wallets, logger)
+
+    assert txmonitor.build_address_history([dummy_spk1, dummy_spk2])
+    assert len(txmonitor.address_history) == 2
+
+    sh1 = script_to_scripthash(dummy_spk1)
+    sh2 = script_to_scripthash(dummy_spk2)
+    assert len(txmonitor.get_electrum_history(sh1)) == 0
+    assert len(txmonitor.get_electrum_history(sh2)) == 0
+    txmonitor.subscribe_address(sh1)
+    txmonitor.subscribe_address(sh2)
+
+    #the unconfirmed transactions appear
+    assert len(list(txmonitor.check_for_updated_txes())) == 0
+    rpc.add_transaction(dummy_tx1)
+    rpc.add_transaction(dummy_tx2)
+    assert len(list(txmonitor.check_for_updated_txes())) == 2
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk1,
+        height=0, txid=dummy_tx1["txid"], subscribed=True)
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk2,
+        height=-1, txid=dummy_tx2["txid"], subscribed=True)
+
+    #the transactions confirm
+    dummy_tx1["confirmations"] = 1
+    dummy_tx2["confirmations"] = 1
+
+    assert len(list(txmonitor.check_for_updated_txes())) == 2
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk1,
+        height=containing_block_height1, txid=dummy_tx1["txid"],
+        subscribed=True)
+    assert_address_history_tx(txmonitor.address_history, spk=dummy_spk2,
+        height=containing_block_height2, txid=dummy_tx2["txid"],
+        subscribed=True)
 
 def test_overrun_gap_limit():
     ###overrun gap limit so import address is needed
