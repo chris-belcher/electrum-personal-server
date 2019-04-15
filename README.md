@@ -194,11 +194,11 @@ pytest is used for automated testing. On Debian-like systems install with
 
 Run the tests with:
 
-    $ PYTHONPATH=.:$PYTHONPATH py.test-3
+    $ PYTHONPATH=.:$PYTHONPATH pytest
 
 Create the coverage report with:
 
-    $ PYTHONPATH=.:$PYTHONPATH py.test-3 --cov-report=html --cov
+    $ PYTHONPATH=.:$PYTHONPATH pytest --cov-report=html --cov
     $ open htmlcov/index.html
 
 If you have installed Electrum Personal Server with pip, there is no
