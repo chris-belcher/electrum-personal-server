@@ -2,11 +2,13 @@
 # Electrum Personal Server configuration file
 # Comments start with #
 
+# The most important options are towards the top of the file
+
 [master-public-keys]
 # Add electrum wallet master public keys to this section
 # In electrum then go Wallet -> Information to get the mpk
 
-# any_name_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
+#any_name_works = xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
 # Multiple master public keys maybe added by simply adding another line
 #my_second_wallet = xpubanotherkey
@@ -15,23 +17,12 @@
 # this example is a 2-of-3 multisig wallet
 #multisig_wallet = 2 xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
-[watch-only-addresses]
-#Add individual addresses to this section, for example paper wallets
-
-#addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
-
-# A space separated list is also accepted
-#my_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq
-
-# multiple addresses may also be added in separate lines (like master public keys above)
-#addr2 = 3anotheraddress
-
 [bitcoin-rpc]
 host = 127.0.0.1
 port = 8332
 #add the bitcoin datadir to search for the .cookie file created by the
-# node, which avoids the need to configure rpc_user/pass, leave empty to
-# have it look in the default location
+# node, which avoids the need to configure rpc_user/pass
+#leave this option empty to have it look in the default location
 datadir = 
 #if you dont want to use the .cookie method with datadir, uncomment to config u/p here
 #rpc_user =
@@ -76,3 +67,36 @@ keyfile = certs/cert.key
 # It improves server responsiveness but stops mempool-based Electrum features
 # This is useful on low powered devices at times when the node mempool is large
 disable_mempool_fee_histogram = false
+
+[watch-only-addresses]
+#Add individual addresses to this section, for example paper wallets
+#Dont use this section for adding entire wallets, instead use the
+# above section `master-public-keys`
+
+#addr = 1DuqpoeTB9zLvVCXQG53VbMxvMkijk494n
+
+# A space separated list is also accepted
+#my_test_addresses = 3Hh7QujVLqz11tiQsnUE5CSL16WEHBmiyR 1PXRLo1FQoZyF1Jhnz4qbG5x8Bo3pFpybz bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq
+
+# multiple addresses may also be added in separate lines (like master public keys above)
+#addr2 = 3anotheraddress
+
+
+[logging]
+# Section for configuring the logging output
+
+# The log level. Logging messages less severe than this will not be displayed
+#options are 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+#Information printed to the log file is always at level DEBUG
+log_level_stdout = INFO
+
+# Location of log file, leave empty to use the default location in temp dir
+log_file_location =
+
+# Whether to append to log file or delete and overwrite on startup
+append_log = false
+
+# Format to use for logging messages
+#see docs https://docs.python.org/3/library/logging.html#logging.Formatter
+log_format = %(levelname)s:%(asctime)s: %(message)s
+

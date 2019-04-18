@@ -1,9 +1,10 @@
 import socket, time, json, datetime, struct, binascii, ssl, os, os.path
-from configparser import ConfigParser, NoSectionError, NoOptionError
+from configparser import RawConfigParser, NoSectionError, NoOptionError
 from collections import defaultdict
 import traceback, sys, platform
 from ipaddress import ip_network, ip_address
 import logging
+from tempfile import gettempdir
 
 from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes
@@ -606,57 +607,47 @@ def obtain_rpc_username_password(datadir):
 
 def parse_args():
     from argparse import ArgumentParser
-    from tempfile import gettempdir
 
     parser = ArgumentParser(description='Electrum Personal Server daemon')
     parser.add_argument('config_file',
                         help='configuration file (mandatory)')
-    parser.add_argument('-l', '--log', help='log file',
-                        default='{}/electrumpersonalserver.log'.format(
-                        gettempdir()))
-    parser.add_argument('-a', '--appendlog', action='store_true',
-                        help='append to log file')
-    logfmt = '%(levelname)s:%(asctime)s: %(message)s'
-    parser.add_argument('-f', '--logfmt', default=logfmt,
-                        help='log format')
-    loglvls = [l for l in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')]
-    parser.add_argument('--loglevel', default='INFO', choices=loglvls,
-                        help='Log level when echoing to terminal. Log file '
-                        + 'is always at DEBUG level')
     return parser.parse_args()
 
 #log for checking up/seeing your wallet, debug for when something has gone wrong
-def logger_config(logger, fmt, filename, logfilemode, stdout_loglevel):
-    formatter = logging.Formatter(fmt)
+def logger_config(logger, config):
+    formatter = logging.Formatter(config.get("logging", "log_format",
+        fallback="%(levelname)s:%(asctime)s: %(message)s"))
     logstream = logging.StreamHandler()
     logstream.setFormatter(formatter)
-    logstream.setLevel(stdout_loglevel)
+    logstream.setLevel(config.get("logging", "log_level_stdout", fallback=
+        "INFO"))
     logger.addHandler(logstream)
-    if filename:
-        logfile = logging.FileHandler(filename, mode=logfilemode)
-        logfile.setFormatter(formatter)
-        logfile.setLevel(logging.DEBUG)
-        logger.addHandler(logfile)
+    filename = config.get("logging", "log_file_location", fallback="")
+    if len(filename.strip()) == 0:
+        filename= gettempdir() + "/electrumpersonalserver.log"
+    logfile = logging.FileHandler(filename, mode=('a' if
+        config.get("logging", "append_log", fallback="false") else 'w'))
+    logfile.setFormatter(formatter)
+    logfile.setLevel(logging.DEBUG)
+    logger.addHandler(logfile)
     logger.setLevel(logging.DEBUG)
-    return logger
+    return logger, filename
 
 def main():
     opts = parse_args()
 
-    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
-                           logfilemode='a' if opts.appendlog else 'w',
-                           stdout_loglevel=opts.loglevel)
-    logger.info('Starting Electrum Personal Server')
-    logger.info('Logging to ' + opts.log)
     try:
-        config = ConfigParser()
+        config = RawConfigParser()
         config.read(opts.config_file)
         config.options("master-public-keys")
     except NoSectionError:
-        logger.error("Non-existant configuration file {}".format(
+        print("ERROR: Non-existant configuration file {}".format(
             opts.config_file))
         return
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger, logfilename = logger_config(logger, config)
+    logger.info('Starting Electrum Personal Server')
+    logger.info('Logging to ' + logfilename)
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
         rpc_p = config.get("bitcoin-rpc", "rpc_password")
@@ -760,21 +751,18 @@ def search_for_block_height_of_date(datestr, rpc):
 def rescan():
     opts = parse_args()
 
-    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger = logger_config(logger, fmt=opts.logfmt, filename=opts.log,
-                           logfilemode='a' if opts.appendlog else 'w',
-                           stdout_loglevel=opts.loglevel)
-    logger.setLevel(opts.loglevel)
-    logger.info('Starting the Electrum Personal Server rescan script')
-    logger.info('Logging to ' + opts.log)
     try:
-        config = ConfigParser()
+        config = RawConfigParser()
         config.read(opts.config_file)
         config.options("master-public-keys")
     except NoSectionError:
-        logger.error("Non-existant configuration file {}".format(
+        print("ERROR: Non-existant configuration file {}".format(
             opts.config_file))
         return
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger, logfilename = logger_config(logger, config)
+    logger.info('Starting Electrum Personal Server rescan script')
+    logger.info('Logging to ' + logfilename)
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
         rpc_p = config.get("bitcoin-rpc", "rpc_password")
