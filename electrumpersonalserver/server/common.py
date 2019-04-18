@@ -611,6 +611,10 @@ def parse_args():
     parser = ArgumentParser(description='Electrum Personal Server daemon')
     parser.add_argument('config_file',
                         help='configuration file (mandatory)')
+    parser.add_argument("--rescan", action="store_true", help="Start the " +
+        " rescan script instead")
+    parser.add_argument("-v", "--version", action="version", version=
+        "%(prog)s " + SERVER_VERSION_NUMBER)
     return parser.parse_args()
 
 #log for checking up/seeing your wallet, debug for when something has gone wrong
@@ -682,6 +686,10 @@ def main():
         logger.error("Wallet related RPC calls not found, looks like the " +
             "bitcoin node was compiled with the disable wallet flag")
         return
+
+    if opts.rescan:
+        rescan_script(logger, rpc)
+        return
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
@@ -748,33 +756,7 @@ def search_for_block_height_of_date(datestr, rpc):
         else:
             return -1
 
-def rescan():
-    opts = parse_args()
-
-    try:
-        config = RawConfigParser()
-        config.read(opts.config_file)
-        config.options("master-public-keys")
-    except NoSectionError:
-        print("ERROR: Non-existant configuration file {}".format(
-            opts.config_file))
-        return
-    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger, logfilename = logger_config(logger, config)
-    logger.info('Starting Electrum Personal Server rescan script')
-    logger.info('Logging to ' + logfilename)
-    try:
-        rpc_u = config.get("bitcoin-rpc", "rpc_user")
-        rpc_p = config.get("bitcoin-rpc", "rpc_password")
-    except NoOptionError:
-        rpc_u, rpc_p = obtain_rpc_username_password(config.get(
-            "bitcoin-rpc", "datadir"))
-    if rpc_u == None:
-        return
-    rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
-        port = int(config.get("bitcoin-rpc", "port")),
-        user = rpc_u, password = rpc_p,
-        wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip())
+def rescan_script(logger, rpc):
     user_input = input("Enter earliest wallet creation date (DD/MM/YYYY) "
         "or block height to rescan from: ")
     try:
@@ -791,3 +773,34 @@ def rescan():
         + " debug.log file")
     rpc.call("rescanblockchain", [height])
     logger.info("end")
+
+def rescan_main():
+    opts = parse_args()
+
+    try:
+        config = RawConfigParser()
+        config.read(opts.config_file)
+        config.options("master-public-keys")
+    except NoSectionError:
+        print("ERROR: Non-existant configuration file {}".format(
+            opts.config_file))
+        return
+    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger, logfilename = logger_config(logger, config)
+    logger.info('Starting Electrum Personal Server rescan script')
+    logger.info('Logging to ' + logfilename)
+    logger.info("The seperate rescan script is deprecated, use " +
+        "`electrum-personal-server --rescan` instead.")
+    try:
+        rpc_u = config.get("bitcoin-rpc", "rpc_user")
+        rpc_p = config.get("bitcoin-rpc", "rpc_password")
+    except NoOptionError:
+        rpc_u, rpc_p = obtain_rpc_username_password(config.get(
+            "bitcoin-rpc", "datadir"))
+    if rpc_u == None:
+        return
+    rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
+        port = int(config.get("bitcoin-rpc", "port")),
+        user = rpc_u, password = rpc_p,
+        wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip())
+    rescan_script(logger, rpc)
