@@ -804,3 +804,9 @@ def rescan_main():
         user = rpc_u, password = rpc_p,
         wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip())
     rescan_script(logger, rpc)
+
+if __name__ == "__main__":
+    #entry point for pyinstaller executable
+    main()
+    os.system("pause")
+
