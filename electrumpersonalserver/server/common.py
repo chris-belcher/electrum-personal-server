@@ -682,11 +682,11 @@ def main():
             time.sleep(5)
     try:
         rpc.call("listunspent", [])
-    except JsonRpcError:
-        logger.error("Wallet related RPC calls not found, looks like the " +
+    except JsonRpcError as e:
+        logger.error(repr(e))
+        logger.error("Wallet related RPC call failed, possibly the " +
             "bitcoin node was compiled with the disable wallet flag")
         return
-
     if opts.rescan:
         rescan_script(logger, rpc)
         return
