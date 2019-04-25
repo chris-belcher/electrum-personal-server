@@ -1,6 +1,7 @@
-
 # Electrum Personal Server configuration file
-# Comments start with #
+
+# Lines starting with # are called comments which are ignored.
+# For a line to have effect it must not start with #
 
 # The most important options are towards the top of the file
 
