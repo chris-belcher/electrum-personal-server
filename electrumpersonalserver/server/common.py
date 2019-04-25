@@ -523,6 +523,12 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         watch_only_addresses_to_import = (watch_only_addresses -
             imported_addresses)
 
+    if len(deterministic_wallets) == 0 and len(watch_only_addresses) == 0:
+        logger.error("No master public keys or watch-only addresses have " +
+            "been configured at all. Exiting..")
+        #import = true and no addresses means exit
+        return (True, [], None)
+
     #if addresses need to be imported then return them
     if import_needed:
         addresses_to_import = [hashes.script_to_address(spk, rpc)
@@ -693,6 +699,9 @@ def main():
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
+        if len(relevant_spks_addrs) == 0:
+            #import = true and no addresses means exit
+            return
         transactionmonitor.import_addresses(rpc, relevant_spks_addrs)
         logger.info("Done.\nIf recovering a wallet which already has existing" +
             " transactions, then\nrun the rescan script. If you're confident" +
