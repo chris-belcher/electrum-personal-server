@@ -18,6 +18,7 @@
 # this example is a 2-of-3 multisig wallet
 #multisig_wallet = 2 xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF xpub661MyMwAqRbcFseXCwRdRVkhVuzEiskg4QUp5XpUdNf2uGXvQmnD4zcofZ1MN6Fo8PjqQ5cemJQ39f7RTwDVVputHMFjPUn8VRp2pJQMgEF
 
+
 [bitcoin-rpc]
 host = 127.0.0.1
 port = 8332
@@ -45,7 +46,6 @@ initial_import_count = 1000
 # number of unused addresses kept at the head of the wallet
 gap_limit = 25
 
-
 [electrum-server]
 # 0.0.0.0 to accept connections from any IP
 #127.0.0.1 to accept from only localhost
@@ -68,6 +68,14 @@ keyfile = certs/cert.key
 # It improves server responsiveness but stops mempool-based Electrum features
 # This is useful on low powered devices at times when the node mempool is large
 disable_mempool_fee_histogram = false
+
+# Parameter for broadcasting unconfirmed transactions
+# Options are:
+# * own-node         (broadcast using the connected full node)
+# * system <cmd> %s  (save transaction to file, and invoke system command
+#                     with file path as parameter %s)
+broadcast_method = own-node
+
 
 [watch-only-addresses]
 #Add individual addresses to this section, for example paper wallets

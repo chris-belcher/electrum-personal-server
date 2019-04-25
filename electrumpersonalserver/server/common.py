@@ -4,7 +4,7 @@ from collections import defaultdict
 import traceback, sys, platform
 from ipaddress import ip_network, ip_address
 import logging
-from tempfile import gettempdir
+import tempfile
 
 from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes
@@ -92,7 +92,8 @@ def on_disconnect(txmonitor):
     subscribed_to_headers[0] = False
     txmonitor.unsubscribe_all_addresses()
 
-def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram):
+def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
+        broadcast_method):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.debug("=> " + line)
     try:
@@ -226,14 +227,34 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram):
         headers_hex, n = get_block_headers_hex(rpc, start_height, count)
         send_response(sock, query, headers_hex)
     elif method == "blockchain.transaction.broadcast":
-        if not rpc.call("getnetworkinfo", [])["localrelay"]:
-            result = "Broadcast disabled when using blocksonly"
-            logger.info("Transaction broadcasting disabled when blocksonly")
+        txhex = query["params"][0]
+        result = None
+        txreport = rpc.call("testmempoolaccept", [[txhex]])[0]
+        if not txreport["allowed"]:
+            result = txreport["reject-reason"]
         else:
-            try:
-                result = rpc.call("sendrawtransaction", [query["params"][0]])
-            except JsonRpcError as e:
-                result = str(e)
+            result = txreport["txid"]
+            if broadcast_method == "own-node":
+                if not rpc.call("getnetworkinfo", [])["localrelay"]:
+                    result = "Broadcast disabled when using blocksonly"
+                    logger.warning("Transaction broadcasting disabled when " +
+                        "blocksonly")
+                else:
+                    try:
+                        rpc.call("sendrawtransaction", [txhex])
+                    except JsonRpcError as e:
+                        pass
+            elif broadcast_method.startswith("system "):
+                with tempfile.NamedTemporaryFile() as fd:
+                    system_line = broadcast_method[7:].replace("%s", fd.name)
+                    fd.write(txhex.encode())
+                    fd.flush()
+                    logger.debug("running command: " + system_line)
+                    os.system(system_line)
+            else:
+                logger.error("Unrecognized broadcast method = "
+                    + broadcast_method)
+                result = "Unrecognized broadcast method"
         send_response(sock, query, result)
     elif method == "mempool.get_fee_histogram":
         if disable_mempool_fee_histogram:
@@ -407,11 +428,30 @@ def create_server_socket(hostport):
     logger.info("Listening for Electrum Wallet on " + str(hostport))
     return server_sock
 
-def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
-        poll_interval_listening, poll_interval_connected, certfile, keyfile,
-        disable_mempool_fee_histogram):
+def run_electrum_server(rpc, txmonitor, config):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.info("Starting electrum server")
+
+    hostport = (config.get("electrum-server", "host"),
+            int(config.get("electrum-server", "port")))
+    ip_whitelist = []
+    for ip in config.get("electrum-server", "ip_whitelist").split(" "):
+        if ip == "*":
+            #matches everything
+            ip_whitelist.append(ip_network("0.0.0.0/0"))
+            ip_whitelist.append(ip_network("::0/0"))
+        else:
+            ip_whitelist.append(ip_network(ip, strict=False))
+    poll_interval_listening = int(config.get("bitcoin-rpc",
+        "poll_interval_listening"))
+    poll_interval_connected = int(config.get("bitcoin-rpc",
+        "poll_interval_connected"))
+    certfile, keyfile = get_certs(config)
+    disable_mempool_fee_histogram = config.getboolean("electrum-server",
+        "disable_mempool_fee_histogram", fallback=False)
+    broadcast_method = config.get("electrum-server", "broadcast_method",
+        fallback="own-node")
+
     server_sock = create_server_socket(hostport)
     server_sock.settimeout(poll_interval_listening)
     while True:
@@ -450,7 +490,8 @@ def run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
                         recv_buffer = recv_buffer[lb + 1:]
                         lb = recv_buffer.find(b'\n')
                         handle_query(sock, line.decode("utf-8"), rpc,
-                            txmonitor, disable_mempool_fee_histogram)
+                            txmonitor, disable_mempool_fee_histogram,
+                            broadcast_method)
                 except socket.timeout:
                     on_heartbeat_connected(sock, rpc, txmonitor)
         except (IOError, EOFError) as e:
@@ -634,7 +675,7 @@ def logger_config(logger, config):
     logger.addHandler(logstream)
     filename = config.get("logging", "log_file_location", fallback="")
     if len(filename.strip()) == 0:
-        filename= gettempdir() + "/electrumpersonalserver.log"
+        filename= tempfile.gettempdir() + "/electrumpersonalserver.log"
     logfile = logging.FileHandler(filename, mode=('a' if
         config.get("logging", "append_log", fallback="false") else 'w'))
     logfile.setFormatter(formatter)
@@ -712,28 +753,8 @@ def main():
             deterministic_wallets, logger)
         if not txmonitor.build_address_history(relevant_spks_addrs):
             return
-        hostport = (config.get("electrum-server", "host"),
-                int(config.get("electrum-server", "port")))
-        ip_whitelist = []
-        for ip in config.get("electrum-server", "ip_whitelist").split(" "):
-            if ip == "*":
-                #matches everything
-                ip_whitelist.append(ip_network("0.0.0.0/0"))
-                ip_whitelist.append(ip_network("::0/0"))
-            else:
-                ip_whitelist.append(ip_network(ip, strict=False))
-        poll_interval_listening = int(config.get("bitcoin-rpc",
-            "poll_interval_listening"))
-        poll_interval_connected = int(config.get("bitcoin-rpc",
-            "poll_interval_connected"))
-        certfile, keyfile = get_certs(config)
-        disable_mempool_fee_histogram = config.getboolean("electrum-server",
-            "disable_mempool_fee_histogram", fallback=False)
         try:
-            run_electrum_server(rpc, txmonitor, hostport, ip_whitelist,
-                                poll_interval_listening,
-                                poll_interval_connected, certfile, keyfile,
-                                disable_mempool_fee_histogram)
+            run_electrum_server(rpc, txmonitor, config)
         except KeyboardInterrupt:
             logger.info('Received KeyboardInterrupt, quitting')
 
