@@ -500,7 +500,8 @@ def run_electrum_server(rpc, txmonitor, config):
             else:
                 logger.error("IOError: " + repr(e))
             try:
-                sock.close()
+                if sock != None:
+                    sock.close()
             except IOError:
                 pass
             sock = None
@@ -712,7 +713,8 @@ def main():
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
         port = int(config.get("bitcoin-rpc", "port")),
         user = rpc_u, password = rpc_p,
-        wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip())
+        wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip(),
+        logger=logger)
 
     #TODO somewhere here loop until rpc works and fully sync'd, to allow
     # people to run this script without waiting for their node to fully
