@@ -1,0 +1,34 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Bitcoin addresses for sending donations to the Electrum Personal Server project
+
+(bech32) bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz
+(legacy) 12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg
+
+Always check signatures of addresses to avoid man-in-the-middle attacks
+
+The GPG public key and fingerprint can be found at:
+* The Electrum Personal Server github repository in /docs/pubkeys/belcher.asc
+* https://github.com/chris-belcher
+* https://www.reddit.com/r/publickeyexchange/comments/3ti8vp/ubelcher_s_public_key/
+* https://twitter.com/chris_belcher_/status/559879313622061056
+* https://bitcointalk.org/index.php?action=profile;u=321816
+* https://en.bitcoin.it/wiki/User:Belcher
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJcwxLVAAoJEO9zTqZ38xEpHFMP/0GA5UOKNxl3/XJjtKYBpyMK
+laXsHqlIAVe4P93YkExnOv8Xbrj8o7wZoqkRaiYKA0xtMNDD1QimRFOVTYp7y5Fu
+sLkkV5rkjz/p6/H/esMdmDEsFgBi7Gya00YpAxbwTGcLHNJ1mCHNbeCh6yyjEC+9
+4nd8/vxEsMYnC5Mh3Bx8LpTMe11aMe+CEBc4EAWRcu+2+x/iwwUZhYVvVaT8IOYC
+5zsP+DFLtOmuD2d/vnYq8PamPwYv1YlcKmSDyLhWLPUSyPNb/T9lUqXXIBtel/KO
+1ZG/wNcxTkdPP3WgK85C7//ODpbicLoVmtqCRLlDV6lifSw24EcbBWs9Ojm6vH9t
+oIbRbJ+MDS5ekPT7xAkOWYJnf7WkpSOSKPvr/kmxAl6DGX8rxkFeiJ6ehsdqE69r
+JTSZBzw8zIjbOESiA4yzOEYyLOGdjM0cI7Mc2BrVi2vH9F+w878zwbO4KlR7XGC4
+8gEdMsLlNH4lzo4rhu3O88+m8abFjjZqek/pVLxzkpTOuVqh/sqrjBSyEt3ElJ9Q
+GZdc4XwfvatDEgTROpDFbLeNNTgDndPQvNyZ65Iqi5iAvws3R4wuSOVOmwV7yuAL
+19Sv90U6KUIVNsXOpDZVQZN8B2Gnw1vwR/uIdAGgV/mMeEM/DMm/S6cgkm82pLBz
+0DDqvYz0EYPghVLBnlPv
+=RPFL
+-----END PGP SIGNATURE-----

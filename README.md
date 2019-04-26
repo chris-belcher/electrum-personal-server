@@ -37,8 +37,8 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 
 ## How To
 
-* If you dont already have them, download and install python3 and Bitcoin Core
-  version 0.16 or higher. Make sure you
+* If you dont already have them, download and install Bitcoin Core version 0.17
+  or higher. Make sure you
   [verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
   of any binaries before running them, or compile from source. The Bitcoin node
   must have wallet enabled, and must have the RPC server switched on (`server=1`
@@ -52,13 +52,14 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   `--server localhost:50002:s`.
 
 * Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
-  of Electrum Personal Server. Enter the directory and copy the file
-  `config.cfg_sample` to `config.cfg`.
+  of Electrum Personal Server. If using Windows OS take the packaged binary
+  release build `electrumpersonalserver-windows-release-XXX.zip`.
 
-* Edit the file `config.cfg` to configure everything about the server. Add your
-  wallet master public keys or watch-only addresses to the
+* Extract and enter the directory, and copy the file `config.ini_sample` to
+  `config.ini`. Edit the file `config.ini` to configure everything about the
+  server. Add your wallet master public keys or watch-only addresses to the
   `[master-public-keys]` and `[watch-only-addresses]` sections. Master public
-  keys for an Electrum wallet (which start with xpub/ypub/zpub) can be found
+  keys for an Electrum wallet (which start with xpub/ypub/zpub/etc) can be found
   in the Electrum client menu `Wallet` -> `Information`.  You can add multiple
   master public keys or watch-only addresses by adding separate lines for the
   different keys/addresses:
@@ -66,24 +67,30 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
       wallet1 = xpub661MyMwAqRbcF...
       wallet2 = xpub7712KLsfsg46G...
 
-* Install Electrum Personal Server in your home directory with
-  `pip3 install --user .`.  On Linux the scripts
-  (`electrum-personal-server` and `electrum-personal-server-rescan`) will be
-  installed in `~/.local/bin`.  Please note, if for some reason, you want to
-  make a system-wide install, simply run `pip3 install .` as root (e.g. if
-  you have `sudo` setup, you could use: `sudo pip3 install .`)
+* If using the windows packaged binary release, drag the file `config.ini` onto
+  the file `electrum-personal-server.exe` to run the server, or on the command
+  line run `electrum-personal-server config.ini`.
 
-* Run `electrum-personal-server /path/to/config.cfg` to start Electrum
-  Personal Server. The first time the server is run it will import all
-  configured addresses as watch-only into the Bitcoin node, and then exit.
+* If installing from the source release, install Electrum Personal Server in
+  your home directory with `pip3 install --user .`.  On Linux the script
+  `electrum-personal-server` will be installed in `~/.local/bin`.  Please note,
+  if for some reason, you want to make a system-wide install, simply run
+  `pip3 install .` as root (e.g. if you have `sudo` setup, you could use:
+  `sudo pip3 install .`). Run `electrum-personal-server /path/to/config.ini`
+  to start Electrum Personal Server.
+
+* The first time the server is run it will import all configured addresses as
+  watch-only into the Bitcoin node, and then exit.
   If the wallets contain historical transactions you can use the rescan script
-  (`electrum-personal-server-rescan /path/to/config.cfg`) to make them appear.
+  (`electrum-personal-server --rescan /path/to/config.ini`) to make them appear.
+  If using the windows packaged binary release build then drag the file
+  `config.ini` onto the file `electrum-personal-server-rescan.bat`.
 
 * Run the server again which will start Electrum Personal Server. Wait until
   the message `Listening for Electrum Wallet ...` appears and then tell
   Electrum to connect to the server in `Tools` -> `Server`. By default the
   server details are `localhost` if running on the same machine. Make sure the
-  port number matches what is written in `config.cfg` (port 50002 by default).
+  port number matches what is written in `config.ini` (port 50002 by default).
 
 Linked here are guides for installing Electrum Personal Server on a
 [Raspberry Pi](https://github.com/Stadicus/guides/blob/master/raspibolt/raspibolt_64_electrum.md),
@@ -144,12 +151,7 @@ Definitely check out implementations like [ElectrumX](https://github.com/kyuupic
 
 #### Further ideas for work
 
-* Packaging up the application using pyinstaller so that it would be much
-easier to set up.
-
-* It would be cool to have a GUI front-end for this. So less technical users
-can set up a personal server helped by a GUI wizard for configuring that
-explains everything. With the rescan script built-in.
+* Allowing connections from more than one Electrum instance at a time.
 
 * An option to broadcast transactions over tor, so that transaction broadcasting
 doesn't leak the user's IP address.
@@ -158,53 +160,14 @@ doesn't leak the user's IP address.
 Electrum Personal Server can accept connections from the entire internet but
 without a fear of privacy loss.
 
-## Contributing
+* Dynamic adding of wallet master public keys. Perhaps by polling for changes
+in the config file.
 
-Donate to help make Electrum Personal Server even better: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`.
-
-This is open source project which happily accepts coding contributions from
-anyone. Please keep lines under 80 characters in length and ideally don't add
-any external dependencies to keep this as easy to install as possible.
+## Contact
 
 I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels, by email or on [twitter](https://twitter.com/chris_belcher_/).
 
 My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
-
-### Notes for developers
-
-To seamlessly work on the codebase while using `pip`, you need to
-install in the `develop`/`editable` mode.  You can do that with:
-
-    $ pip3 install --user -e /path/to/repo
-
-`/path/to/repo` can also be a relative path, so if you are in the
-source directory, just use `.`.  This installs the scripts in the
-usual places, but imports the package from the source directory.  This
-way, any changes you make are immediately visible.
-
-#### Testing
-
-Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
-and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The
-Electrum wallet can be started in testnet mode with the command line flag
-`--testnet` or `--regtest`.
-
-pytest is used for automated testing. On Debian-like systems install with
-`pip3 install pytest pytest-cov`
-
-Run the tests with:
-
-    $ PYTHONPATH=.:$PYTHONPATH pytest
-
-Create the coverage report with:
-
-    $ PYTHONPATH=.:$PYTHONPATH pytest --cov-report=html --cov
-    $ open htmlcov/index.html
-
-If you have installed Electrum Personal Server with pip, there is no
-need to set `PYTHONPATH`.  You could also run the tests with:
-
-    $ python3 setup.py test
 
 ## Media Coverage and Talks
 
@@ -213,4 +176,11 @@ need to set `PYTHONPATH`.  You could also run the tests with:
 * [Discussion at Building on Bitcoin 2018](https://youtu.be/XORDEX-RrAI?t=4980) [transcript](http://diyhpl.us/wiki/transcripts/building-on-bitcoin/2018/current-and-future-state-of-wallets/)
 
 * [Electrum Personal Server talk at London Bitcoin Developer Meetup](https://www.youtube.com/watch?v=uKMXYdfm-is)
+
+## Contributing
+
+Donate to help make Electrum Personal Server even better: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`. Signed donation addresses can be found [here](/docs/signed-donation-addresses.txt).
+
+This is open source project which happily accepts coding contributions from
+anyone. See [developer-notes.md](docs/developer-notes.md).
 

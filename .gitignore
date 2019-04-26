@@ -1,5 +1,5 @@
 *.pyc
 *.swp
-config.cfg
-debug.log
+config.ini*
 .cache/
+.pytest_cache/
