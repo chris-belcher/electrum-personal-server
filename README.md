@@ -93,7 +93,7 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   port number matches what is written in `config.ini` (port 50002 by default).
 
 Linked here are guides for installing Electrum Personal Server on a
-[Raspberry Pi](https://github.com/Stadicus/guides/blob/master/raspibolt/raspibolt_64_electrum.md),
+[Raspberry Pi](https://github.com/Stadicus/RaspiBolt/blob/master/raspibolt_64_electrum.md),
 [Windows](https://github.com/HelgeHunding/guides/blob/master/hodl-guide/hodl-guide_63_eps-win.md)
 and
 [Mac OS](https://github.com/HelgeHunding/guides/blob/master/hodl-guide/hodl-guide_64_eps-mac.md).
