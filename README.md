@@ -102,7 +102,9 @@ Pro Tip: run Electrum wallet with the command line arguments `--oneserver --serv
 This stops Electrum connecting to several other servers to obtain block
 headers; and locks Electrum to connect only to your server, disabling the GUI
 button to stop accidental connections. This helps avoid a user accidentally
-ruining their privacy by connecting to public Electrum servers.
+ruining their privacy by connecting to public Electrum servers. Another way
+to do this is to open Electrum's config file and edit the lines to
+`oneserver=true`.
 
 #### Exposure to the Internet
 
