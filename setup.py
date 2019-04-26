@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="electrum-personal-server",
-    version="0.1.6.dev0",
+    version="0.1.7.dev0",
     description="Electrum Personal Server",
     author="Chris Belcher",
     license="MIT",

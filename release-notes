@@ -1,3 +1,23 @@
+# Release v0.1.7 (26th April 2019)
+
+New release, thanks to code contributions by suvayu and andrewtoth
+And thanks to everyone else who contributed via discussion and donations
+
+* If pruning is enabled and block is not available then send dummy merkle
+  proof, which Electrum will accept if run with the command line
+  flag --skipmerklecheck
+* Added option to allow broadcasting unconfirmed transactions via any
+  system call, for example it could be a shell script which broadcasts
+  via SMS or radio.
+* Added option which allows disabling the mempool histogram feature
+  which is useful on low-powered devices when the mempool is large.
+* Deprecated electrum-personal-server-rescan script in favour of
+  electrum-personal-server --rescan
+* Releases will now also be packaged as windows binaries using pyinstaller.
+* No longer adds orphaned coinbase txes as unconfirmed.
+* Fix bug involving transactions with unconfirmed inputs.
+* Various other bugfixes
+
 # Release v0.1.6 - (15th November 2018)
 
 New release, thanks to code contributions by suvayu and andrewtoth

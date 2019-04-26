@@ -12,7 +12,7 @@ import electrumpersonalserver.server.merkleproof as merkleproof
 import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
 
-SERVER_VERSION_NUMBER = "0.1.6"
+SERVER_VERSION_NUMBER = "0.1.7"
 
 DONATION_ADDR = "bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz"
 
@@ -821,7 +821,7 @@ def rescan_main():
     logger, logfilename = logger_config(logger, config)
     logger.info('Starting Electrum Personal Server rescan script')
     logger.info('Logging to ' + logfilename)
-    logger.info("The seperate rescan script is deprecated, use " +
+    logger.warning("The seperate rescan script is deprecated, use " +
         "`electrum-personal-server --rescan` instead.")
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
