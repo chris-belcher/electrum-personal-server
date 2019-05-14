@@ -546,7 +546,9 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         first_addrs = [hashes.script_to_address(s, rpc) for s in first_spks]
         logger.info("\n" + config_mpk_key + " =>\n\t" + "\n\t".join(
             first_addrs))
-        if not set(first_addrs).issubset(imported_addresses):
+        last_spk = wal.get_scriptpubkeys(0, int(config.get("bitcoin-rpc", "initial_import_count")) - 1, 1) 
+        last_addr = [hashes.script_to_address(last_spk[0], rpc)] 
+        if not set(first_addrs + last_addr).issubset(imported_addresses):
             import_needed = True
             wallets_imported += 1
             for change in [0, 1]:
