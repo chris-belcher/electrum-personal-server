@@ -78,7 +78,8 @@ disable_mempool_fee_histogram = false
 #                     with file path as parameter %s)
 broadcast_method = own-node
 
-# For tor broadcasting (broadcast_method = tor) configure the tor proxy host and port below
+# For tor broadcasting (broadcast_method = tor) configure
+# the tor proxy host and port below
 tor_host = localhost
 tor_port = 9050
 

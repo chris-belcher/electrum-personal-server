@@ -6,7 +6,11 @@ from struct import pack, unpack
 from datetime import datetime
 
 import electrumpersonalserver.bitcoin as btc
-from electrumpersonalserver.server.socks import socksocket, setdefaultproxy, PROXY_TYPE_SOCKS5
+from electrumpersonalserver.server.socks import (
+    socksocket,
+    setdefaultproxy,
+    PROXY_TYPE_SOCKS5
+)
 from electrumpersonalserver.server.jsonrpc import JsonRpcError
 
 import logging as log
@@ -87,12 +91,14 @@ class P2PMessageHandler(object):
 
     def check_keepalive(self, p2p):
         if self.waiting_for_keepalive:
-            if (datetime.now() - self.last_message).total_seconds() < KEEPALIVE_TIMEOUT:
+            if ((datetime.now() - self.last_message).total_seconds()
+                    < KEEPALIVE_TIMEOUT):
                 return
             log.info('keepalive timed out, closing')
             p2p.sock.close()
         else:
-            if (datetime.now() - self.last_message).total_seconds() < KEEPALIVE_INTERVAL:
+            if ((datetime.now() - self.last_message).total_seconds()
+                    < KEEPALIVE_INTERVAL):
                 return
             log.debug('sending keepalive to peer')
             self.waiting_for_keepalive = True
@@ -119,7 +125,8 @@ class P2PMessageHandler(object):
             start_height = read_int(ptr, payload, 4)
             if version > RELAY_TX_VERSION:
                 relay = read_int(ptr, payload, 1) != 0
-            else: # must check this node accepts unconfirmed transactions for the broadcast
+            else:
+                # must check node accepts unconfirmed txes before broadcasting
                 relay = True
             log.debug(('peer version message: version=%d services=0x%x'
                 + ' timestamp=%s user_agent=%s start_height=%d relay=%i'
@@ -154,7 +161,8 @@ class P2PMessageHandler(object):
 class P2PProtocol(object):
     def __init__(self, p2p_message_handler, remote_hostport,
                  network, user_agent=DEFAULT_USER_AGENT,
-                 socks5_hostport=("localhost", 9050), connect_timeout=30, heartbeat_interval=15):
+                 socks5_hostport=("localhost", 9050), connect_timeout=30,
+                 heartbeat_interval=15):
         self.log = (log if log else
                     log.getLogger('ELECTRUMPERSONALSERVER'))
         self.p2p_message_handler = p2p_message_handler
@@ -219,14 +227,16 @@ class P2PProtocol(object):
                     if not recv_data or len(recv_data) == 0:
                         raise EOFError()
                     recv_buffer += recv_data
-                    # this is O(N^2) scaling in time, another way would be to store in a list
-                    # and combine at the end with "".join()
+                    # this is O(N^2) scaling in time, another way would be to
+                    # store in a list and combine at the end with "".join()
                     # but this isnt really timing critical so didnt optimize it
 
                     data_remaining = True
                     while data_remaining and not self.closed:
-                        if payload_length == -1 and len(recv_buffer) >= HEADER_LENGTH:
-                            net_magic, command, payload_length, checksum = unpack('<I12sI4s', recv_buffer[:HEADER_LENGTH])
+                        if payload_length == -1 and (len(recv_buffer)
+                                >= HEADER_LENGTH):
+                            net_magic, command, payload_length, checksum =\
+                                unpack('<I12sI4s', recv_buffer[:HEADER_LENGTH])
                             recv_buffer = recv_buffer[HEADER_LENGTH:]
                             if net_magic != self.magic:
                                 log.debug('wrong MAGIC: ' + hex(net_magic))
@@ -234,15 +244,17 @@ class P2PProtocol(object):
                                 break
                             command = command.strip(b'\0')
                         else:
-
-                            if payload_length >= 0 and len(recv_buffer) >= payload_length:
+                            if payload_length >= 0 and (len(recv_buffer)
+                                    >= payload_length):
                                 payload = recv_buffer[:payload_length]
                                 recv_buffer = recv_buffer[payload_length:]
                                 if btc.bin_dbl_sha256(payload)[:4] == checksum:
-                                    self.p2p_message_handler.handle_message(self, command,
-                                        payload_length, payload)
+                                    self.p2p_message_handler.handle_message(
+                                        self, command, payload_length, payload)
                                 else:
-                                    log.debug('wrong checksum, dropping message, cmd=' + command + ' payloadlen=' + str(payload_length))
+                                    log.debug("wrong checksum, dropping " +
+                                        "message, cmd=" + command +
+                                        " payloadlen=" + str(payload_length))
                                 payload_length = -1
                                 data_remaining = True
                             else:
@@ -262,7 +274,6 @@ class P2PProtocol(object):
                 self.sock.close()
             except Exception as _:
                 pass
-
 
     def close(self):
         self.closed = True
@@ -306,11 +317,13 @@ class P2PBroadcastTx(P2PMessageHandler):
         VERACK_TIMEOUT = 40
         GETDATA_TIMEOUT = 60
         if not self.connected:
-            if (datetime.now() - self.time_marker).total_seconds() < VERACK_TIMEOUT:
+            if ((datetime.now() - self.time_marker).total_seconds()
+                    < VERACK_TIMEOUT):
                 return
             log.debug('timed out of waiting for verack')
         else:
-            if (datetime.now() - self.time_marker).total_seconds() < GETDATA_TIMEOUT:
+            if ((datetime.now() - self.time_marker).total_seconds()
+                    < GETDATA_TIMEOUT):
                 return
             log.debug('timed out of waiting for getdata, node already has tx')
             self.uploaded_tx = True
@@ -337,15 +350,15 @@ def tor_broadcast_tx(txhex, tor_hostport, network, rpc):
     try:
         node_addrs = rpc.call("getnodeaddresses", [ATTEMPTS])
     except JsonRpcError:
-        log.error("BitcoinCore v0.18.0 must be running to broadcast through Tor")
+        log.error("BitcoinCore v0.18.0 must be used to broadcast through Tor")
         return False
-
-    node_addrs = [addr for addr in node_addrs if addr["services"] & NODE_WITNESS]
+    node_addrs = [a for a in node_addrs if a["services"] & NODE_WITNESS]
     for i in range(len(node_addrs)):
         remote_hostport = (node_addrs[i]["address"], node_addrs[i]["port"])
         p2p_msg_handler = P2PBroadcastTx(txhex)
         p2p = P2PProtocol(p2p_msg_handler, remote_hostport=remote_hostport,
-            network=network, socks5_hostport=tor_hostport, heartbeat_interval=20)
+            network=network, socks5_hostport=tor_hostport,
+            heartbeat_interval=20)
         try:
             p2p.run()
         except IOError:

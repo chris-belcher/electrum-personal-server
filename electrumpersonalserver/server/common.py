@@ -247,7 +247,6 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
                     except JsonRpcError as e:
                         pass
             elif broadcast_method == "tor":
-                # send through tor
                 TOR_CONNECTIONS = 8
                 network = "mainnet"
                 chaininfo = rpc.call("getblockchaininfo", [])
@@ -257,7 +256,7 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
                     network = "regtest"
                 for i in range(TOR_CONNECTIONS):
                     t = threading.Thread(target=p2p.tor_broadcast_tx,
-                                         args=(txhex, tor_hostport, network, rpc,))
+                        args=(txhex, tor_hostport, network, rpc,))
                     t.start()
                     time.sleep(0.1)
             elif broadcast_method.startswith("system "):
