@@ -5,12 +5,14 @@ import traceback, sys, platform
 from ipaddress import ip_network, ip_address
 import logging
 import tempfile
+import threading
 
 from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes
 import electrumpersonalserver.server.merkleproof as merkleproof
 import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
+import electrumpersonalserver.server.peertopeer as p2p
 
 SERVER_VERSION_NUMBER = "0.1.7"
 
@@ -93,7 +95,7 @@ def on_disconnect(txmonitor):
     txmonitor.unsubscribe_all_addresses()
 
 def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
-        broadcast_method):
+        broadcast_method, tor_hostport=None):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.debug("=> " + line)
     try:
@@ -244,6 +246,20 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
                         rpc.call("sendrawtransaction", [txhex])
                     except JsonRpcError as e:
                         pass
+            elif broadcast_method == "tor":
+                # send through tor
+                TOR_CONNECTIONS = 8
+                network = "mainnet"
+                chaininfo = rpc.call("getblockchaininfo", [])
+                if chaininfo["chain"] == "test":
+                    network = "testnet"
+                elif chaininfo["chain"] == "regtest":
+                    network = "regtest"
+                for i in range(TOR_CONNECTIONS):
+                    t = threading.Thread(target=p2p.tor_broadcast_tx,
+                                         args=(txhex, tor_hostport, network, rpc,))
+                    t.start()
+                    time.sleep(0.1)
             elif broadcast_method.startswith("system "):
                 with tempfile.NamedTemporaryFile() as fd:
                     system_line = broadcast_method[7:].replace("%s", fd.name)
@@ -451,6 +467,9 @@ def run_electrum_server(rpc, txmonitor, config):
         "disable_mempool_fee_histogram", fallback=False)
     broadcast_method = config.get("electrum-server", "broadcast_method",
         fallback="own-node")
+    tor_host = config.get("electrum-server", "tor_host", fallback="localhost")
+    tor_port = int(config.get("electrum-server", "tor_port", fallback="9050"))
+    tor_hostport = (tor_host, tor_port)
 
     server_sock = create_server_socket(hostport)
     server_sock.settimeout(poll_interval_listening)
@@ -491,7 +510,7 @@ def run_electrum_server(rpc, txmonitor, config):
                         lb = recv_buffer.find(b'\n')
                         handle_query(sock, line.decode("utf-8"), rpc,
                             txmonitor, disable_mempool_fee_histogram,
-                            broadcast_method)
+                            broadcast_method, tor_hostport)
                 except socket.timeout:
                     on_heartbeat_connected(sock, rpc, txmonitor)
         except (IOError, EOFError) as e:
