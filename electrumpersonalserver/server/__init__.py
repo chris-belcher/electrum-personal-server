@@ -28,3 +28,11 @@ from electrumpersonalserver.server.deterministicwallet import (
     parse_electrum_master_public_key,
     DeterministicWallet,
 )
+from electrumpersonalserver.server.socks import (
+    socksocket,
+    setdefaultproxy,
+    PROXY_TYPE_SOCKS5,
+)
+from electrumpersonalserver.server.peertopeer import (
+    tor_broadcast_tx,
+)
