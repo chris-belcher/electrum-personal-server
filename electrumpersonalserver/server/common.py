@@ -236,6 +236,8 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             result = txreport["reject-reason"]
         else:
             result = txreport["txid"]
+            logger.info('Broadcasting tx ' + txreport["txid"] + " with " +
+                "broadcast method: " + broadcast_method)
             if broadcast_method == "own-node":
                 if not rpc.call("getnetworkinfo", [])["localrelay"]:
                     result = "Broadcast disabled when using blocksonly"
@@ -256,7 +258,8 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
                     network = "regtest"
                 for i in range(TOR_CONNECTIONS):
                     t = threading.Thread(target=p2p.tor_broadcast_tx,
-                        args=(txhex, tor_hostport, network, rpc,))
+                        args=(txhex, tor_hostport, network, rpc, logger),
+                        daemon=True)
                     t.start()
                     time.sleep(0.1)
             elif broadcast_method.startswith("system "):
