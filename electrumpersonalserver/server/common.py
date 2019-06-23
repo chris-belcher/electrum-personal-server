@@ -5,14 +5,13 @@ import traceback, sys, platform
 from ipaddress import ip_network, ip_address
 import logging
 import tempfile
-import threading
 
 from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes
 import electrumpersonalserver.server.merkleproof as merkleproof
 import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
-import electrumpersonalserver.server.peertopeer as p2p
+import electrumpersonalserver.server.peertopeer as peertopeer
 
 SERVER_VERSION_NUMBER = "0.1.7"
 
@@ -247,21 +246,17 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
                     try:
                         rpc.call("sendrawtransaction", [txhex])
                     except JsonRpcError as e:
-                        pass
+                        logger.error("Error broadcasting: " + repr(e))
             elif broadcast_method == "tor":
-                TOR_CONNECTIONS = 8
                 network = "mainnet"
                 chaininfo = rpc.call("getblockchaininfo", [])
                 if chaininfo["chain"] == "test":
                     network = "testnet"
                 elif chaininfo["chain"] == "regtest":
                     network = "regtest"
-                for i in range(TOR_CONNECTIONS):
-                    t = threading.Thread(target=p2p.tor_broadcast_tx,
-                        args=(txhex, tor_hostport, network, rpc, logger),
-                        daemon=True)
-                    t.start()
-                    time.sleep(0.1)
+                logger.debug("broadcasting to network: " + network)
+                peertopeer.tor_broadcast_tx(txhex, tor_hostport, network, rpc,
+                    logger)
             elif broadcast_method.startswith("system "):
                 with tempfile.NamedTemporaryFile() as fd:
                     system_line = broadcast_method[7:].replace("%s", fd.name)
