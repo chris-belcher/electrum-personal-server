@@ -3,6 +3,7 @@
 import socket, time
 import base64
 import threading
+import random
 from struct import pack, unpack
 from datetime import datetime
 
@@ -14,9 +15,14 @@ from electrumpersonalserver.server.socks import (
 )
 from electrumpersonalserver.server.jsonrpc import JsonRpcError
 
-PROTOCOL_VERSION = 70012
+PROTOCOL_VERSION = 70015
 DEFAULT_USER_AGENT = '/Satoshi:0.18.0/'
-NODE_WITNESS = (1 << 3)
+
+#https://github.com/bitcoin/bitcoin/blob/master/src/protocol.h
+NODE_NETWORK = 1
+NODE_BLOOM = 1 << 2
+NODE_WITNESS = 1 << 3
+NODE_NETWORK_LIMITED = 1 << 10
 
 # protocol versions above this also send a relay boolean
 RELAY_TX_VERSION = 70001
@@ -154,36 +160,37 @@ class P2PProtocol(object):
     def __init__(self, p2p_message_handler, remote_hostport,
                  network, logger, user_agent=DEFAULT_USER_AGENT,
                  socks5_hostport=("localhost", 9050), connect_timeout=30,
-                 heartbeat_interval=15):
-        self.logger = logger
+                 heartbeat_interval=15, start_height=0):
         self.p2p_message_handler = p2p_message_handler
-        self.network = network
+        self.remote_hostport = remote_hostport
+        self.logger = logger
         self.user_agent = user_agent
         self.socks5_hostport = socks5_hostport
-        self.heartbeat_interval = heartbeat_interval
         self.connect_timeout = connect_timeout
-        if self.network == "testnet":
+        self.heartbeat_interval = heartbeat_interval
+        self.start_height = start_height
+        if network == "testnet":
             self.magic = 0x0709110b
-        elif self.network == "regtest":
+        elif network == "regtest":
             self.magic = 0xdab5bffa
         else:
             self.magic = 0xd9b4bef9
         self.closed = False
-        self.remote_hostport = remote_hostport
 
     def run(self):
-        services = NODE_WITNESS
+        services = (NODE_NETWORK | NODE_WITNESS | NODE_BLOOM |
+            NODE_NETWORK_LIMITED)
         st = int(time.time())
-        nonce = 0
-        start_height = 0
+        nonce = random.getrandbits(64)
 
-        netaddr = create_net_addr(ip_to_hex('0.0.0.0'), 0)
+        netaddr_them = create_net_addr(ip_to_hex('0.0.0.0'), 0)
+        netaddr_us = create_net_addr(ip_to_hex('0.0.0.0'), 0)
         version_message = (pack('<iQQ', PROTOCOL_VERSION, services, st)
-                           + netaddr
-                           + netaddr
+                           + netaddr_them
+                           + netaddr_us
                            + pack('<Q', nonce)
                            + create_var_str(self.user_agent)
-                           + pack('<I', start_height)
+                           + pack('<I', self.start_height)
                            + b'\x01')
 
         self.logger.debug('Connecting to bitcoin peer at ' +
@@ -330,13 +337,14 @@ class P2PBroadcastTx(P2PMessageHandler):
                         + str(p2p.remote_hostport))
                     p2p.close()
 
-def broadcaster_thread(txhex, node_addrs, tor_hostport, network, logger):
+def broadcaster_thread(txhex, node_addrs, tor_hostport, network, logger,
+        start_height):
     for node_addr in node_addrs:
         remote_hostport = (node_addr["address"], node_addr["port"])
         p2p_msg_handler = P2PBroadcastTx(txhex, logger)
         p2p = P2PProtocol(p2p_msg_handler, remote_hostport=remote_hostport,
             network=network, logger=logger, socks5_hostport=tor_hostport,
-            heartbeat_interval=20)
+            heartbeat_interval=20, start_height=start_height)
         try:
             p2p.run()
         except IOError as e:
@@ -378,9 +386,11 @@ def tor_broadcast_tx(txhex, tor_hostport, network, rpc, logger):
         node_addrs_witness[:required_address_count],
         CONNECTION_ATTEMPTS_PER_THREAD
     )
+    start_height = rpc.call("getblockcount", [])
     for node_addrs in node_addrs_chunks:
         t = threading.Thread(target=broadcaster_thread,
-            args=(txhex, node_addrs, tor_hostport, network, logger),
+            args=(txhex, node_addrs, tor_hostport, network, logger,
+                start_height),
             daemon=True)
         t.start()
 
