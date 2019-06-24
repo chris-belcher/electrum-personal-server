@@ -83,6 +83,9 @@ broadcast_method = own-node
 tor_host = localhost
 tor_port = 9050
 
+# If using tor broadcasting, make sure you set `walletbroadcast=0` in
+# your bitcoin.conf file
+
 
 [watch-only-addresses]
 #Add individual addresses to this section, for example paper wallets
