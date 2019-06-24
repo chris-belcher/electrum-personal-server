@@ -335,6 +335,10 @@ class P2PBroadcastTx(P2PMessageHandler):
                     self.uploaded_tx = True
                     self.logger.info("Uploaded transaction via tor to peer at "
                         + str(p2p.remote_hostport))
+                    ##make sure the packets really got through by sleeping
+                    ##some kernels seem to send a RST packet on close() even
+                    ##if theres still data in the send buffer
+                    time.sleep(5)
                     p2p.close()
 
 def broadcaster_thread(txhex, node_addrs, tor_hostport, network, logger,
