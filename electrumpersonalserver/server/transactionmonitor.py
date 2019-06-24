@@ -245,17 +245,22 @@ class TransactionMonitor(object):
             unconfirmed_input = False
             total_input_value = 0
             for inn in txd["vin"]:
-                utxo = self.rpc.call("gettxout", [inn["txid"], inn["vout"],
-                    True])
-                if utxo is None:
-                    utxo = self.rpc.call("gettxout", [inn["txid"], inn["vout"],
-                        False])
+                try:
+                    utxo = self.rpc.call("gettxout", [inn["txid"],
+                        inn["vout"], True])
                     if utxo is None:
-                        rawtx = self.rpc.call("getrawtransaction", [inn["txid"],
-                            True])
-                        if rawtx is not None:
-                            utxo = {"confirmations": 0,
-                                "value": rawtx["vout"][inn["vout"]]["value"]}
+                        utxo = self.rpc.call("gettxout", [inn["txid"],
+                            inn["vout"], False])
+                        if utxo is None:
+                            rawtx = self.rpc.call("getrawtransaction",
+                                [inn["txid"], True])
+                            if rawtx is not None:
+                                utxo = {"confirmations": 0,
+                                    "value": rawtx["vout"][
+                                    inn["vout"]]["value"]}
+                except JsonRpcError:
+                    #error somewhere, unable to get input value, just carry on
+                    pass
                 if utxo is not None:
                     total_input_value += int(Decimal(utxo["value"]) *
                         Decimal(1e8))
