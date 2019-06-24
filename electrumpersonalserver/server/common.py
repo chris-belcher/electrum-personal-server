@@ -23,12 +23,13 @@ BANNER = \
 Monitoring {detwallets} deterministic wallets, in total {addr} addresses.
 
 Connected bitcoin node: {useragent}
-Peers: {peers}
 Uptime: {uptime}
-Blocksonly: {blocksonly}
-Pruning: {pruning}
+Peers: {peers}
 Download: {recvbytes} ({recvbytesperday} per day)
 Upload: {sentbytes} ({sentbytesperday} per day)
+Blocksonly: {blocksonly}
+Pruning: {pruning}
+Blockchain size: {blockchainsizeondisk}
 
 https://github.com/chris-belcher/electrum-personal-server
 
@@ -326,6 +327,8 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             uptime=str(datetime.timedelta(seconds=uptime)),
             blocksonly=not networkinfo["localrelay"],
             pruning=blockchaininfo["pruned"],
+            blockchainsizeondisk=hashes.bytes_fmt(
+                blockchaininfo["size_on_disk"]),
             recvbytes=hashes.bytes_fmt(nettotals["totalbytesrecv"]),
             recvbytesperday=hashes.bytes_fmt(
                 nettotals["totalbytesrecv"]/uptime_days),
