@@ -361,7 +361,7 @@ def tor_broadcast_tx(txhex, tor_hostport, network, rpc, logger):
     while True:
         try:
             new_node_addrs = rpc.call("getnodeaddresses",
-                [required_address_count])
+                [3*required_address_count//2])
         except JsonRpcError as e:
             logger.debug(repr(e))
             logger.error("Bitcoin Core v0.18.0 or higher is required "
