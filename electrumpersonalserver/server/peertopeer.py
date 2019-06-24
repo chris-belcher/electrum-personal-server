@@ -330,7 +330,7 @@ class P2PBroadcastTx(P2PMessageHandler):
                         + str(p2p.remote_hostport))
                     p2p.close()
 
-def broadcaster_thread(txhex, node_addrs, tor_hostport, network, rpc, logger):
+def broadcaster_thread(txhex, node_addrs, tor_hostport, network, logger):
     for node_addr in node_addrs:
         remote_hostport = (node_addr["address"], node_addr["port"])
         p2p_msg_handler = P2PBroadcastTx(txhex, logger)
@@ -380,7 +380,7 @@ def tor_broadcast_tx(txhex, tor_hostport, network, rpc, logger):
     )
     for node_addrs in node_addrs_chunks:
         t = threading.Thread(target=broadcaster_thread,
-            args=(txhex, node_addrs, tor_hostport, network, rpc, logger),
+            args=(txhex, node_addrs, tor_hostport, network, logger),
             daemon=True)
         t.start()
 
