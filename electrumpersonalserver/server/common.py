@@ -27,8 +27,8 @@ Peers: {peers}
 Uptime: {uptime}
 Blocksonly: {blocksonly}
 Pruning: {pruning}
-Download: {recvbytes}
-Upload: {sentbytes}
+Download: {recvbytes} ({recvbytesperday} per day)
+Upload: {sentbytes} ({sentbytesperday} per day)
 
 https://github.com/chris-belcher/electrum-personal-server
 
@@ -316,6 +316,7 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
         blockchaininfo = rpc.call("getblockchaininfo", [])
         uptime = rpc.call("uptime", [])
         nettotals = rpc.call("getnettotals", [])
+        uptime_days = uptime / 60.0 / 60 / 24
         send_response(sock, query, BANNER.format(
             serverversion=SERVER_VERSION_NUMBER,
             detwallets=len(txmonitor.deterministic_wallets),
@@ -326,7 +327,11 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             blocksonly=not networkinfo["localrelay"],
             pruning=blockchaininfo["pruned"],
             recvbytes=hashes.bytes_fmt(nettotals["totalbytesrecv"]),
+            recvbytesperday=hashes.bytes_fmt(
+                nettotals["totalbytesrecv"]/uptime_days),
             sentbytes=hashes.bytes_fmt(nettotals["totalbytessent"]),
+            sentbytesperday=hashes.bytes_fmt(
+                nettotals["totalbytessent"]/uptime_days),
             donationaddr=DONATION_ADDR))
     elif method == "server.donation_address":
         send_response(sock, query, DONATION_ADDR)
