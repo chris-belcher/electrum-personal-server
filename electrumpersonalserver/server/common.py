@@ -233,16 +233,18 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
     elif method == "blockchain.transaction.broadcast":
         txhex = query["params"][0]
         result = None
+        error = None
         txreport = rpc.call("testmempoolaccept", [[txhex]])[0]
         if not txreport["allowed"]:
-            result = txreport["reject-reason"]
+            error = txreport["reject-reason"]
         else:
             result = txreport["txid"]
             logger.info('Broadcasting tx ' + txreport["txid"] + " with " +
                 "broadcast method: " + broadcast_method)
             if broadcast_method == "own-node":
                 if not rpc.call("getnetworkinfo", [])["localrelay"]:
-                    result = "Broadcast disabled when using blocksonly"
+                    error = "Broadcast disabled when using blocksonly"
+                    result = None
                     logger.warning("Transaction broadcasting disabled when " +
                         "blocksonly")
                 else:
@@ -270,8 +272,12 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             else:
                 logger.error("Unrecognized broadcast method = "
                     + broadcast_method)
-                result = "Unrecognized broadcast method"
-        send_response(sock, query, result)
+                result = None
+                error = "Unrecognized broadcast method"
+        if result != None:
+            send_response(sock, query, result)
+        else:
+            send_error(sock, query["id"], error)
     elif method == "mempool.get_fee_histogram":
         if disable_mempool_fee_histogram:
             result = [[0, 0]]
