@@ -60,7 +60,8 @@ class JsonRpc(object):
             except http.client.BadStatusLine:
                 return "CONNFAILURE"
             except OSError as e:
-                    self.logger.debug('Reconnecting RPC after error: ' + repr(e))
+                    self.logger.debug('Reconnecting RPC after dropped ' +
+                        'connection: ' + repr(e))
                     self.conn.close()
                     self.conn.connect()
                     continue
