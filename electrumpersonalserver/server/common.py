@@ -153,9 +153,11 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             history_hash = txmonitor.get_electrum_history_hash(scrhash)
         else:
             logger.warning("Address not known to server, hash(address) = " +
-                scrhash + ".\nThis means Electrum is requesting information " +
-                "about addresses that are missing from Electrum Personal " +
-                "Server's configuration file.")
+                scrhash + ".\nCheck that you've imported the master public " +
+                "key(s) correctly. The first three addresses of each key are " +
+                "printed out on startup,\nso check that they really are " +
+                "addresses you expect. In Electrum go to Wallet -> " +
+                "Information to get the right master public key.")
             history_hash = hashes.get_status_electrum([])
         send_response(sock, query, history_hash)
     elif method == "blockchain.scripthash.get_history":
