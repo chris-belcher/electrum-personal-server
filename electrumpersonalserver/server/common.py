@@ -295,8 +295,9 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
             fee_hist = defaultdict(int)
             for txid, details in mempool.items():
-                fee_rate = 1e8*details["fee"] // details["size"]
-                fee_hist[fee_rate] += details["size"]
+                size = details["size"] if "size" in details else details["vsize"]
+                fee_rate = 1e8*details["fee"] // size
+                fee_hist[fee_rate] += size
             l = list(reversed(sorted(fee_hist.items())))
             out = []
             size = 0
