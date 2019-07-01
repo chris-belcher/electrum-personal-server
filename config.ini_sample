@@ -72,11 +72,12 @@ disable_mempool_fee_histogram = false
 
 # Parameter for broadcasting unconfirmed transactions
 # Options are:
+# * tor-or-own-node  (use tor if tor is running locally, otherwise own-node)
 # * own-node         (broadcast using the connected full node)
 # * tor              (broadcast to random nodes over tor)
 # * system <cmd> %s  (save transaction to file, and invoke system command
 #                     with file path as parameter %s)
-broadcast_method = own-node
+broadcast_method = tor-or-own-node
 
 # For tor broadcasting (broadcast_method = tor) configure
 # the tor proxy host and port below
