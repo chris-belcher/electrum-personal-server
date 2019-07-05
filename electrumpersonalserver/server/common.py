@@ -359,7 +359,7 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
                 client_protocol_version) + " not supported, update needed")
             raise ConnectionRefusedError()
         send_response(sock, query, ["ElectrumPersonalServer "
-            + SERVER_VERSION_NUMBER, protocol_version[0]])
+            + SERVER_VERSION_NUMBER, str(protocol_version[0])])
     elif method == "server.peers.subscribe":
         send_response(sock, query, []) #no peers to report
     elif method == "blockchain.transaction.id_from_pos":
