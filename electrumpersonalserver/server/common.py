@@ -5,6 +5,7 @@ import traceback, sys, platform
 from ipaddress import ip_network, ip_address
 import logging
 import tempfile
+import socket
 
 from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes
@@ -48,6 +49,24 @@ subscribed_to_headers = [False]
 are_headers_raw = [False]
 bestblockhash = [None]
 txid_blockhash_map = {}
+
+def get_tor_hostport():
+    # Probable ports for Tor to listen at
+    host = "127.0.0.1"
+    ports = [9050, 9150]
+    for port in ports:
+        try:
+            s = (socket._socketobject if hasattr(socket, "_socketobject")
+                 else socket.socket)(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.1)
+            s.connect((host, port))
+            # Tor responds uniquely to HTTP-like requests
+            s.send(b"GET\n")
+            if b"Tor is not an HTTP Proxy" in s.recv(1024):
+                return (host, port)
+        except socket.error:
+            pass
+    return None
 
 def send_response(sock, query, result):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
@@ -241,6 +260,16 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             result = txreport["txid"]
             logger.info('Broadcasting tx ' + txreport["txid"] + " with " +
                 "broadcast method: " + broadcast_method)
+            if broadcast_method == "tor-or-own-node":
+                tor_hostport = get_tor_hostport()
+                if tor_hostport is not None:
+                    logger.info("Tor detected at " + str(tor_hostport) +
+                        ". Broadcasting through tor.")
+                    broadcast_method = "tor"
+                else:
+                    logger.info("Could not detect tor. Broadcasting through " +
+                        "own node.")
+                    broadcast_method = "own-node"
             if broadcast_method == "own-node":
                 if not rpc.call("getnetworkinfo", [])["localrelay"]:
                     error = "Broadcast disabled when using blocksonly"
@@ -295,8 +324,9 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
             #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
             fee_hist = defaultdict(int)
             for txid, details in mempool.items():
-                fee_rate = 1e8*details["fee"] // details["size"]
-                fee_hist[fee_rate] += details["size"]
+                size = details["size"] if "size" in details else details["vsize"]
+                fee_rate = 1e8*details["fee"] // size
+                fee_hist[fee_rate] += size
             l = list(reversed(sorted(fee_hist.items())))
             out = []
             size = 0
