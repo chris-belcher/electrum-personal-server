@@ -535,7 +535,7 @@ def run_electrum_server(rpc, txmonitor, config):
                     sock.close()
                     sock = None
 
-            logger.info('Electrum connected from ' + str(addr))
+            logger.info('Electrum connected from ' + str(addr[0]))
             sock.settimeout(poll_interval_connected)
             recv_buffer = bytearray()
             while True:
