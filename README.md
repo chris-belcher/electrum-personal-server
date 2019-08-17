@@ -153,10 +153,17 @@ Definitely check out implementations like [ElectrumX](https://github.com/kyuupic
 
 #### Further ideas for work
 
-* Allowing connections from more than one Electrum instance at a time.
+* Allowing connections from more than one Electrum instance at a time. See issue
+[#50](https://github.com/chris-belcher/electrum-personal-server/issues/50). First
+the server code should be seperated from the networking code.
 
 * An option to broadcast transactions over tor, so that transaction broadcasting
 doesn't leak the user's IP address.
+
+* Fix mempool lock/CPU bottleneck issue. See issue [#96](https://github.com/chris-belcher/electrum-personal-server/issues/96).
+
+* Research and develop an easier way of rescanning the wallet when blockchain
+pruning is enabled. See issue [#85](https://github.com/chris-belcher/electrum-personal-server/issues/85).
 
 * Developing some way for Electrum servers to authenticate clients, so that
 Electrum Personal Server can accept connections from the entire internet but
