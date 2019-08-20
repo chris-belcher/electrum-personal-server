@@ -20,6 +20,7 @@
 
 
 [bitcoin-rpc]
+# Defaults ports for bitcoin core (default/mainnet: 8332, testnet: 18332, regtest: 18443)
 host = 127.0.0.1
 port = 8332
 #add the bitcoin datadir to search for the .cookie file created by the
