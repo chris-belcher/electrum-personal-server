@@ -158,7 +158,7 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
                 reply = {"block_height": txheader["block_height"], "pos":
                     electrum_proof["pos"], "merkle": electrum_proof["merkle"]}
             except (ValueError, JsonRpcError) as e:
-                logger.notice("merkle proof not found for " + txid + " sending"
+                logger.info("merkle proof not found for " + txid + " sending"
                     + " a dummy, Electrum client should be run with "
                     + "--skipmerklecheck")
                 #reply with a proof that the client with accept if
