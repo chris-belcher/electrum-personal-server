@@ -31,7 +31,7 @@ Upload: {sentbytes} ({sentbytesperday} per day)
 Blocksonly: {blocksonly}
 Pruning: {pruning}
 Blockchain size: {blockchainsizeondisk}
-
+{firstunprunedblock}
 https://github.com/chris-belcher/electrum-personal-server
 
 Donate to help make Electrum Personal Server even better:
@@ -356,23 +356,34 @@ def handle_query(sock, line, rpc, txmonitor, disable_mempool_fee_histogram,
         uptime = rpc.call("uptime", [])
         nettotals = rpc.call("getnettotals", [])
         uptime_days = uptime / 60.0 / 60 / 24
+        first_unpruned_block_text = ""
+        if blockchaininfo["pruned"]:
+            first_unpruned_block_time = rpc.call("getblockheader", [
+                rpc.call("getblockhash", [blockchaininfo["pruneheight"]])
+                ])["time"]
+            first_unpruned_block_text = ("First unpruned block: "
+                + str(blockchaininfo["pruneheight"]) + " ("
+                + str(
+                datetime.datetime.fromtimestamp(first_unpruned_block_time))
+                + ")\n")
         send_response(sock, query, BANNER.format(
             serverversion=SERVER_VERSION_NUMBER,
             detwallets=len(txmonitor.deterministic_wallets),
             addr=len(txmonitor.address_history),
             useragent=networkinfo["subversion"],
-            peers=networkinfo["connections"],
             uptime=str(datetime.timedelta(seconds=uptime)),
-            blocksonly=not networkinfo["localrelay"],
-            pruning=blockchaininfo["pruned"],
-            blockchainsizeondisk=hashes.bytes_fmt(
-                blockchaininfo["size_on_disk"]),
+            peers=networkinfo["connections"],
             recvbytes=hashes.bytes_fmt(nettotals["totalbytesrecv"]),
             recvbytesperday=hashes.bytes_fmt(
                 nettotals["totalbytesrecv"]/uptime_days),
             sentbytes=hashes.bytes_fmt(nettotals["totalbytessent"]),
             sentbytesperday=hashes.bytes_fmt(
                 nettotals["totalbytessent"]/uptime_days),
+            blocksonly=not networkinfo["localrelay"],
+            pruning=blockchaininfo["pruned"],
+            blockchainsizeondisk=hashes.bytes_fmt(
+                blockchaininfo["size_on_disk"]),
+            firstunprunedblock=first_unpruned_block_text,
             donationaddr=DONATION_ADDR))
     elif method == "server.donation_address":
         send_response(sock, query, DONATION_ADDR)
