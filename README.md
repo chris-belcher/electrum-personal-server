@@ -8,7 +8,7 @@ It is an implementation of the Electrum server protocol which fulfills the
 specific need of using the Electrum wallet backed by a full node, but without
 the heavyweight server backend, for a single user. It allows the user to
 benefit from all of Bitcoin Core's resource-saving features like
-[pruning](https://bitcoin.org/en/release/v0.12.0#wallet-pruning),
+[pruning](https://github.com/bitcoin/bitcoin/blob/master/doc/release-notes/release-notes-0.12.0.md#wallet-pruning),
 [blocksonly](https://bitcointalk.org/index.php?topic=1377345.0) and disabled
 txindex. All of Electrum's feature-richness like hardware wallet integration,
 [multisignature wallets](http://docs.electrum.org/en/latest/multisig.html),
