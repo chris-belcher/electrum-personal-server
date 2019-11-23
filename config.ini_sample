@@ -120,6 +120,6 @@ log_file_location =
 append_log = false
 
 # Format to use for logging messages
-#see docs https://docs.python.org/3/library/logging.html#logging.Formatter
+#see docs https://docs.python.org/3/library/logging.html#formatter-objects
 log_format = %(levelname)s:%(asctime)s: %(message)s
 

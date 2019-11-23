@@ -133,6 +133,11 @@ connection to the server.
 
 Right now Electrum Personal Server can only accept one connection at a time.
 
+##### Lightning Network
+
+Right now Electrum Personal Server does not support Lightning Network which
+Electrum wallet 4.0 and above implements.
+
 #### How is this different from other Electrum servers ?
 
 They are different approaches with different tradeoffs. Electrum Personal
