@@ -818,6 +818,14 @@ def main():
     if opts.rescan:
         rescan_script(logger, rpc, opts.rescan_date)
         return
+    while True:
+        logger.debug("Checking whether rescan is in progress")
+        walletinfo = rpc.call("getwalletinfo", [])
+        if "scanning" in walletinfo and walletinfo["scanning"]:
+            logger.debug("Waiting for Core wallet rescan to finish")
+            time.sleep(300)
+            continue
+        break
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
