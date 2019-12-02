@@ -36,7 +36,7 @@ datadir =
 wallet_filename =
 
 # how often in seconds to poll for new transactions when electrum not connected
-poll_interval_listening = 30
+poll_interval_listening = 600
 # how often in seconds to poll for new transactions when electrum is connected
 poll_interval_connected = 5
 
