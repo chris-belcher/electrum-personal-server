@@ -42,7 +42,9 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   [verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
   of any binaries before running them, or compile from source. The Bitcoin node
   must have wallet enabled, and must have the RPC server switched on (`server=1`
-  in bitcoin.conf). On first run, it is recommended to create a wallet dedicated to Electrum Personal 	Server using the command line argument `bitcoin-cli createwallet EPS true`.
+  in bitcoin.conf). On first run, it is recommended to create a wallet dedicated
+  to Electrum Personal Server using the command line argument
+  `bitcoin-cli createwallet electrumpersonalserver true`.
 
 * If you dont already have it, download and install
   [Electrum bitcoin wallet](https://electrum.org/), and set up your Electrum
@@ -69,7 +71,7 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 
 * If you created a wallet dedicated to Electrum Personal Server in Bitcoin Core,
   you have to modify the line `wallet_filename` in the `[bitcoin-rpc]` section 
-  with the name of the  wallet, for example `EPS`.
+  with the name of the  wallet, for example `electrumpersonalserver`.
 
 * If using the windows packaged binary release, drag the file `config.ini` onto
   the file `electrum-personal-server.exe` to run the server, or on the command
