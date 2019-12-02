@@ -22,6 +22,22 @@ source directory, just use `.`.  This installs the scripts in the
 usual places, but imports the package from the source directory.  This
 way, any changes you make are immediately visible.
 
+## Maintainable code
+
+Read the article [How To Write Unmaintainable Code](https://github.com/Droogans/unmaintainable-code/blob/master/README.md) and do the opposite of what it says.
+
+## Commits
+
+Commits should be [atomic](https://en.wikipedia.org/wiki/Atomic_commit#Atomic_commit_convention) and diffs should be easy to read.
+
+Commit messages should be verbose by default consisting of a short subject line
+(50 chars max), a blank line and detailed explanatory text as separate
+paragraph(s), unless the title alone is self-explanatory (like "Corrected typo
+in server.py") in which case a single title line is sufficient. Commit messages
+should be helpful to people reading your code in the future, so explain the
+reasoning for your decisions. Further explanation
+[here](https://chris.beams.io/posts/git-commit/).
+
 ## Testing
 
 Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
