@@ -737,6 +737,9 @@ def parse_args():
                         help='configuration file (mandatory)')
     parser.add_argument("--rescan", action="store_true", help="Start the " +
         " rescan script instead")
+    parser.add_argument("--rescan-date", action="store", dest="rescan_date",
+        default=None, help="Earliest wallet creation date (DD/MM/YYYY) or "
+        + "block height to rescan from")
     parser.add_argument("-v", "--version", action="version", version=
         "%(prog)s " + SERVER_VERSION_NUMBER)
     return parser.parse_args()
@@ -813,7 +816,7 @@ def main():
             "bitcoin node was compiled with the disable wallet flag")
         return
     if opts.rescan:
-        rescan_script(logger, rpc)
+        rescan_script(logger, rpc, opts.rescan_date)
         return
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
@@ -864,9 +867,12 @@ def search_for_block_height_of_date(datestr, rpc):
         else:
             return -1
 
-def rescan_script(logger, rpc):
-    user_input = input("Enter earliest wallet creation date (DD/MM/YYYY) "
-        "or block height to rescan from: ")
+def rescan_script(logger, rpc, rescan_date):
+    if rescan_date:
+        user_input = rescan_date
+    else:
+        user_input = input("Enter earliest wallet creation date (DD/MM/YYYY) "
+            "or block height to rescan from: ")
     try:
         height = int(user_input)
     except ValueError:
@@ -875,8 +881,10 @@ def rescan_script(logger, rpc):
             return
         height -= 2016 #go back two weeks for safety
 
-    if input("Rescan from block height " + str(height) + " ? (y/n):") != 'y':
-        return
+    if not rescan_date:
+        if input("Rescan from block height " + str(height) + " ? (y/n):") \
+                != 'y':
+            return
     logger.info("Rescanning. . . for progress indicator see the bitcoin node's"
         + " debug.log file")
     rpc.call("rescanblockchain", [height])
