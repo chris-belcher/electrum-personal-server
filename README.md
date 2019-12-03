@@ -27,8 +27,12 @@ configuration requires it to send (hashes of) all your bitcoin addresses to some
 server. That server can then easily spy on your transactions. Full node
 wallets like Electrum Personal Server would download the entire blockchain and
 scan it for the user's own addresses, and therefore don't reveal to anyone else
-which bitcoin addresses they are interested in.
-
+which bitcoin addresses they are interested in. Electrum Personal Server can
+also [broadcast transactions through Tor](https://en.bitcoin.it/wiki/Privacy#Countermeasures_to_traffic_analysis)
+which improves privacy by resisting traffic analysis for broadcasted
+transactions which can link the IP address of the user to the transaction. If
+enabled this would happen transparently whenever the user simply clicks "Send"
+on a transaction in Electrum wallet.
 
 For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
@@ -113,6 +117,9 @@ ruining their privacy by connecting to public Electrum servers. Another way
 to do this is to open Electrum's config file and edit the lines to
 `oneserver=true`.
 
+Pro Tip2: run tor on the same machine as Electrum Personal Server. Then by
+default transactions will be broadcast through tor.
+
 #### Quick start on a Debian/Ubuntu machine with a running Bitcoin full node
 1. Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
 of Electrum Personal Server. (Not the Windows version, the "Source code" zip or
@@ -191,9 +198,6 @@ and [here](https://medium.com/hackernoon/completely-offline-bitcoin-transactions
 * Allowing connections from more than one Electrum instance at a time. See issue
 [#50](https://github.com/chris-belcher/electrum-personal-server/issues/50). First
 the server code should be seperated from the networking code.
-
-* An option to broadcast transactions over tor, so that transaction broadcasting
-doesn't leak the user's IP address.
 
 * Fix mempool lock/CPU bottleneck issue. See issue [#96](https://github.com/chris-belcher/electrum-personal-server/issues/96).
 
