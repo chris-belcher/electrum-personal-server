@@ -29,6 +29,7 @@ wallets like Electrum Personal Server would download the entire blockchain and
 scan it for the user's own addresses, and therefore don't reveal to anyone else
 which bitcoin addresses they are interested in.
 
+
 For a longer explaination of this project, see the
 [mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
 and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198).
@@ -177,6 +178,13 @@ resources which push people towards using centralized solutions. This is what
 we'd like to avoid with Electrum Personal Server.
 
 Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/) if you're interested in this sort of thing.
+
+#### Bitcoin without internet access
+
+Electrum Personal Server can also be used as a building block for systems which
+use bitcoin over mesh networks and satellites instead of connecting the
+internet. See [here](https://twitter.com/notgrubles/status/1091011511961731073)
+and [here](https://medium.com/hackernoon/completely-offline-bitcoin-transactions-4e58324637bd) for information and setup guide.
 
 #### Further ideas for work
 
