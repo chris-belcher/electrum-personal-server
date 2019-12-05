@@ -118,7 +118,9 @@ to do this is to open Electrum's config file and edit the lines to
 `oneserver=true`.
 
 Pro Tip2: run tor on the same machine as Electrum Personal Server. Then by
-default transactions will be broadcast through tor.
+default transactions will be broadcast through tor. If running tor, also set
+`walletbroadcast=0` in your `bitcoin.conf`. This prevents the wallet from
+rebroadcasting transactions without tor.
 
 #### Quick start on a Debian/Ubuntu machine with a running Bitcoin full node
 1. Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
