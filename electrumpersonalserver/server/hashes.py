@@ -1,5 +1,7 @@
 
-import hashlib, binascii, math
+import hashlib
+import binascii
+import math
 
 ## stuff copied from electrum's source
 

@@ -1,11 +1,21 @@
-import socket, time, json, datetime, struct, binascii, ssl, os, os.path
-from configparser import RawConfigParser, NoSectionError, NoOptionError
-from collections import defaultdict
-import traceback, sys, platform
-from ipaddress import ip_network, ip_address
+import socket
+import time
+import json
+import datetime
+import struct
+import binascii
+import ssl
+import os
+import os.path
 import logging
 import tempfile
 import socket
+import traceback
+import sys
+import platform
+from configparser import RawConfigParser, NoSectionError, NoOptionError
+from collections import defaultdict
+from ipaddress import ip_network, ip_address
 
 from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes

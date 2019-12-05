@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
-import socket, time
+import socket
+import time
 import base64
 import threading
 import random

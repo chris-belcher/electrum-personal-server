@@ -1,8 +1,11 @@
 
-import time, pprint, math, sys
+import time
+import pprint
+import math
+import sys
+import logging
 from decimal import Decimal
 from collections import defaultdict
-import logging
 
 from electrumpersonalserver.server.jsonrpc import JsonRpcError
 from electrumpersonalserver.server.hashes import (
