@@ -133,7 +133,7 @@ tar.gz.)
     1. Add bitcoind back-end RPC auth information
     1. Add wallet master public keys for your wallets
 1. Install the server to your home directory with `pip3 install --user .`
-1. Make sure `~/local/bin` is in your $PATH (`echo $PATH`). If not, add it:
+1. Make sure `~/.local/bin` is in your $PATH (`echo $PATH`). If not, add it:
    `echo 'PATH=$HOME/.local/bin:$PATH' >> ~/.profile`, logout, and log in again
 1. Run the server: `electrum-personal-server config.ini`
 1. Start your Electrum wallet: `electrum --oneserver --server localhost:50002:s`.
