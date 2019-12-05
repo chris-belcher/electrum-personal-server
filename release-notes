@@ -1,3 +1,20 @@
+# Release v0.2.0 (5th December 2019)
+
+New release, thanks to code contributions by suvayu, andrewtoth and Sosthene00
+And thanks to everyone else who contributed via discussion and donations
+
+* Implemented tor broadcasting of transactions, which happens by default if tor
+  is running on the same machine.
+* Also check that the last address of each master public key has been imported,
+  along with the first three.
+* Add bandwidth usage per day and blockchain size to the server banner
+* Support using `vsize` instead of `size` for the mempool calculation, which is
+  the correct behaviour for Bitcoin Core 0.19
+* Allow rescan date to also be passed via CLI args. Wait for any rescanning to
+  finish on startup. This allows Electrum Personal Server to be more easily
+  used with scripting.
+* Various other bugfixes
+
 # Release v0.1.7 (26th April 2019)
 
 New release, thanks to code contributions by suvayu and andrewtoth

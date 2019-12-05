@@ -24,7 +24,7 @@ import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
 import electrumpersonalserver.server.peertopeer as peertopeer
 
-SERVER_VERSION_NUMBER = "0.1.7"
+SERVER_VERSION_NUMBER = "0.2.0"
 
 DONATION_ADDR = "bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz"
 
