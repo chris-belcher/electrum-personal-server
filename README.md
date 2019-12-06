@@ -105,9 +105,9 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
 
 Linked here are guides for installing Electrum Personal Server on a
 [Raspberry Pi](https://github.com/Stadicus/RaspiBolt/blob/master/raspibolt_64_electrum.md),
-[Windows](https://github.com/HelgeHunding/guides/blob/master/hodl-guide/hodl-guide_63_eps-win.md)
+[Windows](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_63_eps-win.html)
 and
-[Mac OS](https://github.com/DriftwoodPalace/Hodl-Guide/blob/master/hodl-guide_64_eps-mac.md).
+[Mac OS](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_64_eps-mac.html).
 
 Pro Tip: run Electrum wallet with the command line arguments `--oneserver --server localhost:50002:s`.
 This stops Electrum connecting to several other servers to obtain block
