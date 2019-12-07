@@ -36,3 +36,10 @@ from electrumpersonalserver.server.socks import (
 from electrumpersonalserver.server.peertopeer import (
     tor_broadcast_tx,
 )
+from electrumpersonalserver.server.electrumprotocol import (
+    SERVER_VERSION_NUMBER,
+    ElectrumProtocol,
+    get_block_header,
+    get_current_header,
+    get_block_headers_hex,
+)
