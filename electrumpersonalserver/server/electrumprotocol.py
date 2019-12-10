@@ -72,9 +72,9 @@ def get_block_header(rpc, blockhash, raw=False):
     return header
 
 def get_current_header(rpc, raw):
-    new_bestblockhash = rpc.call("getbestblockhash", [])
-    header = get_block_header(rpc, new_bestblockhash, raw)
-    return new_bestblockhash, header
+    bestblockhash = rpc.call("getbestblockhash", [])
+    header = get_block_header(rpc, bestblockhash, raw)
+    return bestblockhash, header
 
 def get_block_headers_hex(rpc, start_height, count):
     #read count number of headers starting from start_height
@@ -164,6 +164,8 @@ class ElectrumProtocol(object):
             query = json.loads(line)
         except json.decoder.JSONDecodeError as e:
             raise IOError(e)
+        if "method" not in query:
+            raise IOError("Bad client query, no \"method\"")
         method = query["method"]
 
         if method == "blockchain.transaction.get":
@@ -200,7 +202,7 @@ class ElectrumProtocol(object):
                         electrum_proof["pos"], "merkle":
                         electrum_proof["merkle"]}
                 except (ValueError, JsonRpcError) as e:
-                    logger.info("merkle proof not found for " + txid
+                    self.logger.info("merkle proof not found for " + txid
                         + " sending a dummy, Electrum client should be run "
                         + "with --skipmerklecheck")
                     #reply with a proof that the client with accept if
@@ -213,13 +215,13 @@ class ElectrumProtocol(object):
             if self.txmonitor.subscribe_address(scrhash):
                 history_hash = self.txmonitor.get_electrum_history_hash(scrhash)
             else:
-                logger.warning("Address not known to server, hash(address) = "
-                    + scrhash + ".\nCheck that you've imported the master "
-                    + "public key(s) correctly. The first three addresses of "
-                    + "each key are printed out on startup,\nso check that "
-                    + "they really are addresses you expect. In Electrum go to"
-                    + " Wallet -> Information to get the right master public "
-                    + "key.")
+                self.logger.warning("Address not known to server, hash(address)"
+                    + " = " + scrhash + ".\nCheck that you've imported the "
+                    + "master public key(s) correctly. The first three "
+                    + "addresses of each key are printed out on startup,\nso "
+                    + "check that they really are addresses you expect. In "
+                    + "Electrum go to Wallet -> Information to get the right "
+                    + "master public key.")
                 history_hash = get_status_electrum([])
             self._send_response(query, history_hash)
         elif method == "blockchain.scripthash.get_history":
@@ -227,14 +229,14 @@ class ElectrumProtocol(object):
             history = self.txmonitor.get_electrum_history(scrhash)
             if history == None:
                 history = []
-                logger.warning("Address history not known to server, "
+                self.logger.warning("Address history not known to server, "
                     + "hash(address) = " + scrhash)
             self._send_response(query, history)
         elif method == "blockchain.scripthash.get_balance":
             scrhash = query["params"][0]
             balance = self.txmonitor.get_address_balance(scrhash)
             if balance == None:
-                logger.warning("Address history not known to server, "
+                self.logger.warning("Address history not known to server, "
                     + "hash(address) = " + scrhash)
                 balance = {"confirmed": 0, "unconfirmed": 0}
             self._send_response(query, balance)
@@ -359,7 +361,7 @@ class ElectrumProtocol(object):
         elif method == "mempool.get_fee_histogram":
             if self.disable_mempool_fee_histogram:
                 result = [[0, 0]]
-                logger.debug("fee histogram disabled, sending back empty "
+                self.logger.debug("fee histogram disabled, sending back empty "
                     + "mempool")
             else:
                 st = time.time()
@@ -367,7 +369,7 @@ class ElectrumProtocol(object):
                 et = time.time()
                 MEMPOOL_WARNING_DURATION = 10 #seconds
                 if et - st > MEMPOOL_WARNING_DURATION:
-                    logger.warning("Mempool very large resulting in slow "
+                    self.logger.warning("Mempool very large resulting in slow "
                         + "response by server. Consider setting "
                         + "`disable_mempool_fee_histogram = true`")
                 #algorithm copied from the relevant place in ElectrumX
