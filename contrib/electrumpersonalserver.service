@@ -1,0 +1,19 @@
+# Electrum Personal Server: systemd unit
+# /etc/systemd/system/electrumpersonalserver.service
+
+[Unit]
+Description=Electrum Personal Server
+After=bitcoind.service
+Requires=bitcoind.service
+
+[Service]
+ExecStart=/your-installation-path/server.py /your-workding-dir [optional arguments]
+User=bitcoin
+Group=bitcoin
+Type=simple
+Restart=on-failure
+RestartSec=60
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
