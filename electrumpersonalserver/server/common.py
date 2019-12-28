@@ -7,6 +7,7 @@ import os.path
 import logging
 import tempfile
 import platform
+import json
 from configparser import RawConfigParser, NoSectionError, NoOptionError
 from ipaddress import ip_network, ip_address
 
@@ -126,9 +127,14 @@ def run_electrum_server(rpc, txmonitor, config):
                 except (ConnectionRefusedError, ssl.SSLError):
                     sock.close()
                     sock = None
-
             logger.info('Electrum connected from ' + str(addr[0]))
-            protocol.set_send_line_fun(lambda l: sock.sendall(l + b'\n'))
+
+            def send_reply_fun(reply):
+                line = json.dumps(reply)
+                sock.sendall(line.encode('utf-8') + b'\n')
+                logger.debug('<= ' + line)
+            protocol.set_send_reply_fun(send_reply_fun)
+
             sock.settimeout(poll_interval_connected)
             recv_buffer = bytearray()
             while True:
@@ -144,7 +150,13 @@ def run_electrum_server(rpc, txmonitor, config):
                         line = recv_buffer[:lb].rstrip()
                         recv_buffer = recv_buffer[lb + 1:]
                         lb = recv_buffer.find(b'\n')
-                        protocol.handle_query(line.decode("utf-8"))
+                        line = line.decode("utf-8")
+                        logger.debug("=> " + line)
+                        try:
+                            query = json.loads(line)
+                        except json.decoder.JSONDecodeError as e:
+                            raise IOError(repr(e))
+                        protocol.handle_query(query)
                 except socket.timeout:
                     on_heartbeat_connected(rpc, txmonitor, protocol)
         except (IOError, EOFError) as e:

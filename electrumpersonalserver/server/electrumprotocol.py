@@ -123,8 +123,8 @@ class ElectrumProtocol(object):
         self.are_headers_raw = False
         self.txid_blockhash_map = {}
 
-    def set_send_line_fun(self, send_line_fun):
-        self.send_line_fun = send_line_fun
+    def set_send_reply_fun(self, send_reply_fun):
+        self.send_reply_fun = send_reply_fun
 
     def on_blockchain_tip_updated(self, header):
         if self.subscribed_to_headers:
@@ -145,25 +145,17 @@ class ElectrumProtocol(object):
 
     def _send_response(self, query, result):
         response = {"jsonrpc": "2.0", "result": result, "id": query["id"]}
-        self.send_line_fun(json.dumps(response).encode('utf-8'))
-        self.logger.debug('<= ' + json.dumps(response))
+        self.send_reply_fun(response)
 
     def _send_update(self, update):
         update["jsonrpc"] = "2.0"
-        self.send_line_fun(json.dumps(update).encode('utf-8'))
-        self.logger.debug('<= ' + json.dumps(update))
+        self.send_reply_fun(update)
 
     def _send_error(self, nid, error):
         payload = {"error": error, "jsonrpc": "2.0", "id": nid}
-        self.send_line_fun(json.dumps(payload).encode('utf-8'))
-        self.logger.debug('<= ' + json.dumps(payload))
+        self.send_reply_fun(payload)
 
-    def handle_query(self, line):
-        self.logger.debug("=> " + line)
-        try:
-            query = json.loads(line)
-        except json.decoder.JSONDecodeError as e:
-            raise IOError(e)
+    def handle_query(self, query):
         if "method" not in query:
             raise IOError("Bad client query, no \"method\"")
         method = query["method"]
