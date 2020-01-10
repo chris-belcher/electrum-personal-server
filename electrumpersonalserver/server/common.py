@@ -292,7 +292,7 @@ def get_certs(config):
         certfile = resource_filename('electrumpersonalserver', __certfile__)
         keyfile = resource_filename('electrumpersonalserver', __keyfile__)
         if os.path.exists(certfile) and os.path.exists(keyfile):
-            logger.debug('using cert: {}, key: {}'.format(certfile, keyfile))
+            logger.info('using cert: {}, key: {}'.format(certfile, keyfile))
             return certfile, keyfile
         else:
             raise ValueError('invalid cert: {}, key: {}'.format(
