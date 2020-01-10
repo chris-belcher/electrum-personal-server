@@ -96,6 +96,7 @@ def run_electrum_server(rpc, txmonitor, config):
     poll_interval_connected = int(config.get("bitcoin-rpc",
         "poll_interval_connected"))
     certfile, keyfile = get_certs(config)
+    logger.info('using cert: {}, key: {}'.format(certfile, keyfile))
     disable_mempool_fee_histogram = config.getboolean("electrum-server",
         "disable_mempool_fee_histogram", fallback=False)
     broadcast_method = config.get("electrum-server", "broadcast_method",
@@ -292,7 +293,6 @@ def get_certs(config):
         certfile = resource_filename('electrumpersonalserver', __certfile__)
         keyfile = resource_filename('electrumpersonalserver', __keyfile__)
         if os.path.exists(certfile) and os.path.exists(keyfile):
-            logger.info('using cert: {}, key: {}'.format(certfile, keyfile))
             return certfile, keyfile
         else:
             raise ValueError('invalid cert: {}, key: {}'.format(
