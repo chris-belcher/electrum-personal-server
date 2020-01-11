@@ -369,7 +369,8 @@ def main():
         return
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger, logfilename = logger_config(logger, config)
-    logger.info('Starting Electrum Personal Server')
+    logger.info('Starting Electrum Personal Server v{}'.format(
+        SERVER_VERSION_NUMBER))
     logger.info('Logging to ' + logfilename)
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
