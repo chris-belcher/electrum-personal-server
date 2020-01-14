@@ -15,7 +15,6 @@ from electrumpersonalserver.server.jsonrpc import JsonRpc, JsonRpcError
 import electrumpersonalserver.server.hashes as hashes
 import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
-import electrumpersonalserver.server.peertopeer as peertopeer
 from electrumpersonalserver.server.electrumprotocol import (
     SERVER_VERSION_NUMBER,
     ElectrumProtocol,
@@ -27,24 +26,6 @@ from electrumpersonalserver.server.electrumprotocol import (
 ##python has demented rules for variable scope, so these
 ## global variables are actually mutable lists
 bestblockhash = [None]
-
-def get_tor_hostport():
-    # Probable ports for Tor to listen at
-    host = "127.0.0.1"
-    ports = [9050, 9150]
-    for port in ports:
-        try:
-            s = (socket._socketobject if hasattr(socket, "_socketobject")
-                 else socket.socket)(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(0.1)
-            s.connect((host, port))
-            # Tor responds uniquely to HTTP-like requests
-            s.send(b"GET\n")
-            if b"Tor is not an HTTP Proxy" in s.recv(1024):
-                return (host, port)
-        except socket.error:
-            pass
-    return None
 
 def on_heartbeat_listening(txmonitor):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
