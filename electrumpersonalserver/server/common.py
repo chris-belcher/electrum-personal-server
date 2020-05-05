@@ -8,6 +8,7 @@ import logging
 import tempfile
 import platform
 import json
+from json.decoder import JSONDecodeError
 from configparser import RawConfigParser, NoSectionError, NoOptionError
 from ipaddress import ip_network, ip_address
 
@@ -132,12 +133,12 @@ def run_electrum_server(rpc, txmonitor, config):
                         line = recv_buffer[:lb].rstrip()
                         recv_buffer = recv_buffer[lb + 1:]
                         lb = recv_buffer.find(b'\n')
-                        line = line.decode("utf-8")
-                        logger.debug("=> " + line)
                         try:
+                            line = line.decode("utf-8")
                             query = json.loads(line)
-                        except json.decoder.JSONDecodeError as e:
+                        except (UnicodeDecodeError, JSONDecodeError) as e:
                             raise IOError(repr(e))
+                        logger.debug("=> " + line)
                         protocol.handle_query(query)
                 except socket.timeout:
                     on_heartbeat_connected(rpc, txmonitor, protocol)
