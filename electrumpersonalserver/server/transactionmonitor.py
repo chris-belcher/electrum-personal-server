@@ -500,12 +500,11 @@ class TransactionMonitor(object):
                     output_scriptpubkeys)
                 if overrun_depths != None:
                     for change, import_count in overrun_depths.items():
-                        spks = wal.get_new_scriptpubkeys(change, import_count)
+                        new_addrs, spks = wal.get_new_addresses(change,
+                            import_count)
                         for spk in spks:
                             self.address_history[script_to_scripthash(
                                 spk)] =  {'history': [], 'subscribed': False}
-                        new_addrs = [script_to_address(s, self.rpc)
-                            for s in spks]
                         logger.debug("importing " + str(len(spks)) +
                             " into change=" + str(change))
                         import_addresses(self.rpc, new_addrs, logger)

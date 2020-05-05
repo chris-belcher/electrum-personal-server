@@ -40,7 +40,7 @@ def raw_bip32_ckd(rawtuple, i):
 
     if i >= 2**31:
         if vbytes in PUBLIC:
-            raise Exception("Can't do private derivation on public key!")
+            raise ValueError("Can't do private derivation on public key!")
         I = hmac.new(chaincode, b'\x00' + priv[:32] + encode(i, 256, 4),
                      hashlib.sha512).digest()
     else:
@@ -70,7 +70,7 @@ def bip32_serialize(rawtuple):
 def bip32_deserialize(data):
     dbin = changebase(data, 58, 256)
     if bin_dbl_sha256(dbin[:-4])[:4] != dbin[-4:]:
-        raise Exception("Invalid checksum")
+        raise ValueError("Invalid checksum")
     vbytes = dbin[0:4]
     depth = from_byte_to_int(dbin[4])
     fingerprint = dbin[5:9]
@@ -118,7 +118,7 @@ def raw_crack_bip32_privkey(parent_pub, priv):
     i = int(i)
 
     if i >= 2**31:
-        raise Exception("Can't crack private derivation!")
+        raise ValueError("Can't crack private derivation!")
 
     I = hmac.new(pchaincode, pkey + encode(i, 256, 4), hashlib.sha512).digest()
 

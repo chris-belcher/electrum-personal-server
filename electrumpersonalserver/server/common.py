@@ -174,34 +174,39 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 
     deterministic_wallets = []
     for key in config.options("master-public-keys"):
-        wal = deterministicwallet.parse_electrum_master_public_key(
-            config.get("master-public-keys", key),
-            int(config.get("bitcoin-rpc", "gap_limit")))
+        mpk = config.get("master-public-keys", key)
+        gaplimit = int(config.get("bitcoin-rpc", "gap_limit"))
+        chain = rpc.call("getblockchaininfo", [])["chain"]
+        try:
+            wal = deterministicwallet.parse_electrum_master_public_key(mpk,
+                gaplimit, rpc, chain)
+        except ValueError:
+            raise ValueError("Bad master public key format. Get it from " +
+                "Electrum menu `Wallet` -> `Information`")
         deterministic_wallets.append(wal)
 
     #check whether these deterministic wallets have already been imported
     import_needed = False
     wallets_imported = 0
-    spks_to_import = []
+    addresses_to_import = []
     TEST_ADDR_COUNT = 3
     logger.info("Displaying first " + str(TEST_ADDR_COUNT) + " addresses of " +
         "each master public key:")
     for config_mpk_key, wal in zip(config.options("master-public-keys"),
             deterministic_wallets):
-        first_spks = wal.get_scriptpubkeys(change=0, from_index=0,
+        first_addrs, first_spk = wal.get_addresses(change=0, from_index=0,
             count=TEST_ADDR_COUNT)
-        first_addrs = [hashes.script_to_address(s, rpc) for s in first_spks]
         logger.info("\n" + config_mpk_key + " =>\n\t" + "\n\t".join(
             first_addrs))
-        last_spk = wal.get_scriptpubkeys(0, int(config.get("bitcoin-rpc",
-            "initial_import_count")) - 1, 1)
-        last_addr = [hashes.script_to_address(last_spk[0], rpc)] 
+        last_addr, last_spk = wal.get_addresses(change=0, from_index=int(
+            config.get("bitcoin-rpc", "initial_import_count")) - 1, count=1)
         if not set(first_addrs + last_addr).issubset(imported_addresses):
             import_needed = True
             wallets_imported += 1
             for change in [0, 1]:
-                spks_to_import.extend(wal.get_scriptpubkeys(change, 0,
-                    int(config.get("bitcoin-rpc", "initial_import_count"))))
+                addrs, spks = wal.get_addresses(change, 0,
+                    int(config.get("bitcoin-rpc", "initial_import_count")))
+                addresses_to_import.extend(addrs)
     logger.info("Obtaining bitcoin addresses to monitor . . .")
     #check whether watch-only addresses have been imported
     watch_only_addresses = []
@@ -223,8 +228,6 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 
     #if addresses need to be imported then return them
     if import_needed:
-        addresses_to_import = [hashes.script_to_address(spk, rpc)
-            for spk in spks_to_import]
         #TODO minus imported_addresses
         logger.info("Importing " + str(wallets_imported) + " wallets and " +
             str(len(watch_only_addresses_to_import)) + " watch-only " +
@@ -242,15 +245,15 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     spks_to_monitor = []
     for wal in deterministic_wallets:
         for change in [0, 1]:
-            spks_to_monitor.extend(wal.get_scriptpubkeys(change, 0,
-                int(config.get("bitcoin-rpc", "initial_import_count"))))
+            addrs, spks = wal.get_addresses(change, 0,
+                int(config.get("bitcoin-rpc", "initial_import_count")))
+            spks_to_monitor.extend(spks)
             #loop until one address found that isnt imported
             while True:
-                spk = wal.get_new_scriptpubkeys(change, count=1)[0]
-                spks_to_monitor.append(spk)
-                if hashes.script_to_address(spk, rpc) not in imported_addresses:
+                addrs, spks = wal.get_new_addresses(change, count=1)
+                if addrs[0] not in imported_addresses:
                     break
-            spks_to_monitor.pop()
+                spks_to_monitor.append(spks[0])
             wal.rewind_one(change)
 
     spks_to_monitor.extend([hashes.address_to_script(addr, rpc)
@@ -388,6 +391,22 @@ def main():
         logger.error(repr(e))
         logger.error("Wallet related RPC call failed, possibly the " +
             "bitcoin node was compiled with the disable wallet flag")
+        return
+
+    test_keydata = (
+    "2 tpubD6NzVbkrYhZ4YVMVzC7wZeRfz3bhqcHvV8M3UiULCfzFtLtp5nwvi6LnBQegrkx" +
+    "YGPkSzXUEvcPEHcKdda8W1YShVBkhFBGkLxjSQ1Nx3cJ tpubD6NzVbkrYhZ4WjgNYq2nF" +
+    "TbiSLW2SZAzs4g5JHLqwQ3AmR3tCWpqsZJJEoZuP5HAEBNxgYQhtWMezszoaeTCg6FWGQB" +
+    "T74sszGaxaf64o5s")
+    chain = rpc.call("getblockchaininfo", [])["chain"]
+    try:
+        gaplimit = 5
+        deterministicwallet.parse_electrum_master_public_key(test_keydata,
+            gaplimit, rpc, chain)
+    except ValueError as e:
+        logger.error(repr(e))
+        logger.error("Descriptor related RPC call failed. Bitcoin Core 0.20.0"
+            + " or higher required. Exiting..")
         return
     if opts.rescan:
         rescan_script(logger, rpc, opts.rescan_date)
