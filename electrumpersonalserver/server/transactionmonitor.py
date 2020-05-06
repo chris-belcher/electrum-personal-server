@@ -13,6 +13,7 @@ from electrumpersonalserver.server.hashes import (
     script_to_scripthash,
     script_to_address
 )
+from electrumpersonalserver.server.deterministicwallet import import_addresses
 
 #internally this code uses scriptPubKeys, it only converts to bitcoin addresses
 # when importing to bitcoind or checking whether enough addresses have been
@@ -20,39 +21,11 @@ from electrumpersonalserver.server.hashes import (
 #the electrum protocol uses sha256(scriptpubkey) as a key for lookups
 # this code calls them scripthashes
 
-#code will generate the first address from each deterministic wallet
-# and check whether they have been imported into the bitcoin node
-# if no then initial_import_count addresses will be imported, then exit
-# if yes then initial_import_count addresses will be generated and extra
-# addresses will be generated one-by-one, each time checking whether they have
-# been imported into the bitcoin node
-# when an address has been reached that has not been imported, that means
-# we've reached the end, then rewind the deterministic wallet index by one
-
 #when a transaction happens paying to an address from a deterministic wallet
 # lookup the position of that address, if its less than gap_limit then
 # import more addresses
 
-ADDRESSES_LABEL = "electrum-watchonly-addresses"
 CONFIRMATIONS_SAFE_FROM_REORG = 100
-
-def import_addresses(rpc, addrs, logger=None):
-    logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger.debug("importing addrs = " + str(addrs))
-    logger.debug("into label \"" + ADDRESSES_LABEL + "\"")
-    logger.info("Importing " + str(len(addrs)) + " addresses in total")
-    addr_i = iter(addrs)
-    notifications = 20
-    for i in range(notifications):
-        pc = int(100.0 * i / notifications)
-        sys.stdout.write("[" + str(pc) + "%]... ")
-        sys.stdout.flush()
-        for j in range(int(len(addrs) / notifications)):
-            rpc.call("importaddress", [next(addr_i), ADDRESSES_LABEL, False])
-    for a in addr_i: #import the reminder of addresses
-        rpc.call("importaddress", [a, ADDRESSES_LABEL, False])
-    print("[100%]")
-    logger.info("Importing done")
 
 class TransactionMonitor(object):
     """
@@ -507,7 +480,7 @@ class TransactionMonitor(object):
                                 spk)] =  {'history': [], 'subscribed': False}
                         logger.debug("importing " + str(len(spks)) +
                             " into change=" + str(change))
-                        import_addresses(self.rpc, new_addrs, logger)
+                        import_addresses(self.rpc, new_addrs, [], -1, 0, logger)
 
             updated_scripthashes.extend(matching_scripthashes)
             new_history_element = self.generate_new_history_element(tx, txd)

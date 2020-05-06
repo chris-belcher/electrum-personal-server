@@ -21,12 +21,13 @@ from electrumpersonalserver.server.hashes import (
 )
 from electrumpersonalserver.server.transactionmonitor import (
     TransactionMonitor,
-    import_addresses,
-    ADDRESSES_LABEL,
 )
 from electrumpersonalserver.server.deterministicwallet import (
     parse_electrum_master_public_key,
     DeterministicWallet,
+    DescriptorDeterministicWallet,
+    import_addresses,
+    ADDRESSES_LABEL,
 )
 from electrumpersonalserver.server.socks import (
     socksocket,

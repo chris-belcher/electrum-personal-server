@@ -161,13 +161,13 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     st = time.time()
     try:
         imported_addresses = set(rpc.call("getaddressesbyaccount",
-            [transactionmonitor.ADDRESSES_LABEL]))
+            [deterministicwallet.ADDRESSES_LABEL]))
         logger.debug("using deprecated accounts interface")
     except JsonRpcError:
         #bitcoin core 0.17 deprecates accounts, replaced with labels
-        if transactionmonitor.ADDRESSES_LABEL in rpc.call("listlabels", []):
+        if deterministicwallet.ADDRESSES_LABEL in rpc.call("listlabels", []):
             imported_addresses = set(rpc.call("getaddressesbylabel",
-                [transactionmonitor.ADDRESSES_LABEL]).keys())
+                [deterministicwallet.ADDRESSES_LABEL]).keys())
         else:
             #no label, no addresses imported at all
             imported_addresses = set()
@@ -188,8 +188,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 
     #check whether these deterministic wallets have already been imported
     import_needed = False
-    wallets_imported = 0
-    addresses_to_import = []
+    wallets_to_import = []
     TEST_ADDR_COUNT = 3
     logger.info("Displaying first " + str(TEST_ADDR_COUNT) + " addresses of " +
         "each master public key:")
@@ -203,11 +202,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
             config.get("bitcoin-rpc", "initial_import_count")) - 1, count=1)
         if not set(first_addrs + last_addr).issubset(imported_addresses):
             import_needed = True
-            wallets_imported += 1
-            for change in [0, 1]:
-                addrs, spks = wal.get_addresses(change, 0,
-                    int(config.get("bitcoin-rpc", "initial_import_count")))
-                addresses_to_import.extend(addrs)
+            wallets_to_import.append(wal)
     logger.info("Obtaining bitcoin addresses to monitor . . .")
     #check whether watch-only addresses have been imported
     watch_only_addresses = []
@@ -224,18 +219,17 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     if len(deterministic_wallets) == 0 and len(watch_only_addresses) == 0:
         logger.error("No master public keys or watch-only addresses have " +
             "been configured at all. Exiting..")
-        #import = true and no addresses means exit
-        return (True, [], None)
+        #import = true and none other params means exit
+        return (True, None, None)
 
     #if addresses need to be imported then return them
     if import_needed:
         #TODO minus imported_addresses
-        logger.info("Importing " + str(wallets_imported) + " wallets and " +
-            str(len(watch_only_addresses_to_import)) + " watch-only " +
-            "addresses into the Bitcoin node")
+        logger.info("Importing " + str(len(wallets_to_import))
+            + " wallets and " + str(len(watch_only_addresses_to_import))
+            + " watch-only addresses into the Bitcoin node")
         time.sleep(5)
-        return (True, addresses_to_import + list(
-            watch_only_addresses_to_import), None)
+        return True, watch_only_addresses_to_import, wallets_to_import
 
     #test
     # importing one det wallet and no addrs, two det wallets and no addrs
@@ -423,10 +417,12 @@ def main():
     import_needed, relevant_spks_addrs, deterministic_wallets = \
         get_scriptpubkeys_to_monitor(rpc, config)
     if import_needed:
-        if len(relevant_spks_addrs) == 0:
+        if not relevant_spks_addrs and not deterministic_wallets:
             #import = true and no addresses means exit
             return
-        transactionmonitor.import_addresses(rpc, relevant_spks_addrs)
+        deterministicwallet.import_addresses(rpc, relevant_spks_addrs,
+            deterministic_wallets, change_param=-1,
+            count=int(config.get("bitcoin-rpc", "initial_import_count")))
         logger.info("Done.\nIf recovering a wallet which already has existing" +
             " transactions, then\nrun the rescan script. If you're confident" +
             " that the wallets are new\nand empty then there's no need to" +

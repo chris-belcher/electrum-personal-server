@@ -1,4 +1,6 @@
 
+import logging
+
 import electrumpersonalserver.bitcoin as btc
 from electrumpersonalserver.server.hashes import bh2u, hash_160, bfh, sha256,\
     address_to_script, script_to_address
@@ -8,6 +10,48 @@ from electrumpersonalserver.server.jsonrpc import JsonRpcError
 #https://github.com/spesmilo/electrum/blob/3.0.6/RELEASE-NOTES
 #and
 #https://github.com/spesmilo/electrum-docs/blob/master/xpub_version_bytes.rst
+
+ADDRESSES_LABEL = "electrum-watchonly-addresses"
+
+def import_addresses(rpc, watchonly_addrs, wallets, change_param, count,
+        logger=None):
+    """
+    change_param = 0 for receive, 1 for change, -1 for both
+    """
+    logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
+    logger.debug("Importing " + str(len(watchonly_addrs)) + " watch-only "
+        + "address[es] and " + str(len(wallets)) + " wallet[s] into label \""
+        + ADDRESSES_LABEL + "\"")
+
+    watchonly_addr_param = [{"scriptPubKey": {"address": addr}, "label":
+        ADDRESSES_LABEL, "watchonly": True, "timestamp": "now"}
+        for addr in watchonly_addrs]
+    rpc.call("importmulti", [watchonly_addr_param, {"rescan": False}])
+
+    for i, wal in enumerate(wallets):
+        logger.info("Importing wallet " + str(i+1) + "/" + str(len(wallets)))
+        if isinstance(wal, DescriptorDeterministicWallet):
+            if change_param in (0, -1):
+                #import receive addrs
+                rpc.call("importmulti", [[{"desc": wal.descriptors[0], "range":
+                    [0, count-1], "label": ADDRESSES_LABEL, "watchonly": True,
+                    "timestamp": "now"}], {"rescan": False}])
+            if change_param in (1, -1):
+                #import change addrs
+                rpc.call("importmulti", [[{"desc": wal.descriptors[1], "range":
+                    [0, count-1], "label": ADDRESSES_LABEL, "watchonly": True,
+                    "timestamp": "now"}], {"rescan": False}])
+        else:
+            #old-style-seed wallets
+            logger.info("importing an old-style-seed wallet, will be slow...")
+            for change in [0, 1]:
+                addrs, spks = wal.get_addresses(change, 0, count)
+                addr_param = [{"scriptPubKey": {"address": a}, "label":
+                    ADDRESSES_LABEL, "watchonly": True, "timestamp": "now"}
+                    for a in addrs]
+                rpc.call("importmulti", [addr_param, {"rescan": False}])
+    logger.debug("Importing done")
+
 
 def is_string_parsable_as_hex_int(s):
     try:
