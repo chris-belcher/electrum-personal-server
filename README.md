@@ -186,7 +186,9 @@ Traditional Electrum servers inherently are not very scalable and use many
 resources which push people towards using centralized solutions. This is what
 we'd like to avoid with Electrum Personal Server.
 
-Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/) if you're interested in this sort of thing.
+Definitely check out implementations like [ElectrumX](https://github.com/kyuupichan/electrumx/)
+and [Electrs](https://github.com/romanz/electrs) if you're interested in this
+sort of thing.
 
 #### Bitcoin without internet access
 
