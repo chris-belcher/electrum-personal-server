@@ -13,7 +13,6 @@ setup(
     entry_points={
         "console_scripts": [
             "electrum-personal-server = electrumpersonalserver.server.common:main",
-            "electrum-personal-server-rescan = electrumpersonalserver.server.common:rescan_main",
         ]
     },
     package_data={"electrumpersonalserver": ["certs/*"]},

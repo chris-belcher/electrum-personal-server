@@ -486,37 +486,6 @@ def rescan_script(logger, rpc, rescan_date):
     rpc.call("rescanblockchain", [height])
     logger.info("end")
 
-def rescan_main():
-    opts = parse_args()
-
-    try:
-        config = RawConfigParser()
-        config.read(opts.config_file)
-        config.options("master-public-keys")
-    except NoSectionError:
-        print("ERROR: Non-existant configuration file {}".format(
-            opts.config_file))
-        return
-    logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger, logfilename = logger_config(logger, config)
-    logger.info('Starting Electrum Personal Server rescan script')
-    logger.info('Logging to ' + logfilename)
-    logger.warning("The seperate rescan script is deprecated, use " +
-        "`electrum-personal-server --rescan` instead.")
-    try:
-        rpc_u = config.get("bitcoin-rpc", "rpc_user")
-        rpc_p = config.get("bitcoin-rpc", "rpc_password")
-    except NoOptionError:
-        rpc_u, rpc_p = obtain_rpc_username_password(config.get(
-            "bitcoin-rpc", "datadir"))
-    if rpc_u == None:
-        return
-    rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
-        port = int(config.get("bitcoin-rpc", "port")),
-        user = rpc_u, password = rpc_p,
-        wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip())
-    rescan_script(logger, rpc)
-
 if __name__ == "__main__":
     #entry point for pyinstaller executable
     main()
