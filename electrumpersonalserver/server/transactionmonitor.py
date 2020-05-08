@@ -188,7 +188,6 @@ class TransactionMonitor(object):
             self.last_known_wallet_txid))
 
         et = time.time()
-        logger.debug("address_history =\n" + pprint.pformat(address_history))
         logger.info("Found " + str(count) + " txes. History built in "
             + str(et - st) + "sec")
         self.address_history = address_history
@@ -284,8 +283,6 @@ class TransactionMonitor(object):
             his = self.address_history[ush]
             self.sort_address_history_list(his)
         if len(updated_scrhashes) > 0:
-            logger.debug("new tx address_history =\n"
-                + pprint.pformat(self.address_history))
             logger.debug("unconfirmed txes = "
                 + pprint.pformat(self.unconfirmed_txes))
             logger.debug("reorganizable_txes = "
@@ -300,7 +297,6 @@ class TransactionMonitor(object):
         elements_removed = []
         elements_added = []
         updated_scrhashes = set()
-        logger.debug("reorganizable_txes = " + str(self.reorganizable_txes))
         for reorgable_tx in self.reorganizable_txes:
             txid, blockhash, height, scrhashes = reorgable_tx
             tx = self.rpc.call("gettransaction", [txid])
@@ -312,7 +308,7 @@ class TransactionMonitor(object):
                 updated_scrhashes.update(scrhashes)
                 if tx["confirmations"] == 0:
                     #transaction became unconfirmed in a reorg
-                    logger.warning("A transaction was reorg'd out: " + txid)
+                    logger.info("A transaction was reorg'd out: " + txid)
                     elements_removed.append(reorgable_tx)
                     self.unconfirmed_txes[txid].extend(scrhashes)
 
@@ -328,17 +324,17 @@ class TransactionMonitor(object):
 
                 elif tx["confirmations"] < 0:
                     #tx became conflicted in reorg i.e. a double spend
-                    logger.error("A transaction was double spent! " + txid)
+                    logger.info("A transaction was double spent! " + txid)
                     elements_removed.append(reorgable_tx)
             elif tx["blockhash"] != blockhash:
                 block = self.rpc.call("getblockheader", [tx["blockhash"]])
                 if block["height"] == height: #reorg but height is the same
-                    logger.warning("A transaction was reorg'd but still " +
+                    logger.debug("A transaction was reorg'd but still " +
                         "confirmed at same height: " + txid)
                     continue
                 #reorged but still confirmed at a different height
                 updated_scrhashes.update(scrhashes)
-                logger.warning("A transaction was reorg'd but still confirmed"
+                logger.debug("A transaction was reorg'd but still confirmed"
                     + " to a new block and different height: " + txid)
                 #update history with the new height
                 for scrhash in scrhashes:
@@ -368,8 +364,6 @@ class TransactionMonitor(object):
     def check_for_confirmations(self):
         logger = self.logger
         tx_scrhashes_removed_from_mempool = []
-        logger.debug("unconfirmed_txes = "
-            + pprint.pformat(self.unconfirmed_txes))
         for uc_txid, scrhashes in self.unconfirmed_txes.items():
             tx = self.rpc.call("gettransaction", [uc_txid])
             logger.debug("uc_txid=" + uc_txid + " => " + str(tx))
@@ -406,8 +400,6 @@ class TransactionMonitor(object):
         tx_request_count = 2
         max_attempts = int(math.log(MAX_TX_REQUEST_COUNT, 2))
         for i in range(max_attempts):
-            logger.debug("listtransactions tx_request_count="
-                + str(tx_request_count))
             ##how listtransactions works
             ##skip and count parameters take most-recent txes first
             ## so skip=0 count=1 will return the most recent tx
@@ -433,13 +425,9 @@ class TransactionMonitor(object):
 
         #TODO low priority: handle a user getting more than 255 new
         # transactions in 15 seconds
-        logger.debug("recent tx index = " + str(recent_tx_index) + " ret = " +
-            str([(t["txid"], t.get("address", None)) for t in ret]))
         if len(ret) > 0:
             self.last_known_wallet_txid = (ret[0]["txid"],
                 ret[0].get("address", None))
-            logger.debug("last_known_wallet_txid = " + str(
-                self.last_known_wallet_txid))
         assert(recent_tx_index != -1)
         if recent_tx_index == 0:
             return set()

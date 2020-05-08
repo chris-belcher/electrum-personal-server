@@ -92,7 +92,7 @@ class P2PMessageHandler(object):
             if ((datetime.now() - self.last_message).total_seconds()
                     < KEEPALIVE_TIMEOUT):
                 return
-            self.logger.info('keepalive timed out, closing')
+            self.logger.debug('keepalive timed out, closing')
             p2p.sock.close()
         else:
             if ((datetime.now() - self.last_message).total_seconds()
@@ -334,7 +334,7 @@ class P2PBroadcastTx(P2PMessageHandler):
                 if hash_id == self.txid:
                     p2p.sock.sendall(p2p.create_message('tx', self.txhex))
                     self.uploaded_tx = True
-                    self.logger.info("Uploaded transaction via tor to peer at "
+                    self.logger.debug("Uploaded transaction via tor to peer at "
                         + str(p2p.remote_hostport))
                     ##make sure the packets really got through by sleeping
                     ##some kernels seem to send a RST packet on close() even

@@ -30,12 +30,10 @@ bestblockhash = [None]
 
 def on_heartbeat_listening(txmonitor):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger.debug("on heartbeat listening")
     txmonitor.check_for_updated_txes()
 
 def on_heartbeat_connected(rpc, txmonitor, protocol):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger.debug("on heartbeat connected")
     is_tip_updated, header = check_for_new_blockchain_tip(rpc,
         protocol.are_headers_raw)
     if is_tip_updated:
@@ -61,7 +59,7 @@ def create_server_socket(hostport):
 
 def run_electrum_server(rpc, txmonitor, config):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    logger.info("Starting electrum server")
+    logger.debug("Starting electrum server")
 
     hostport = (config.get("electrum-server", "host"),
             int(config.get("electrum-server", "port")))
@@ -78,7 +76,7 @@ def run_electrum_server(rpc, txmonitor, config):
     poll_interval_connected = int(config.get("bitcoin-rpc",
         "poll_interval_connected"))
     certfile, keyfile = get_certs(config)
-    logger.info('using cert: {}, key: {}'.format(certfile, keyfile))
+    logger.debug('using cert: {}, key: {}'.format(certfile, keyfile))
     disable_mempool_fee_histogram = config.getboolean("electrum-server",
         "disable_mempool_fee_histogram", fallback=False)
     broadcast_method = config.get("electrum-server", "broadcast_method",
@@ -110,7 +108,7 @@ def run_electrum_server(rpc, txmonitor, config):
                 except (ConnectionRefusedError, ssl.SSLError):
                     sock.close()
                     sock = None
-            logger.info('Electrum connected from ' + str(addr[0]))
+            logger.debug('Electrum connected from ' + str(addr[0]))
 
             def send_reply_fun(reply):
                 line = json.dumps(reply)
@@ -144,9 +142,9 @@ def run_electrum_server(rpc, txmonitor, config):
                     on_heartbeat_connected(rpc, txmonitor, protocol)
         except (IOError, EOFError) as e:
             if isinstance(e, (EOFError, ConnectionRefusedError)):
-                logger.info("Electrum wallet disconnected")
+                logger.debug("Electrum wallet disconnected")
             else:
-                logger.error("IOError: " + repr(e))
+                logger.debug("IOError: " + repr(e))
             try:
                 if sock != None:
                     sock.close()
@@ -171,7 +169,6 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         else:
             #no label, no addresses imported at all
             imported_addresses = set()
-    logger.debug("already-imported addresses = " + str(imported_addresses))
 
     deterministic_wallets = []
     for key in config.options("master-public-keys"):
@@ -348,7 +345,7 @@ def main():
         return
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger, logfilename = logger_config(logger, config)
-    logger.info('Starting Electrum Personal Server v{}'.format(
+    logger.info('Starting Electrum Personal Server ' + str(
         SERVER_VERSION_NUMBER))
     logger.info('Logging to ' + logfilename)
     try:
