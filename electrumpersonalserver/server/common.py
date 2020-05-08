@@ -348,6 +348,7 @@ def main():
     logger.info('Starting Electrum Personal Server ' + str(
         SERVER_VERSION_NUMBER))
     logger.info('Logging to ' + logfilename)
+    logger.debug("Process ID (PID) = " + str(os.getpid()))
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
         rpc_p = config.get("bitcoin-rpc", "rpc_password")
