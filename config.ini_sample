@@ -36,9 +36,9 @@ datadir =
 wallet_filename =
 
 # how often in seconds to poll for new transactions when electrum not connected
-poll_interval_listening = 600
+poll_interval_listening = 30
 # how often in seconds to poll for new transactions when electrum is connected
-poll_interval_connected = 5
+poll_interval_connected = 1
 
 # Parameters for dealing with deterministic wallets
 # how many addresses to import first time, should be big because if you import too little you may have to rescan again
