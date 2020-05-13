@@ -15,18 +15,33 @@ class JsonRpc(object):
     Simple implementation of a JSON-RPC client that is used
     to connect to Bitcoin.
     """
-    def __init__(self, host, port, user, password, wallet_filename="",
-            logger=None):
+    def __init__(self, host, port, user, password, cookie_path=None,
+            wallet_filename="", logger=None):
         self.host = host
         self.port = port
+
+        self.cookie_path = cookie_path
+        if cookie_path:
+            self.load_from_cookie()
+        else:
+            self.create_authstr(user, password)
+
         self.conn = http.client.HTTPConnection(self.host, self.port)
-        self.authstr = "%s:%s" % (user, password)
         if len(wallet_filename) > 0:
             self.url = "/wallet/" + wallet_filename
         else:
             self.url = ""
         self.logger = logger
         self.queryId = 1
+
+    def create_authstr(self, username, password):
+        self.authstr = "%s:%s" % (username, password)
+
+    def load_from_cookie(self):
+        fd = open(self.cookie_path)
+        username, password = fd.read().strip().split(":")
+        fd.close()
+        self.create_authstr(username, password)
 
     def queryHTTP(self, obj):
         """
@@ -41,14 +56,22 @@ class JsonRpc(object):
         headers["Authorization"] = (b"Basic " +
             base64.b64encode(self.authstr.encode('utf-8')))
         body = json.dumps(obj)
+        auth_failed_once = False
         for i in range(20):
             try:
                 self.conn.request("POST", self.url, body, headers)
                 response = self.conn.getresponse()
                 if response.status == 401:
-                    self.conn.close()
-                    raise JsonRpcConnectionError(
-                            "authentication for JSON-RPC failed")
+                    if self.cookie_path == None or auth_failed_once:
+                        self.conn.close()
+                        raise JsonRpcConnectionError(
+                                "authentication for JSON-RPC failed")
+                    else:
+                        auth_failed_once = True
+                        #try reloading u/p from the cookie file once
+                        self.load_from_cookie()
+                        raise OSError() #jump to error handler below
+                auth_failed_once = False
                 #All the codes below are 'fine' from a JSON-RPC point of view.
                 if response.status not in [200, 404, 500]:
                     self.conn.close()
@@ -59,11 +82,14 @@ class JsonRpc(object):
                 raise exc
             except http.client.BadStatusLine:
                 return "CONNFAILURE"
-            except OSError as e:
-                    self.logger.debug('Reconnecting RPC after dropped ' +
-                        'connection: ' + repr(e))
-                    self.conn.close()
-                    self.conn.connect()
+            except OSError:
+                    # connection dropped, reconnect
+                    try:
+                        self.conn.close()
+                        self.conn.connect()
+                    except ConnectionError as e:
+                        #node probably offline, notify with jsonrpc error
+                        raise JsonRpcConnectionError(repr(e))
                     continue
             except Exception as exc:
                 raise JsonRpcConnectionError("JSON-RPC connection failed. Err:"

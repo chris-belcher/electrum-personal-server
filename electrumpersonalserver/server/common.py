@@ -8,6 +8,7 @@ import logging
 import tempfile
 import platform
 import json
+import traceback
 from json.decoder import JSONDecodeError
 from configparser import RawConfigParser, NoSectionError, NoOptionError
 from ipaddress import ip_network, ip_address
@@ -30,14 +31,20 @@ bestblockhash = [None]
 
 def on_heartbeat_listening(txmonitor):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    txmonitor.check_for_updated_txes()
+    try:
+        txmonitor.check_for_updated_txes()
+        is_node_reachable = True
+    except JsonRpcError:
+        is_node_reachable = False
+    return is_node_reachable
 
 def on_heartbeat_connected(rpc, txmonitor, protocol):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     is_tip_updated, header = check_for_new_blockchain_tip(rpc,
         protocol.are_headers_raw)
     if is_tip_updated:
-        logger.debug("Blockchain tip updated")
+        logger.debug("Blockchain tip updated " + (str(header["height"]) if
+            "height" in header else ""))
         protocol.on_blockchain_tip_updated(header)
     updated_scripthashes = txmonitor.check_for_updated_txes()
     protocol.on_updated_scripthashes(updated_scripthashes)
@@ -90,35 +97,44 @@ def run_electrum_server(rpc, txmonitor, config):
 
     server_sock = create_server_socket(hostport)
     server_sock.settimeout(poll_interval_listening)
+    accepting_clients = True
     while True:
+        # main server loop, runs forever
+        sock = None
+        while sock == None:
+            # loop waiting for a successful connection from client
+            try:
+                sock, addr = server_sock.accept()
+                if not accepting_clients:
+                    logger.debug("Refusing connection from client because"
+                        + " Bitcoin node isnt reachable")
+                    raise ConnectionRefusedError()
+                if not any([ip_address(addr[0]) in ipnet
+                        for ipnet in ip_whitelist]):
+                    logger.debug(addr[0] + " not in whitelist, closing")
+                    raise ConnectionRefusedError()
+                sock = ssl.wrap_socket(sock, server_side=True,
+                    certfile=certfile, keyfile=keyfile,
+                    ssl_version=ssl.PROTOCOL_SSLv23)
+            except socket.timeout:
+                is_node_reachable = on_heartbeat_listening(txmonitor)
+                accepting_clients = is_node_reachable
+            except (ConnectionRefusedError, ssl.SSLError):
+                sock.close()
+                sock = None
+        logger.debug('Electrum connected from ' + str(addr[0]))
+
+        def send_reply_fun(reply):
+            line = json.dumps(reply)
+            sock.sendall(line.encode('utf-8') + b'\n')
+            logger.debug('<= ' + line)
+        protocol.set_send_reply_fun(send_reply_fun)
+
         try:
-            sock = None
-            while sock == None:
-                try:
-                    sock, addr = server_sock.accept()
-                    if not any([ip_address(addr[0]) in ipnet
-                            for ipnet in ip_whitelist]):
-                        logger.debug(addr[0] + " not in whitelist, closing")
-                        raise ConnectionRefusedError()
-                    sock = ssl.wrap_socket(sock, server_side=True,
-                        certfile=certfile, keyfile=keyfile,
-                        ssl_version=ssl.PROTOCOL_SSLv23)
-                except socket.timeout:
-                    on_heartbeat_listening(txmonitor)
-                except (ConnectionRefusedError, ssl.SSLError):
-                    sock.close()
-                    sock = None
-            logger.debug('Electrum connected from ' + str(addr[0]))
-
-            def send_reply_fun(reply):
-                line = json.dumps(reply)
-                sock.sendall(line.encode('utf-8') + b'\n')
-                logger.debug('<= ' + line)
-            protocol.set_send_reply_fun(send_reply_fun)
-
             sock.settimeout(poll_interval_connected)
             recv_buffer = bytearray()
             while True:
+                # loop for replying to client queries
                 try:
                     recv_data = sock.recv(4096)
                     if not recv_data or len(recv_data) == 0:
@@ -140,6 +156,10 @@ def run_electrum_server(rpc, txmonitor, config):
                         protocol.handle_query(query)
                 except socket.timeout:
                     on_heartbeat_connected(rpc, txmonitor, protocol)
+        except JsonRpcError as e:
+            logger.debug("Error with node connection, e = " + repr(e)
+                + "\ntraceback = " + str(traceback.format_exc()))
+            accepting_clients = False
         except (IOError, EOFError) as e:
             if isinstance(e, (EOFError, ConnectionRefusedError)):
                 logger.debug("Electrum wallet disconnected")
@@ -150,9 +170,8 @@ def run_electrum_server(rpc, txmonitor, config):
                     sock.close()
             except IOError:
                 pass
-            sock = None
-            protocol.on_disconnect()
-            time.sleep(0.2)
+        protocol.on_disconnect()
+        time.sleep(0.2)
 
 def get_scriptpubkeys_to_monitor(rpc, config):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
@@ -274,7 +293,7 @@ def get_certs(config):
             raise ValueError('invalid cert: {}, key: {}'.format(
                 certfile, keyfile))
 
-def obtain_rpc_username_password(datadir):
+def obtain_cookie_file_path(datadir):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     if len(datadir.strip()) == 0:
         logger.debug("no datadir configuration, checking in default location")
@@ -291,11 +310,8 @@ def obtain_rpc_username_password(datadir):
     if not os.path.exists(cookie_path):
         logger.warning("Unable to find .cookie file, try setting `datadir`" +
             " config")
-        return None, None
-    fd = open(cookie_path)
-    username, password = fd.read().strip().split(":")
-    fd.close()
-    return username, password
+        return None
+    return cookie_path
 
 def parse_args():
     from argparse import ArgumentParser
@@ -349,19 +365,22 @@ def main():
         SERVER_VERSION_NUMBER))
     logger.info('Logging to ' + logfilename)
     logger.debug("Process ID (PID) = " + str(os.getpid()))
+    rpc_u = None
+    rpc_p = None
+    cookie_path = None
     try:
         rpc_u = config.get("bitcoin-rpc", "rpc_user")
         rpc_p = config.get("bitcoin-rpc", "rpc_password")
         logger.debug("obtaining auth from rpc_user/pass")
     except NoOptionError:
-        rpc_u, rpc_p = obtain_rpc_username_password(config.get(
+        cookie_path = obtain_cookie_file_path(config.get(
             "bitcoin-rpc", "datadir"))
         logger.debug("obtaining auth from .cookie")
-    if rpc_u == None:
+    if rpc_u == None and cookie_path == None:
         return
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
         port = int(config.get("bitcoin-rpc", "port")),
-        user = rpc_u, password = rpc_p,
+        user = rpc_u, password = rpc_p, cookie_path = cookie_path,
         wallet_filename=config.get("bitcoin-rpc", "wallet_filename").strip(),
         logger=logger)
 
