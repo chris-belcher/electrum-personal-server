@@ -4,41 +4,50 @@ Electrum Personal Server aims to make using Electrum bitcoin wallet more secure
 and more private. It makes it easy to connect your Electrum wallet to your own
 full node.
 
-It is an implementation of the Electrum server protocol which fulfills the
-specific need of using the Electrum wallet backed by a full node, but without
-the heavyweight server backend, for a single user. It allows the user to
-benefit from all of Bitcoin Core's resource-saving features like
-[pruning](https://github.com/bitcoin/bitcoin/blob/master/doc/release-notes/release-notes-0.12.0.md#wallet-pruning),
-[blocksonly](https://bitcointalk.org/index.php?topic=1377345.0) and disabled
-txindex. All of Electrum's feature-richness like hardware wallet integration,
-[multisignature wallets](http://docs.electrum.org/en/latest/multisig.html),
-[offline signing](http://docs.electrum.org/en/latest/coldstorage.html),
-[seed recovery phrases](https://en.bitcoin.it/wiki/Seed_phrase), coin control
-and so on can still be used, but connected only to the user's own full node.
-
-Full node wallets are important in bitcoin because they are an big part of what
-makes the system be trustless. No longer do people have to trust a financial
-institution like a bank or paypal, they can run software on their own
-computers. If bitcoin is digital gold, then a full node wallet is your own
-personal goldsmith who checks for you that received payments are genuine.
+[Full nodes](https://en.bitcoin.it/wiki/Full_node) wallets are important in
+bitcoin because they are a big part of what makes the system trustless. No
+longer do people have to trust a financial institution like a bank or Paypal,
+they can run software on their own computers. If bitcoin is digital gold, then
+a full node wallet is your own personal goldsmith who checks for you that
+received payments are genuine.
 
 Full node wallets are also important for privacy. Using Electrum under default
 configuration requires it to send (hashes of) all your bitcoin addresses to some
 server. That server can then easily spy on your transactions. Full node
 wallets like Electrum Personal Server would download the entire blockchain and
 scan it for the user's own addresses, and therefore don't reveal to anyone else
-which bitcoin addresses they are interested in. Electrum Personal Server can
-also [broadcast transactions through Tor](https://en.bitcoin.it/wiki/Privacy#Countermeasures_to_traffic_analysis)
-which improves privacy by resisting traffic analysis for broadcasted
-transactions which can link the IP address of the user to the transaction. If
-enabled this would happen transparently whenever the user simply clicks "Send"
-on a transaction in Electrum wallet.
+which bitcoin addresses they are interested in.
 
-For a longer explaination of this project, see the
-[mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
-and [bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198).
-See also the Bitcoin Wiki [pages](https://en.bitcoin.it/wiki/Clearing_Up_Misconceptions_About_Full_Nodes)
-on [full nodes](https://en.bitcoin.it/wiki/Full_node).
+## Contents
+
+- [Features](#features)
+- [Detailed how-to guide](#how-to)
+- [Quick start for Debian/Ubuntu](#quick-start-on-a-debianubuntu-machine-with-a-running-bitcoin-full-node)
+- [Links to other setup guides](#links-to-other-setup-guides)
+- [How to expose the server to the internet](#exposure-to-the-internet)
+- [How is this different from other Electrum servers ?](#how-is-this-different-from-other-electrum-servers-)
+- [Articles, Discussion and Talks](#articles-discussion-and-talks)
+- [Contributing](#contributing)
+
+### Features
+
+* Fully-featured Electrum server for a single user. Combine full node security
+and privacy with all of Electrum's feature-richness: (Hardware wallet
+integration, [Multisignature wallets](http://docs.electrum.org/en/latest/multisig.html),
+[Offline signing](http://docs.electrum.org/en/latest/coldstorage.html),
+[Seed recovery phrases](https://en.bitcoin.it/wiki/Seed_phrase), Coin control,
+Fee-bumping)
+* Maximally lightweight. Very low CPU, RAM and disk space requirements. Only a
+full node required.
+* Compatible with all Bitcoin Core resource-saving features:
+    * [Pruning](https://github.com/bitcoin/bitcoin/blob/master/doc/release-notes/release-notes-0.12.0.md#wallet-pruning)
+    * [Blocksonly](https://bitcointalk.org/index.php?topic=1377345.0)
+    * Disabled txindex
+* Scriptable transaction broadcasting. When the user click "Send" the server
+can be configured to run a system call with the new transaction:
+    * Broadcast transactions through Tor, for [resisting traffic analysis](https://en.bitcoin.it/wiki/Privacy#Tor_and_tor_broadcasting).
+    * By writing a shell script (eg. `send-tx-over-sms.sh`) the server can
+      broadcast transactions via SMS, radio or any other creative way.
 
 ## How To
 
@@ -46,7 +55,7 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   or higher. Make sure you
   [verify the digital signatures](https://bitcoin.stackexchange.com/questions/50185/how-to-verify-bitcoin-core-release-signing-keys)
   of any binaries before running them, or compile from source. The Bitcoin node
-  must have wallet enabled, and must have the RPC server switched on (`server=1`
+  must have wallet functionality enabled, and must have the RPC server switched on (`server=1`
   in bitcoin.conf). On first run, it is recommended to create a wallet dedicated
   to Electrum Personal Server using the command line argument
   `bitcoin-cli createwallet electrumpersonalserver true`.
@@ -104,14 +113,8 @@ on [full nodes](https://en.bitcoin.it/wiki/Full_node).
   server details are `localhost` if running on the same machine. Make sure the
   port number matches what is written in `config.ini` (port 50002 by default).
 
-Linked here are guides for installing Electrum Personal Server on a
-[Raspberry Pi](https://github.com/Stadicus/RaspiBolt/blob/master/raspibolt_64_electrum.md),
-[Windows](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_63_eps-win.html)
-and
-[Mac OS](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_64_eps-mac.html).
-
 Pro Tip: run Electrum wallet with the command line arguments `--oneserver --server localhost:50002:s`.
-This stops Electrum connecting to several other servers to obtain block
+This stops Electrum connecting to other servers to obtain block
 headers; and locks Electrum to connect only to your server, disabling the GUI
 button to stop accidental connections. This helps avoid a user accidentally
 ruining their privacy by connecting to public Electrum servers. Another way
@@ -120,7 +123,7 @@ to do this is to open Electrum's config file and edit the lines to
 
 Pro Tip2: run tor on the same machine as Electrum Personal Server. Then by
 default transactions will be broadcast through tor. If running tor, also set
-`walletbroadcast=0` in your `bitcoin.conf`. This prevents the wallet from
+`walletbroadcast=0` in your `bitcoin.conf`. This prevents the node from
 rebroadcasting transactions without tor.
 
 #### Quick start on a Debian/Ubuntu machine with a running Bitcoin full node
@@ -138,6 +141,17 @@ tar.gz.)
    `echo 'PATH=$HOME/.local/bin:$PATH' >> ~/.profile`, logout, and log in again
 1. Run the server: `electrum-personal-server config.ini`
 1. Start your Electrum wallet: `electrum --oneserver --server localhost:50002:s`.
+
+### Links to other setup guides
+
+* [How to setup Electrum Personal Server on a Raspberry Pi](https://github.com/Stadicus/RaspiBolt/blob/master/raspibolt_64_electrum.md)
+* [Electrum Personal Server on Windows 10](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_63_eps-win.html)
+* [Running Electrum Personal Server on Mac OS](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_64_eps-mac.html)
+* [BTCPay Server integration with Electrum Personal Server](https://docs.btcpayserver.org/ElectrumPersonalServer/)
+* [Using Electrum Personal Server with a Bitseed node](https://github.com/john-light/bitcoin/blob/master/eps.md)
+* [Spanish language video tutorial / Instalación del servidor Electrum Personal Server](https://www.youtube.com/watch?v=F3idwecYvcU)
+* [Japanese language setup guide](https://freefromjp.wordpress.com/2019/07/13/electrum-personal-server-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB/)
+
 
 #### Exposure to the Internet
 
@@ -177,7 +191,7 @@ They are different approaches with different tradeoffs. Electrum Personal
 Server is compatible with pruning, blocksonly and txindex=0, uses less CPU and
 RAM, is suitable for being used intermittently rather than needing to be
 always-on, and doesn't require an index of every bitcoin address ever used. The
-tradeoff is when recovering an old wallet, you must to import your wallet first
+tradeoff is when recovering an old wallet, you must import your wallet first
 and you may need to rescan, so it loses the "instant on" feature of Electrum
 wallet. Other Electrum server implementations will be able to sync your wallet
 immediately even if you have historical transactions, and they can serve
@@ -191,44 +205,40 @@ Definitely check out implementations like [ElectrumX](https://github.com/kyuupic
 and [Electrs](https://github.com/romanz/electrs) if you're interested in this
 sort of thing.
 
-#### Bitcoin without internet access
-
-Electrum Personal Server can also be used as a building block for systems which
-use bitcoin over mesh networks and satellites instead of connecting the
-internet. See [here](https://twitter.com/notgrubles/status/1091011511961731073)
-and [here](https://medium.com/hackernoon/completely-offline-bitcoin-transactions-4e58324637bd) for information and setup guide.
-
 #### Further ideas for work
 
 * Allowing connections from more than one Electrum instance at a time. See issue
 [#50](https://github.com/chris-belcher/electrum-personal-server/issues/50). First
-the server code should be seperated from the networking code.
-
+the server code should be separated from the networking code.
 * Fix mempool lock/CPU bottleneck issue. See issue [#96](https://github.com/chris-belcher/electrum-personal-server/issues/96).
-
 * Research and develop an easier way of rescanning the wallet when blockchain
 pruning is enabled. See issue [#85](https://github.com/chris-belcher/electrum-personal-server/issues/85).
-
 * Developing some way for Electrum servers to authenticate clients, so that
 Electrum Personal Server can accept connections from the entire internet but
 without a fear of privacy loss.
-
 * Dynamic adding of wallet master public keys. Perhaps by polling for changes
 in the config file.
 
 ## Contact
 
-I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels, by email or on [twitter](https://twitter.com/chris_belcher_/).
+I can be contacted on freenode IRC on the `#bitcoin` and `#electrum` channels,
+by email or on [twitter](https://twitter.com/chris_belcher_/).
 
 My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
 
-## Media Coverage and Talks
+## Articles, Discussion and Talks
 
-* https://bitcoinmagazine.com/articles/electrum-personal-server-will-give-users-full-node-security-they-need/
-
-* [Discussion at Building on Bitcoin 2018](https://youtu.be/XORDEX-RrAI?t=4980) [transcript](http://diyhpl.us/wiki/transcripts/building-on-bitcoin/2018/current-and-future-state-of-wallets/)
-
+* [BitcoinMagazine.com article](https://bitcoinmagazine.com/articles/electrum-personal-server-will-give-users-full-node-security-they-need/)
 * [Electrum Personal Server talk at London Bitcoin Developer Meetup](https://www.youtube.com/watch?v=uKMXYdfm-is)
+* Electrum Personal Server used as a building block for systems which use
+bitcoin without internet access. See [here](https://twitter.com/notgrubles/status/1091011511961731073)
+and [here](https://medium.com/hackernoon/completely-offline-bitcoin-transactions-4e58324637bd)
+for information and setup guide.
+* [Mailing list email](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015707.html)
+* [Bitcointalk thread](https://bitcointalk.org/index.php?topic=2664747.msg27179198)
+* [Nasdaq article](https://www.nasdaq.com/article/the-electrum-personal-server-will-give-users-the-full-node-security-they-need-cm920443)
+* [Bitcoinnews.ru article (russian)](https://bitcoinnews.ru/novosti/electrum-personal-server-uluchshennaya-versiya-/)
+* [bits.media article (russian)](https://bits.media/razrabotchiki-electrum-opublikovali-alfa-versiyu-electrum-personal-server/)
 
 ## Contributing
 
