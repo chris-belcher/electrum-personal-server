@@ -143,6 +143,7 @@ class ElectrumProtocol(object):
         self.subscribed_to_headers = False
         self.are_headers_raw = False
         self.txid_blockhash_map = {}
+        self.printed_slow_mempool_warning = False
 
     def set_send_reply_fun(self, send_reply_fun):
         self.send_reply_fun = send_reply_fun
@@ -383,9 +384,12 @@ class ElectrumProtocol(object):
                 et = time.time()
                 MEMPOOL_WARNING_DURATION = 10 #seconds
                 if et - st > MEMPOOL_WARNING_DURATION:
-                    self.logger.warning("Mempool very large resulting in slow "
-                        + "response by server. Consider setting "
-                        + "`disable_mempool_fee_histogram = true`")
+                    if not self.printed_slow_mempool_warning:
+                        self.logger.warning("Mempool very large resulting in"
+                            + " slow response by server ("
+                            + str(round(et-st, 1)) + "sec). Consider setting "
+                            + "`disable_mempool_fee_histogram = true`")
+                    self.printed_slow_mempool_warning = True
                 #algorithm copied from the relevant place in ElectrumX
                 #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
                 fee_hist = defaultdict(int)
