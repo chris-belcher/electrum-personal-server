@@ -50,6 +50,9 @@ Donate to help make Electrum Personal Server even better:
 
 """
 
+class UnknownScripthashError(Exception):
+    pass
+
 def get_tor_hostport():
     # Probable ports for Tor to listen at
     host = "127.0.0.1"
@@ -236,15 +239,15 @@ class ElectrumProtocol(object):
                     + "check that they really are addresses you expect. In "
                     + "Electrum go to Wallet -> Information to get the right "
                     + "master public key.")
-                history_hash = get_status_electrum([])
+                raise UnknownScripthashError(scrhash)
             self._send_response(query, history_hash)
         elif method == "blockchain.scripthash.get_history":
             scrhash = query["params"][0]
             history = self.txmonitor.get_electrum_history(scrhash)
             if history == None:
-                history = []
                 self.logger.warning("Address history not known to server, "
                     + "hash(address) = " + scrhash)
+                raise UnknownScripthashError(scrhash)
             self._send_response(query, history)
         elif method == "blockchain.scripthash.get_balance":
             scrhash = query["params"][0]
@@ -252,7 +255,7 @@ class ElectrumProtocol(object):
             if balance == None:
                 self.logger.warning("Address history not known to server, "
                     + "hash(address) = " + scrhash)
-                balance = {"confirmed": 0, "unconfirmed": 0}
+                raise UnknownScripthashError(scrhash)
             self._send_response(query, balance)
         elif method == "server.ping":
             self._send_response(query, None)

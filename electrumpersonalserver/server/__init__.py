@@ -39,6 +39,7 @@ from electrumpersonalserver.server.peertopeer import (
 )
 from electrumpersonalserver.server.electrumprotocol import (
     SERVER_VERSION_NUMBER,
+    UnknownScripthashError,
     ElectrumProtocol,
     get_block_header,
     get_current_header,

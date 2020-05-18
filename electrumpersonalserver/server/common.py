@@ -19,6 +19,7 @@ import electrumpersonalserver.server.deterministicwallet as deterministicwallet
 import electrumpersonalserver.server.transactionmonitor as transactionmonitor
 from electrumpersonalserver.server.electrumprotocol import (
     SERVER_VERSION_NUMBER,
+    UnknownScripthashError,
     ElectrumProtocol,
     get_block_header,
     get_current_header,
@@ -160,16 +161,19 @@ def run_electrum_server(rpc, txmonitor, config):
             logger.debug("Error with node connection, e = " + repr(e)
                 + "\ntraceback = " + str(traceback.format_exc()))
             accepting_clients = False
+        except UnknownScripthashError as e:
+            logger.debug("Disconnecting client due to misconfiguration. User"
+                + " must correctly configure master public key(s)")
         except (IOError, EOFError) as e:
             if isinstance(e, (EOFError, ConnectionRefusedError)):
                 logger.debug("Electrum wallet disconnected")
             else:
                 logger.debug("IOError: " + repr(e))
-            try:
-                if sock != None:
-                    sock.close()
-            except IOError:
-                pass
+        try:
+            if sock != None:
+                sock.close()
+        except IOError:
+            pass
         protocol.on_disconnect()
         time.sleep(0.2)
 
