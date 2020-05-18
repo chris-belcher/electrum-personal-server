@@ -462,12 +462,18 @@ class ElectrumProtocol(object):
         elif method == "server.donation_address":
             self._send_response(query, DONATION_ADDR)
         elif method == "server.version":
-            client_protocol_version = query["params"][1]
-            if isinstance(client_protocol_version, list):
-                client_min, client_max = float(client_min)
+            if len(query["params"]) > 0:
+                client_protocol_version = query["params"][1]
+                if isinstance(client_protocol_version, list):
+                    client_min, client_max = float(client_min)
+                else:
+                    client_min = float(query["params"][1])
+                    client_max = client_min
             else:
-                client_min = float(query["params"][1])
-                client_max = client_min
+                #it seems some clients like bluewallet dont provide a version
+                #just assume the client is compatible with us then
+                client_min = SERVER_PROTOCOL_VERSION_MIN
+                client_max = SERVER_PROTOCOL_VERSION_MAX
             self.protocol_version = min(client_max, SERVER_PROTOCOL_VERSION_MAX)
             if self.protocol_version < max(client_min,
                     SERVER_PROTOCOL_VERSION_MIN):
