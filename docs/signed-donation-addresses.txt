@@ -3,8 +3,8 @@ Hash: SHA512
 
 Bitcoin addresses for sending donations to the Electrum Personal Server project
 
-(bech32) bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz
-(legacy) 12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg
+(bech32) bc1qwt8kh83dpdj4yuquvsf28rhcft2rjh6jvy6678
+(legacy) 15wAE63DG8RH6xp7nTucgYn1Jb4acR1EvM
 
 Always check signatures of addresses to avoid man-in-the-middle attacks
 
@@ -18,17 +18,18 @@ The GPG public key and fingerprint can be found at:
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJcwxLVAAoJEO9zTqZ38xEpHFMP/0GA5UOKNxl3/XJjtKYBpyMK
-laXsHqlIAVe4P93YkExnOv8Xbrj8o7wZoqkRaiYKA0xtMNDD1QimRFOVTYp7y5Fu
-sLkkV5rkjz/p6/H/esMdmDEsFgBi7Gya00YpAxbwTGcLHNJ1mCHNbeCh6yyjEC+9
-4nd8/vxEsMYnC5Mh3Bx8LpTMe11aMe+CEBc4EAWRcu+2+x/iwwUZhYVvVaT8IOYC
-5zsP+DFLtOmuD2d/vnYq8PamPwYv1YlcKmSDyLhWLPUSyPNb/T9lUqXXIBtel/KO
-1ZG/wNcxTkdPP3WgK85C7//ODpbicLoVmtqCRLlDV6lifSw24EcbBWs9Ojm6vH9t
-oIbRbJ+MDS5ekPT7xAkOWYJnf7WkpSOSKPvr/kmxAl6DGX8rxkFeiJ6ehsdqE69r
-JTSZBzw8zIjbOESiA4yzOEYyLOGdjM0cI7Mc2BrVi2vH9F+w878zwbO4KlR7XGC4
-8gEdMsLlNH4lzo4rhu3O88+m8abFjjZqek/pVLxzkpTOuVqh/sqrjBSyEt3ElJ9Q
-GZdc4XwfvatDEgTROpDFbLeNNTgDndPQvNyZ65Iqi5iAvws3R4wuSOVOmwV7yuAL
-19Sv90U6KUIVNsXOpDZVQZN8B2Gnw1vwR/uIdAGgV/mMeEM/DMm/S6cgkm82pLBz
-0DDqvYz0EYPghVLBnlPv
-=RPFL
+iQIcBAEBCgAGBQJe2P7yAAoJEO9zTqZ38xEpoE8QAKOwstmd+LW6ohmPM22O9Ei6
+VdOJXKUgxJMJKBfPaRKGSIZqAs1wboBJ7b3llig5+aQuZ5T4M5O2ZQ6dWM0py67v
++9OnW4c6U7Q7mx0VvDdF8hBZXl3+OuMbphYMp4OCworgn8bRPXtGyGTTV4su849B
+Fy+K1L7ZkRd2z1gwTxRKMYvQRsh/SvwDfVaCkKG00hVc77jgS39kUdIcrKHJXNhr
+XM5efu9+DbF3cpaxKjYoq2y3D6C09raVuIm66HiDBgVr3ihnN1TakUQUIQkgj0/y
+cnI8p9IdXoWc+wL7aYvGAtapqtLkxJmKnYmiowXVZQfZATe77W6z2XQKKUz9QCVx
+9rxet0y5MWrx7vpH1m7YkSvOhpi75T03OVUPRBJ1wKWZXPlcaMH69x6ncq1U96MO
+AmLrqVi/bPyq3uZeVNfWrLGSCJecP/htYmSTtW4n/1eknd+r/3eyXHDImMqjWY3C
+FGlhZRQwrhxGef6fSAG25EGpzpjXwTpbTc8dJ3B1pPWEnOd7zQOsa6lbWiFsU57V
+PI0pqGfqFuTKxfgK/zbR/qR0GHxMPFMWR7yLwhtkVN9FXL50APYECsDdfjg0DRSp
+BVkpzqALYNNjEgiy0KKTT4trQ5fYqXB+J58S1/cL0I/yY2dQKlZVBJ5JIBEkCIaf
+VZUIiz0Tcb53wTf54331
+=qjzp
 -----END PGP SIGNATURE-----
+
