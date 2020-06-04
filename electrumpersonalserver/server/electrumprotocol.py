@@ -45,7 +45,7 @@ Blockchain size: {blockchainsizeondisk}
 {firstunprunedblock}
 https://github.com/chris-belcher/electrum-personal-server
 
-Donate to help make Electrum Personal Server even better:
+Donate to help improve Electrum Personal Server:
 {donationaddr}
 
 """

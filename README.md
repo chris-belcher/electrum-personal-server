@@ -242,7 +242,7 @@ for information and setup guide.
 
 ## Contributing
 
-Donate to help make Electrum Personal Server even better: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`. Signed donation addresses can be found [here](/docs/signed-donation-addresses.txt).
+Donate to help improve Electrum Personal Server: `bc1q5d8l0w33h65e2l5x7ty6wgnvkvlqcz0wfaslpz` or `12LMDTSTWxaUg6dGtuMCVLtr2EyEN6Jimg`. Signed donation addresses can be found [here](/docs/signed-donation-addresses.txt).
 
 This is open source project which happily accepts coding contributions from
 anyone. See [developer-notes.md](docs/developer-notes.md).
