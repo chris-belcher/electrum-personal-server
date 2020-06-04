@@ -44,4 +44,5 @@ from electrumpersonalserver.server.electrumprotocol import (
     get_block_header,
     get_current_header,
     get_block_headers_hex,
+    DONATION_ADDR,
 )
