@@ -1,3 +1,20 @@
+# Release v0.2.1 (4th June 2020)
+
+New release, thanks to contributions by DriftwoodPalace, m-schmoock and wiredcheetah
+And thanks to everyone else who contributed via discussion and donations
+
+* Massive speedup to startup time and initial import of addresses. This is done
+  using the descriptor wallets feature of Bitcoin Core 0.20. The speedup is
+  very helpful when running Electrum Personal Server on low powered devices
+  such as the raspberry pi
+* Close the connection to client if it requests an unknown address or if the
+  connection to the Bitcoin node is lost. The user will see a red dot in
+  Electrum indicating that something is wrong which should prompt them to fix.
+* Increase default polling interval to make the server more responsive to new
+  transactions and confirmations
+* Reduce spam in the debug log and info log
+* Various other tweaks and bug fixes
+
 # Release v0.2.0 (5th December 2019)
 
 New release, thanks to code contributions by suvayu, andrewtoth and Sosthene00
