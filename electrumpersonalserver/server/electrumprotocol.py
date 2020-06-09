@@ -22,7 +22,7 @@ from electrumpersonalserver.server.merkleproof import (
 #protocol documentation
 #https://github.com/kyuupichan/electrumx/blob/master/docs/protocol-methods.rst
 
-SERVER_VERSION_NUMBER = "0.2.1"
+SERVER_VERSION_NUMBER = "0.2.1.1"
 
 SERVER_PROTOCOL_VERSION_MAX = 1.4
 SERVER_PROTOCOL_VERSION_MIN = 1.1
