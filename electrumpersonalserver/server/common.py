@@ -123,7 +123,7 @@ def run_electrum_server(rpc, txmonitor, config):
             except socket.timeout:
                 is_node_reachable = on_heartbeat_listening(txmonitor)
                 accepting_clients = is_node_reachable
-            except (ConnectionRefusedError, ssl.SSLError):
+            except (ConnectionRefusedError, ssl.SSLError, IOError):
                 sock.close()
                 sock = None
         logger.debug('Electrum connected from ' + str(addr[0]))
