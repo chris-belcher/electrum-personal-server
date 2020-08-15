@@ -155,7 +155,7 @@ class TransactionMonitor(object):
                         logger.error("Not enough addresses imported.")
                         logger.error("Delete wallet.dat and increase the value"
                             + " of `initial_import_count` in the file"
-                            + " `config.cfg` then reimport and rescan")
+                            + " `config.ini` then reimport and rescan")
                         #TODO make it so users dont have to delete wallet.dat
                         # check whether all initial_import_count addresses are
                         # imported rather than just the first one
