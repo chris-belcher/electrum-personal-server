@@ -145,14 +145,16 @@ rebroadcasting transactions without tor.
 
 ### Links to other setup guides
 
-- [How to setup Electrum Personal Server on a Raspberry Pi](https://github.com/Stadicus/RaspiBolt/blob/master/raspibolt_64_electrum.md)
-- [Electrum Personal Server on Windows 10](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_63_eps-win.html)
-- [Running Electrum Personal Server on Mac OS](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_64_eps-mac.html)
-- [Linux setup video tutorial on youtube](https://www.youtube.com/watch?v=1JMP4NZCC5g)
-- [BTCPay Server integration with Electrum Personal Server](https://docs.btcpayserver.org/ElectrumPersonalServer/)
-- [Using Electrum Personal Server with a Bitseed node](https://github.com/john-light/bitcoin/blob/master/eps.md)
-- [Spanish language video tutorial / Instalación del servidor Electrum Personal Server](https://www.youtube.com/watch?v=F3idwecYvcU)
-- [Japanese language setup guide](https://freefromjp.wordpress.com/2019/07/13/electrum-personal-server-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB/)
+* [How to setup Electrum Personal Server on a Raspberry Pi](https://github.com/Stadicus/RaspiBolt/blob/master/raspibolt_64_electrum.md)
+* [Electrum Personal Server on Windows 10](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_63_eps-win.html)
+* [Running Electrum Personal Server on Mac OS](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_64_eps-mac.html)
+* [How to set up your own Bitcoin node, Electrum wallet and Server](https://curiosityoverflow.xyz/posts/bitcoin-electrum-wallet/)
+* [How to set up Wireguard to connect to EPS](https://curiosityoverflow.xyz/posts/wireguard-eps/)
+* [Linux setup video tutorial on youtube](https://www.youtube.com/watch?v=1JMP4NZCC5g)
+* [BTCPay Server integration with Electrum Personal Server](https://docs.btcpayserver.org/ElectrumPersonalServer/)
+* [Using Electrum Personal Server with a Bitseed node](https://github.com/john-light/bitcoin/blob/master/eps.md)
+* [Spanish language video tutorial / Instalación del servidor Electrum Personal Server](https://www.youtube.com/watch?v=F3idwecYvcU)
+* [Japanese language setup guide](https://freefromjp.wordpress.com/2019/07/13/electrum-personal-server-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB/)
 
 #### Exposure to the Internet
 
