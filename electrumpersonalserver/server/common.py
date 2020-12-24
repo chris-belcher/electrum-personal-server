@@ -355,6 +355,7 @@ def logger_config(logger, config):
     logger.setLevel(logging.DEBUG)
     return logger, filename
 
+# returns non-zero status code on failure
 def main():
     opts = parse_args()
 
@@ -365,7 +366,7 @@ def main():
     except NoSectionError:
         print("ERROR: Non-existant configuration file {}".format(
             opts.config_file))
-        return
+        return 1
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     logger, logfilename = logger_config(logger, config)
     logger.info('Starting Electrum Personal Server ' + str(
@@ -384,7 +385,7 @@ def main():
             "bitcoin-rpc", "datadir"))
         logger.debug("obtaining auth from .cookie")
     if rpc_u == None and cookie_path == None:
-        return
+        return 1
     rpc = JsonRpc(host = config.get("bitcoin-rpc", "host"),
         port = int(config.get("bitcoin-rpc", "port")),
         user = rpc_u, password = rpc_p, cookie_path = cookie_path,
@@ -410,7 +411,7 @@ def main():
         logger.error(repr(e))
         logger.error("Wallet related RPC call failed, possibly the " +
             "bitcoin node was compiled with the disable wallet flag")
-        return
+        return 1
 
     test_keydata = (
     "2 tpubD6NzVbkrYhZ4YVMVzC7wZeRfz3bhqcHvV8M3UiULCfzFtLtp5nwvi6LnBQegrkx" +
@@ -426,10 +427,10 @@ def main():
         logger.error(repr(e))
         logger.error("Descriptor related RPC call failed. Bitcoin Core 0.20.0"
             + " or higher required. Exiting..")
-        return
+        return 1
     if opts.rescan:
         rescan_script(logger, rpc, opts.rescan_date)
-        return
+        return 0
     while True:
         logger.debug("Checking whether rescan is in progress")
         walletinfo = rpc.call("getwalletinfo", [])
@@ -443,7 +444,7 @@ def main():
     if import_needed:
         if not relevant_spks_addrs and not deterministic_wallets:
             #import = true and no addresses means exit
-            return
+            return 0
         deterministicwallet.import_addresses(rpc, relevant_spks_addrs,
             deterministic_wallets, change_param=-1,
             count=int(config.get("bitcoin-rpc", "initial_import_count")))
@@ -455,11 +456,13 @@ def main():
         txmonitor = transactionmonitor.TransactionMonitor(rpc,
             deterministic_wallets, logger)
         if not txmonitor.build_address_history(relevant_spks_addrs):
-            return
+            return 1
         try:
             run_electrum_server(rpc, txmonitor, config)
         except KeyboardInterrupt:
             logger.info('Received KeyboardInterrupt, quitting')
+            return 1
+    return 0
 
 def search_for_block_height_of_date(datestr, rpc):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
@@ -514,6 +517,11 @@ def rescan_script(logger, rpc, rescan_date):
 
 if __name__ == "__main__":
     #entry point for pyinstaller executable
-    main()
-    os.system("pause")
+    res = main()
+
+    # only relevant for pyinstaller executables (on Windows):
+    if os.name == 'nt':
+        os.system("pause")
+
+    sys.exit(res)
 
