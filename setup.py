@@ -8,7 +8,6 @@ setup(
     license="MIT",
     include_package_data=True,
     packages=find_packages(exclude=["tests"]),
-    setup_requires=["pytest-runner"],
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
@@ -19,7 +18,4 @@ setup(
     data_files=[
         ("share/doc/electrum-personal-server", ["README.md"]),
     ],
-    install_requires=[
-        'wheel'
-    ]
 )
