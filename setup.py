@@ -16,6 +16,7 @@ setup(
     },
     package_data={"electrumpersonalserver": ["certs/*"]},
     data_files=[
-        ("share/doc/electrum-personal-server", ["README.md"]),
+        ("share/doc/electrum-personal-server", ["README.md",
+                                                "config.ini_sample"]),
     ],
 )
