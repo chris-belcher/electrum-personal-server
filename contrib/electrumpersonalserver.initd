@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+# Copyright 1999-2021 Gentoo Authors
+# Distributed under the terms of the GNU General Public License v2
+
+pidfile="/var/run/electrum-personal-server.pid"
+command="/usr/bin/electrum-personal-server"
+command_args="${eps_args}"
+start_stop_daemon_args="-u ${eps_user} -b -m -p ${pidfile}"
+
+name="Electrum Personal Server"
+description="Connects to the bitcoind RPC"
+
+depend() {
+	need bitcoind
+}
+
+start_pre() {
+	if ! [ -e "${eps_config}" ]; then
+		eerror ""
+		eerror "Please create a configuration in ${eps_config}"
+		eerror ""
+		return 1
+	fi
+}
