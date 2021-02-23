@@ -2,13 +2,12 @@ from setuptools import setup, find_packages
 
 setup(
     name="electrum-personal-server",
-    version="0.2.0.dev0",
+    version="0.2.1.1",
     description="Electrum Personal Server",
     author="Chris Belcher",
     license="MIT",
     include_package_data=True,
     packages=find_packages(exclude=["tests"]),
-    setup_requires=["pytest-runner"],
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
@@ -17,9 +16,7 @@ setup(
     },
     package_data={"electrumpersonalserver": ["certs/*"]},
     data_files=[
-        ("share/doc/electrum-personal-server", ["README.md"]),
+        ("share/doc/electrum-personal-server", ["README.md",
+                                                "config.ini_sample"]),
     ],
-    install_requires=[
-        'wheel'
-    ]
 )
