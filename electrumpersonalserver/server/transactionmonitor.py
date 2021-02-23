@@ -147,6 +147,9 @@ class TransactionMonitor(object):
                     input_scripthashes))
                 if len(sh_to_add) == 0:
                     continue
+                new_history_element = self.generate_new_history_element(tx, txd)
+                if new_history_element == None:
+                    continue
 
                 for wal in self.deterministic_wallets:
                     overrun_depths = wal.have_scriptpubkeys_overrun_gaplimit(
@@ -160,7 +163,6 @@ class TransactionMonitor(object):
                         # check whether all initial_import_count addresses are
                         # imported rather than just the first one
                         return False
-                new_history_element = self.generate_new_history_element(tx, txd)
                 for scripthash in sh_to_add:
                     address_history[scripthash][
                         "history"].append(new_history_element)
@@ -217,37 +219,16 @@ class TransactionMonitor(object):
     def generate_new_history_element(self, tx, txd):
         logger = self.logger
         if tx["confirmations"] == 0:
-            unconfirmed_input = False
-            total_input_value = 0
-            for inn in txd["vin"]:
-                try:
-                    utxo = self.rpc.call("gettxout", [inn["txid"],
-                        inn["vout"], True])
-                    if utxo is None:
-                        utxo = self.rpc.call("gettxout", [inn["txid"],
-                            inn["vout"], False])
-                        if utxo is None:
-                            rawtx = self.rpc.call("getrawtransaction",
-                                [inn["txid"], True])
-                            if rawtx is not None:
-                                utxo = {"confirmations": 0,
-                                    "value": rawtx["vout"][
-                                    inn["vout"]]["value"]}
-                except JsonRpcError:
-                    #error somewhere, unable to get input value, just carry on
-                    pass
-                if utxo is not None:
-                    total_input_value += int(Decimal(utxo["value"]) *
-                        Decimal(1e8))
-                    unconfirmed_input = (unconfirmed_input or
-                        utxo["confirmations"] == 0)
-                else:
-                    # Electrum will now display a weird negative fee
-                    logger.warning("input utxo not found(!)")
-
-            logger.debug("total_input_value = " + str(total_input_value))
-            fee = total_input_value - sum([int(Decimal(out["value"])
-                * Decimal(1e8)) for out in txd["vout"]])
+            try:
+                mempool_tx = self.rpc.call("getmempoolentry", [tx["txid"]])
+                fee = int(Decimal(str(mempool_tx["fees"]["base"]))
+                    * Decimal(1e8))
+                unconfirmed_input = mempool_tx["ancestorcount"] > 1
+            except JsonRpcError as e:
+                #not in mempool, return None
+                logger.debug("txid in wallet but not in mempool = "
+                    + tx["txid"])
+                return None
             height = -1 if unconfirmed_input else 0
             new_history_element = ({"tx_hash": tx["txid"], "height": height,
                 "fee": fee})
@@ -318,6 +299,8 @@ class TransactionMonitor(object):
                         txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
                         new_history_element = self.generate_new_history_element(
                             tx, txd)
+                        if new_history_element == None:
+                            continue
                         for scrhash in scrhashes:
                             self.address_history[scrhash]["history"].append(
                                 new_history_element)
@@ -455,6 +438,9 @@ class TransactionMonitor(object):
                     matching_scripthashes.append(scripthash)
             if len(matching_scripthashes) == 0:
                 continue
+            new_history_element = self.generate_new_history_element(tx, txd)
+            if new_history_element == None:
+                continue
 
             for wal in self.deterministic_wallets:
                 overrun_depths = wal.have_scriptpubkeys_overrun_gaplimit(
@@ -471,7 +457,6 @@ class TransactionMonitor(object):
                         import_addresses(self.rpc, new_addrs, [], -1, 0, logger)
 
             updated_scripthashes.extend(matching_scripthashes)
-            new_history_element = self.generate_new_history_element(tx, txd)
             logger.info("Found new tx: " + str(new_history_element))
             for scrhash in matching_scripthashes:
                 self.address_history[scrhash]["history"].append(

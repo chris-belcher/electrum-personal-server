@@ -55,8 +55,16 @@ class DummyJsonRpc(object):
             return {"addresses": [dummy_spk_to_address(params[0])]}
         elif method == "importaddress":
             self.imported_addresses.append(params[0])
+        elif method == "getmempoolentry":
+            for t in self.txlist:
+                if t["txid"] == params[0]:
+                    return {"fees": {"base": 0},
+                        "ancestorcount":
+                            1 if t["vin"][0]["confirmations"] > 0 else 2}
+            logger.debug(params[0])
+            assert 0
         else:
-            raise ValueError("unknown method in dummy jsonrpc")
+            raise ValueError("unknown method in dummy jsonrpc " + method)
 
     def add_transaction(self, tx):
         self.txlist = [tx] + self.txlist
