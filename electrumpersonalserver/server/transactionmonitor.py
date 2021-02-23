@@ -73,7 +73,7 @@ class TransactionMonitor(object):
         confirmed_balance = 0
         unconfirmed_balance = 0
         for utxo in utxos.values():
-            value = int(Decimal(utxo[0]) * Decimal(1e8))
+            value = int(Decimal(str(utxo[0])) * Decimal(1e8))
             if utxo[1] > 0:
                 confirmed_balance += value
             else:
