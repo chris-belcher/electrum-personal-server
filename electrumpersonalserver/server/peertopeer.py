@@ -4,6 +4,7 @@ import socket
 import time
 import base64
 import threading
+import queue
 import random
 from struct import pack, unpack
 from datetime import datetime
@@ -36,6 +37,7 @@ KEEPALIVE_INTERVAL = 2 * 60
 
 # close connection if keep alive ping isnt responded to in this many seconds
 KEEPALIVE_TIMEOUT = 20 * 60
+
 
 def ip_to_hex(ip_str):
     # ipv4 only for now
@@ -159,12 +161,13 @@ class P2PMessageHandler(object):
 
 class P2PProtocol(object):
     def __init__(self, p2p_message_handler, remote_hostport,
-                 network, logger, user_agent=DEFAULT_USER_AGENT,
+                 network, logger, notify_queue, user_agent=DEFAULT_USER_AGENT,
                  socks5_hostport=("localhost", 9050), connect_timeout=30,
                  heartbeat_interval=15, start_height=0):
         self.p2p_message_handler = p2p_message_handler
         self.remote_hostport = remote_hostport
         self.logger = logger
+        self.notify_queue = notify_queue
         self.user_agent = user_agent
         self.socks5_hostport = socks5_hostport
         self.connect_timeout = connect_timeout
@@ -204,7 +207,6 @@ class P2PProtocol(object):
         self.sock.connect(self.remote_hostport)
         self.sock.sendall(self.create_message('version', version_message))
 
-        self.logger.debug('Connected to bitcoin peer')
         self.sock.settimeout(self.heartbeat_interval)
         self.closed = False
         try:
@@ -276,13 +278,14 @@ class P2PProtocol(object):
             + btc.bin_dbl_sha256(payload)[:4] + payload)
 
 class P2PBroadcastTx(P2PMessageHandler):
-    def __init__(self, txhex, logger):
+    def __init__(self, txhex, logger, notify_queue):
         P2PMessageHandler.__init__(self, logger)
         self.txhex = bytes.fromhex(txhex)
         self.txid = btc.bin_txhash(self.txhex)
         self.uploaded_tx = False
         self.time_marker = datetime.now()
         self.connected = False
+        self.notify_queue = notify_queue
 
     def on_recv_version(self, p2p, version, services, timestamp,
             addr_recv_services, addr_recv_ip, addr_trans_services,
@@ -336,6 +339,7 @@ class P2PBroadcastTx(P2PMessageHandler):
                     self.uploaded_tx = True
                     self.logger.debug("Uploaded transaction via tor to peer at "
                         + str(p2p.remote_hostport))
+                    self.notify_queue.put(True)
                     ##make sure the packets really got through by sleeping
                     ##some kernels seem to send a RST packet on close() even
                     ##if theres still data in the send buffer
@@ -343,12 +347,12 @@ class P2PBroadcastTx(P2PMessageHandler):
                     p2p.close()
 
 def broadcaster_thread(txhex, node_addrs, tor_hostport, network, logger,
-        start_height):
+        start_height, notify_queue):
     for node_addr in node_addrs:
         remote_hostport = (node_addr["address"], node_addr["port"])
-        p2p_msg_handler = P2PBroadcastTx(txhex, logger)
-        p2p = P2PProtocol(p2p_msg_handler, remote_hostport=remote_hostport,
-            network=network, logger=logger, socks5_hostport=tor_hostport,
+        p2p_msg_handler = P2PBroadcastTx(txhex, logger, notify_queue)
+        p2p = P2PProtocol(p2p_msg_handler, remote_hostport,
+            network, logger, notify_queue, socks5_hostport=tor_hostport,
             heartbeat_interval=20, start_height=start_height)
         try:
             p2p.run()
@@ -359,7 +363,8 @@ def broadcaster_thread(txhex, node_addrs, tor_hostport, network, logger,
             break
     logger.debug("Exiting tor broadcast thread, uploaded_tx = " +
         str(p2p_msg_handler.uploaded_tx))
-    # return false if never found a node that accepted unconfirms
+    if not p2p_msg_handler.uploaded_tx:
+        notify_queue.put(False)
     return p2p_msg_handler.uploaded_tx
 
 def chunk_list(d, n):
@@ -391,11 +396,23 @@ def tor_broadcast_tx(txhex, tor_hostport, network, rpc, logger):
         node_addrs_witness[:required_address_count],
         CONNECTION_ATTEMPTS_PER_THREAD
     )
+    notify_queue = queue.Queue()
     start_height = rpc.call("getblockcount", [])
     for node_addrs in node_addrs_chunks:
         t = threading.Thread(target=broadcaster_thread,
             args=(txhex, node_addrs, tor_hostport, network, logger,
-                start_height),
+                start_height, notify_queue),
             daemon=True)
         t.start()
-
+    try:
+        success = notify_queue.get(block=True, timeout=20)
+    except queue.Empty:
+        logger.debug("Timed out getting notification for broadcasting "
+            + "transaction")
+        #the threads will maybe still continue to try broadcasting even
+        # after this timeout
+        #could time out at 20 seconds for any legitimate reason, tor is slow
+        # so no point failing, this timeout is just so the user doesnt have
+        # to stare at a seemingly-frozen dialog
+        success = True
+    return success

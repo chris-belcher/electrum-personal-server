@@ -357,8 +357,10 @@ class ElectrumProtocol(object):
                     elif chaininfo["chain"] == "regtest":
                         network = "regtest"
                     self.logger.debug("broadcasting to network: " + network)
-                    tor_broadcast_tx(txhex, self.tor_hostport, network,
-                        self.rpc, self.logger)
+                    success = tor_broadcast_tx(txhex, self.tor_hostport,
+                        network, self.rpc, self.logger)
+                    if not success:
+                        result = None
                 elif broadcast_method.startswith("system "):
                     with tempfile.NamedTemporaryFile() as fd:
                         system_line = broadcast_method[7:].replace("%s",
