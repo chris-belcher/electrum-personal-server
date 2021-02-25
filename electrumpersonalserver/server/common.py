@@ -505,7 +505,10 @@ def rescan_script(logger, rpc, rescan_date):
 
 if __name__ == "__main__":
     #entry point for pyinstaller executable
-    res = main()
+    try:
+        res = main()
+    except:
+        res = 1
 
     # only relevant for pyinstaller executables (on Windows):
     if os.name == 'nt':
