@@ -180,21 +180,12 @@ def run_electrum_server(rpc, txmonitor, config):
         protocol.on_disconnect()
         time.sleep(0.2)
 
+def is_address_imported(rpc, address):
+    return rpc.call("getaddressinfo", [address])["iswatchonly"]
+
 def get_scriptpubkeys_to_monitor(rpc, config):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     st = time.time()
-    try:
-        imported_addresses = set(rpc.call("getaddressesbyaccount",
-            [deterministicwallet.ADDRESSES_LABEL]))
-        logger.debug("using deprecated accounts interface")
-    except JsonRpcError:
-        #bitcoin core 0.17 deprecates accounts, replaced with labels
-        if deterministicwallet.ADDRESSES_LABEL in rpc.call("listlabels", []):
-            imported_addresses = set(rpc.call("getaddressesbylabel",
-                [deterministicwallet.ADDRESSES_LABEL]).keys())
-        else:
-            #no label, no addresses imported at all
-            imported_addresses = set()
 
     deterministic_wallets = []
     for key in config.options("master-public-keys"):
@@ -208,7 +199,6 @@ def get_scriptpubkeys_to_monitor(rpc, config):
             raise ValueError("Bad master public key format. Get it from " +
                 "Electrum menu `Wallet` -> `Information`")
         deterministic_wallets.append(wal)
-
     #check whether these deterministic wallets have already been imported
     import_needed = False
     wallets_to_import = []
@@ -223,7 +213,8 @@ def get_scriptpubkeys_to_monitor(rpc, config):
             first_addrs))
         last_addr, last_spk = wal.get_addresses(change=0, from_index=int(
             config.get("bitcoin-rpc", "initial_import_count")) - 1, count=1)
-        if not set(first_addrs + last_addr).issubset(imported_addresses):
+        if not all((is_address_imported(rpc, a) for a in (first_addrs
+                + last_addr))):
             import_needed = True
             wallets_to_import.append(wal)
     logger.info("Obtaining bitcoin addresses to monitor . . .")
@@ -232,12 +223,10 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     for key in config.options("watch-only-addresses"):
         watch_only_addresses.extend(config.get("watch-only-addresses",
             key).split(' '))
-    watch_only_addresses = set(watch_only_addresses)
-    watch_only_addresses_to_import = []
-    if not watch_only_addresses.issubset(imported_addresses):
+    watch_only_addresses_to_import = [a for a in watch_only_addresses
+        if not is_address_imported(rpc, a)]
+    if len(watch_only_addresses_to_import) > 0:
         import_needed = True
-        watch_only_addresses_to_import = (watch_only_addresses -
-            imported_addresses)
 
     if len(deterministic_wallets) == 0 and len(watch_only_addresses) == 0:
         logger.error("No master public keys or watch-only addresses have " +
@@ -247,7 +236,6 @@ def get_scriptpubkeys_to_monitor(rpc, config):
 
     #if addresses need to be imported then return them
     if import_needed:
-        #TODO minus imported_addresses
         logger.info("Importing " + str(len(wallets_to_import))
             + " wallets and " + str(len(watch_only_addresses_to_import))
             + " watch-only addresses into the Bitcoin node")
@@ -269,7 +257,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
             #loop until one address found that isnt imported
             while True:
                 addrs, spks = wal.get_new_addresses(change, count=1)
-                if addrs[0] not in imported_addresses:
+                if not is_address_imported(rpc, addrs[0]):
                     break
                 spks_to_monitor.append(spks[0])
             wal.rewind_one(change)
