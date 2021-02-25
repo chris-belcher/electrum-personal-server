@@ -349,7 +349,6 @@ class TransactionMonitor(object):
         tx_scrhashes_removed_from_mempool = []
         for uc_txid, scrhashes in self.unconfirmed_txes.items():
             tx = self.rpc.call("gettransaction", [uc_txid])
-            logger.debug("uc_txid=" + uc_txid + " => " + str(tx))
             if tx["confirmations"] == 0:
                 continue #still unconfirmed
             tx_scrhashes_removed_from_mempool.append((uc_txid, scrhashes))
