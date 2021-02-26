@@ -65,7 +65,7 @@ which bitcoin addresses they are interested in.
   privacy by connecting to public Electrum servers, disconnect from the
   internet first or run Electrum with the command line argument
   `--server localhost:50002:s`. To avoid accidentally connecting to public
-  electrum servers, also use the command line argument `--oneserver`.
+  electrum servers, also use the command line argument `--offline`.
 
 - Download the [latest release](https://github.com/chris-belcher/electrum-personal-server/releases)
   of Electrum Personal Server. If using Windows OS take the packaged binary
@@ -140,6 +140,8 @@ rebroadcasting transactions without tor.
 1. Make sure `~/.local/bin` is in your \$PATH (`echo $PATH`). If not, add it:
    `echo 'PATH=$HOME/.local/bin:$PATH' >> ~/.profile`, logout, and log in again
 1. Run the server: `electrum-personal-server config.ini`
+1. Rescan if needed: `electrum-personal-server --rescan config.ini`
+1. Restart the server if needed
 1. Start your Electrum wallet: `electrum --oneserver --server localhost:50002:s`.
 
 ### Links to other setup guides
@@ -154,6 +156,7 @@ rebroadcasting transactions without tor.
 - [Using Electrum Personal Server with a Bitseed node](https://github.com/john-light/bitcoin/blob/master/eps.md)
 - [Spanish language video tutorial / Instalación del servidor Electrum Personal Server](https://www.youtube.com/watch?v=F3idwecYvcU)
 - [Japanese language setup guide](https://freefromjp.wordpress.com/2019/07/13/electrum-personal-server-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB/)
+- [Connect to Electrum Personal Server via Wireguard ](https://curiosityoverflow.xyz/posts/wireguard-eps/#connecting-to-electrum-personal-server)
 
 #### Exposure to the Internet
 
@@ -203,9 +206,10 @@ Traditional Electrum servers inherently are not very scalable and use many
 resources which push people towards using centralized solutions. This is what
 we'd like to avoid with Electrum Personal Server.
 
-Definitely check out implementations like [ElectrumX](https://github.com/spesmilo/electrumx)
-and [Electrs](https://github.com/romanz/electrs) if you're interested in this
-sort of thing.
+Definitely check out other implementations:
+- [ElectrumX](https://github.com/spesmilo/electrumx) - Full Electrum server maintained by the Electrum project
+- [Electrs](https://github.com/romanz/electrs) - Full Electrum server coded in rust
+- [Bitcoin Wallet Tracker](https://github.com/bwt-dev/bwt) - Wallet indexer coded in rust
 
 #### Further ideas for work
 
