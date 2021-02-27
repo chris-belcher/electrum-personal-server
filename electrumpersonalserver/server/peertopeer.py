@@ -17,8 +17,8 @@ from electrumpersonalserver.server.socks import (
 )
 from electrumpersonalserver.server.jsonrpc import JsonRpcError
 
-PROTOCOL_VERSION = 70015
-DEFAULT_USER_AGENT = '/Satoshi:0.18.0/'
+PROTOCOL_VERSION = 70016
+DEFAULT_USER_AGENT = '/Satoshi:0.21.0/'
 
 #https://github.com/bitcoin/bitcoin/blob/master/src/protocol.h
 NODE_NETWORK = 1
@@ -182,8 +182,7 @@ class P2PProtocol(object):
         self.closed = False
 
     def run(self):
-        services = (NODE_NETWORK | NODE_WITNESS | NODE_BLOOM |
-            NODE_NETWORK_LIMITED)
+        services = (NODE_NETWORK | NODE_WITNESS | NODE_NETWORK_LIMITED)
         st = int(time.time())
         nonce = random.getrandbits(64)
 
