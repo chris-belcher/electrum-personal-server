@@ -70,6 +70,10 @@ keyfile = certs/cert.key
 # This is useful on low powered devices at times when the node mempool is large
 disable_mempool_fee_histogram = false
 
+# How often in seconds to update the mempool
+# this mempool is used to calculate the mempool fee histogram
+mempool_update_interval = 60
+
 # Parameter for broadcasting unconfirmed transactions
 # Options are:
 # * tor-or-own-node  (use tor if tor is running locally, otherwise own-node)

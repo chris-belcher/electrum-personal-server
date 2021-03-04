@@ -134,19 +134,18 @@ class ElectrumProtocol(object):
     """
 
     def __init__(self, rpc, txmonitor, logger, broadcast_method,
-            tor_hostport, disable_mempool_fee_histogram):
+            tor_hostport, mempool_sync):
         self.rpc = rpc
         self.txmonitor = txmonitor
         self.logger = logger
         self.broadcast_method = broadcast_method
         self.tor_hostport = tor_hostport
-        self.disable_mempool_fee_histogram = disable_mempool_fee_histogram
+        self.mempool_sync = mempool_sync
 
         self.protocol_version = 0   
         self.subscribed_to_headers = False
         self.are_headers_raw = False
         self.txid_blockhash_map = {}
-        self.printed_slow_mempool_warning = False
 
     def set_send_reply_fun(self, send_reply_fun):
         self.send_reply_fun = send_reply_fun
@@ -379,43 +378,9 @@ class ElectrumProtocol(object):
             else:
                 self._send_error(query["id"], error)
         elif method == "mempool.get_fee_histogram":
-            if self.disable_mempool_fee_histogram:
-                result = [[0, 0]]
-                self.logger.debug("fee histogram disabled, sending back empty "
-                    + "mempool")
-            else:
-                st = time.time()
-                mempool = self.rpc.call("getrawmempool", [True])
-                et = time.time()
-                MEMPOOL_WARNING_DURATION = 10 #seconds
-                if et - st > MEMPOOL_WARNING_DURATION:
-                    if not self.printed_slow_mempool_warning:
-                        self.logger.warning("Mempool very large resulting in"
-                            + " slow response by server ("
-                            + str(round(et-st, 1)) + "sec). Consider setting "
-                            + "`disable_mempool_fee_histogram = true`")
-                    self.printed_slow_mempool_warning = True
-                #algorithm copied from the relevant place in ElectrumX
-                #https://github.com/kyuupichan/electrumx/blob/e92c9bd4861c1e35989ad2773d33e01219d33280/server/mempool.py
-                fee_hist = defaultdict(int)
-                for txid, details in mempool.items():
-                    size = (details["size"] if "size" in details else
-                        details["vsize"])
-                    fee_rate = 1e8*details["fee"] // size
-                    fee_hist[fee_rate] += size
-                l = list(reversed(sorted(fee_hist.items())))
-                out = []
-                size = 0
-                r = 0
-                binsize = 100000
-                for fee, s in l:
-                    size += s
-                    if size + r > binsize:
-                        out.append((fee, size))
-                        r += size - binsize
-                        size = 0
-                        binsize *= 1.1
-                result = out
+            result = self.mempool_sync.get_fee_histogram()
+            self.logger.debug("mempool entry count = "
+                + str(len(self.mempool_sync.mempool)))
             self._send_response(query, result)
         elif method == "blockchain.estimatefee":
             estimate = self.rpc.call("estimatesmartfee", [query["params"][0]])

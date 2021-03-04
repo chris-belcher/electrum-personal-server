@@ -1,6 +1,6 @@
 import socket
 import time
-import datetime
+from datetime import datetime
 import ssl
 import os
 import os.path
@@ -26,12 +26,23 @@ from electrumpersonalserver.server.electrumprotocol import (
     get_block_headers_hex,
     DONATION_ADDR,
 )
+from electrumpersonalserver.server.mempoolhistogram import (
+    MempoolSync,
+    PollIntervalChange
+)
 
 ##python has demented rules for variable scope, so these
 ## global variables are actually mutable lists
 bestblockhash = [None]
 
-def on_heartbeat_listening(txmonitor):
+last_heartbeat_listening = [datetime.now()]
+last_heartbeat_connected = [datetime.now()]
+
+def on_heartbeat_listening(poll_interval_listening, txmonitor):
+    if ((datetime.now() - last_heartbeat_listening[0]).total_seconds()
+            < poll_interval_listening):
+        return True
+    last_heartbeat_listening[0] = datetime.now()
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     try:
         txmonitor.check_for_updated_txes()
@@ -40,7 +51,11 @@ def on_heartbeat_listening(txmonitor):
         is_node_reachable = False
     return is_node_reachable
 
-def on_heartbeat_connected(rpc, txmonitor, protocol):
+def on_heartbeat_connected(poll_interval_connected, rpc, txmonitor, protocol):
+    if ((datetime.now() - last_heartbeat_connected[0]).total_seconds()
+            < poll_interval_connected):
+        return
+    last_heartbeat_connected[0] = datetime.now()
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     is_tip_updated, header = check_for_new_blockchain_tip(rpc,
         protocol.are_headers_raw)
@@ -90,17 +105,26 @@ def run_electrum_server(rpc, txmonitor, config):
     logger.debug('using cert: {}, key: {}'.format(certfile, keyfile))
     disable_mempool_fee_histogram = config.getboolean("electrum-server",
         "disable_mempool_fee_histogram", fallback=False)
+    mempool_update_interval = int(config.get("bitcoin-rpc",
+        "mempool_update_interval", fallback=60))
     broadcast_method = config.get("electrum-server", "broadcast_method",
         fallback="own-node")
     tor_host = config.get("electrum-server", "tor_host", fallback="localhost")
     tor_port = int(config.get("electrum-server", "tor_port", fallback="9050"))
     tor_hostport = (tor_host, tor_port)
 
-    protocol = ElectrumProtocol(rpc, txmonitor, logger, broadcast_method,
-        tor_hostport, disable_mempool_fee_histogram)
+    mempool_sync = MempoolSync(rpc,
+        disable_mempool_fee_histogram, mempool_update_interval)
+    mempool_sync.initial_sync(logger)
 
+    protocol = ElectrumProtocol(rpc, txmonitor, logger, broadcast_method,
+        tor_hostport, mempool_sync)
+
+    normal_listening_timeout = min(poll_interval_listening,
+        mempool_update_interval)
+    fast_listening_timeout = 0.5
     server_sock = create_server_socket(hostport)
-    server_sock.settimeout(poll_interval_listening)
+    server_sock.settimeout(normal_listening_timeout)
     accepting_clients = True
     while True:
         # main server loop, runs forever
@@ -121,7 +145,14 @@ def run_electrum_server(rpc, txmonitor, config):
                     certfile=certfile, keyfile=keyfile,
                     ssl_version=ssl.PROTOCOL_SSLv23)
             except socket.timeout:
-                is_node_reachable = on_heartbeat_listening(txmonitor)
+                poll_interval_change = mempool_sync.poll_update(1)
+                if poll_interval_change == PollIntervalChange.FAST_POLLING:
+                    server_sock.settimeout(fast_listening_timeout)
+                elif poll_interval_change == PollIntervalChange.NORMAL_POLLING:
+                    server_sock.settimeout(normal_listening_timeout)
+
+                is_node_reachable = on_heartbeat_listening(
+                    poll_interval_listening, txmonitor)
                 accepting_clients = is_node_reachable
             except (ConnectionRefusedError, ssl.SSLError, IOError):
                 sock.close()
@@ -135,7 +166,10 @@ def run_electrum_server(rpc, txmonitor, config):
         protocol.set_send_reply_fun(send_reply_fun)
 
         try:
-            sock.settimeout(poll_interval_connected)
+            normal_connected_timeout = min(poll_interval_connected,
+                mempool_update_interval)
+            fast_connected_timeout = 0.5
+            sock.settimeout(normal_connected_timeout)
             recv_buffer = bytearray()
             while True:
                 # loop for replying to client queries
@@ -159,7 +193,15 @@ def run_electrum_server(rpc, txmonitor, config):
                         logger.debug("=> " + line)
                         protocol.handle_query(query)
                 except socket.timeout:
-                    on_heartbeat_connected(rpc, txmonitor, protocol)
+                    poll_interval_change = mempool_sync.poll_update(1)
+                    if poll_interval_change == PollIntervalChange.FAST_POLLING:
+                        sock.settimeout(fast_connected_timeout)
+                    elif (poll_interval_change
+                            == PollIntervalChange.NORMAL_POLLING):
+                        sock.settimeout(normal_connected_timeout)
+
+                    on_heartbeat_connected(poll_interval_connected, rpc,
+                        txmonitor, protocol)
         except JsonRpcError as e:
             logger.debug("Error with node connection, e = " + repr(e)
                 + "\ntraceback = " + str(traceback.format_exc()))
@@ -454,14 +496,14 @@ def main():
 
 def search_for_block_height_of_date(datestr, rpc):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
-    target_time = datetime.datetime.strptime(datestr, "%d/%m/%Y")
+    target_time = datetime.strptime(datestr, "%d/%m/%Y")
     bestblockhash = rpc.call("getbestblockhash", [])
     best_head = rpc.call("getblockheader", [bestblockhash])
-    if target_time > datetime.datetime.fromtimestamp(best_head["time"]):
+    if target_time > datetime.fromtimestamp(best_head["time"]):
         logger.error("date in the future")
         return -1
     genesis_block = rpc.call("getblockheader", [rpc.call("getblockhash", [0])])
-    if target_time < datetime.datetime.fromtimestamp(genesis_block["time"]):
+    if target_time < datetime.fromtimestamp(genesis_block["time"]):
         logger.warning("date is before the creation of bitcoin")
         return 0
     first_height = 0
@@ -469,7 +511,7 @@ def search_for_block_height_of_date(datestr, rpc):
     while True:
         m = (first_height + last_height) // 2
         m_header = rpc.call("getblockheader", [rpc.call("getblockhash", [m])])
-        m_header_time = datetime.datetime.fromtimestamp(m_header["time"])
+        m_header_time = datetime.fromtimestamp(m_header["time"])
         m_time_diff = (m_header_time - target_time).total_seconds()
         if abs(m_time_diff) < 60*60*2: #2 hours
             return m_header["height"]

@@ -46,3 +46,6 @@ from electrumpersonalserver.server.electrumprotocol import (
     get_block_headers_hex,
     DONATION_ADDR,
 )
+from electrumpersonalserver.server.mempoolhistogram import (
+    MempoolSync
+)
