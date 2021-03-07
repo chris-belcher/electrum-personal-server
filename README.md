@@ -4,7 +4,7 @@ Electrum Personal Server aims to make using Electrum bitcoin wallet more secure
 and more private. It makes it easy to connect your Electrum wallet to your own
 full node.
 
-[Full nodes](https://en.bitcoin.it/wiki/Full_node) wallets are important in
+[Full node](https://en.bitcoin.it/wiki/Full_node) wallets are important in
 bitcoin because they are a big part of what makes the system trustless. No
 longer do people have to trust a financial institution like a bank or Paypal,
 they can run software on their own computers. If bitcoin is digital gold, then
