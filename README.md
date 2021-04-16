@@ -210,6 +210,7 @@ Definitely check out other implementations:
 - [ElectrumX](https://github.com/spesmilo/electrumx) - Full Electrum server maintained by the Electrum project
 - [Electrs](https://github.com/romanz/electrs) - Full Electrum server coded in rust
 - [Bitcoin Wallet Tracker](https://github.com/bwt-dev/bwt) - Wallet indexer coded in rust
+- [Obelisk](https://github.com/parazyd/obelisk) - Minimal Electrum server using zeromq and libbitcoin as backend
 
 #### Further ideas for work
 
