@@ -1,3 +1,17 @@
+# Release v0.2.2 (29th May 2021)
+
+New release, thanks to contributions by Liongrass, Talkless and parazyd
+And thanks to everyone else who contributed via discussion and donations
+
+* Rewrite mempool handling to always be responsive. Previously the server
+  would massively lag if the mempool was large, so most users just disabled
+  the mempool histogram. With this update that is no longer an issue.
+* If Electrum Personal Server fails at startup it will now return a non-zero
+  error code, making it more usable with automated scripts like systemd.
+* Client will now warn user if tor broadcasting fails because tor is not
+  accessible.
+* Various optimizations and bug fixes.
+
 # Release v0.2.1.1 (9th June 2020)
 
 Bugfix release. Thanks to everyone who reported the bug and jmacxx who wrote
