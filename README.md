@@ -249,7 +249,7 @@ My PGP key fingerprint is: `0A8B 038F 5E10 CC27 89BF CFFF EF73 4EA6 77F3 1129`.
 
 ## Contributing
 
-Donate to help improve Electrum Personal Server: `bc1qwt8kh83dpdj4yuquvsf28rhcft2rjh6jvy6678` or `15wAE63DG8RH6xp7nTucgYn1Jb4acR1EvM`. Signed donation addresses can be found [here](/docs/signed-donation-addresses.txt).
+Donate to help improve Electrum Personal Server: `bc1qp9ha0h2zns2ga2p00te72xs9nsnzspg9ess6fe`. Signed donation addresses can be found [here](/docs/signed-donation-addresses.txt).
 
 This is open source project which happily accepts coding contributions from
 anyone. See [developer-notes.md](docs/developer-notes.md).

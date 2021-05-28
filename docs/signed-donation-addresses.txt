@@ -1,13 +1,11 @@
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA512
 
-Bitcoin addresses for sending donations to the Electrum Personal Server project
+Bitcoin address for sending donations to the Electrum Personal Server project:
 
-(bech32) bc1qwt8kh83dpdj4yuquvsf28rhcft2rjh6jvy6678
-(legacy) 15wAE63DG8RH6xp7nTucgYn1Jb4acR1EvM
+bc1qp9ha0h2zns2ga2p00te72xs9nsnzspg9ess6fe
 
 Always check signatures of addresses to avoid man-in-the-middle attacks
-
 The GPG public key and fingerprint can be found at:
 * The Electrum Personal Server github repository in /docs/pubkeys/belcher.asc
 * https://github.com/chris-belcher
@@ -15,21 +13,23 @@ The GPG public key and fingerprint can be found at:
 * https://twitter.com/chris_belcher_/status/559879313622061056
 * https://bitcointalk.org/index.php?action=profile;u=321816
 * https://en.bitcoin.it/wiki/User:Belcher
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+* https://x0f.org/@belcher/105595837557120598
 
-iQIcBAEBCgAGBQJe2P7yAAoJEO9zTqZ38xEpoE8QAKOwstmd+LW6ohmPM22O9Ei6
-VdOJXKUgxJMJKBfPaRKGSIZqAs1wboBJ7b3llig5+aQuZ5T4M5O2ZQ6dWM0py67v
-+9OnW4c6U7Q7mx0VvDdF8hBZXl3+OuMbphYMp4OCworgn8bRPXtGyGTTV4su849B
-Fy+K1L7ZkRd2z1gwTxRKMYvQRsh/SvwDfVaCkKG00hVc77jgS39kUdIcrKHJXNhr
-XM5efu9+DbF3cpaxKjYoq2y3D6C09raVuIm66HiDBgVr3ihnN1TakUQUIQkgj0/y
-cnI8p9IdXoWc+wL7aYvGAtapqtLkxJmKnYmiowXVZQfZATe77W6z2XQKKUz9QCVx
-9rxet0y5MWrx7vpH1m7YkSvOhpi75T03OVUPRBJ1wKWZXPlcaMH69x6ncq1U96MO
-AmLrqVi/bPyq3uZeVNfWrLGSCJecP/htYmSTtW4n/1eknd+r/3eyXHDImMqjWY3C
-FGlhZRQwrhxGef6fSAG25EGpzpjXwTpbTc8dJ3B1pPWEnOd7zQOsa6lbWiFsU57V
-PI0pqGfqFuTKxfgK/zbR/qR0GHxMPFMWR7yLwhtkVN9FXL50APYECsDdfjg0DRSp
-BVkpzqALYNNjEgiy0KKTT4trQ5fYqXB+J58S1/cL0I/yY2dQKlZVBJ5JIBEkCIaf
-VZUIiz0Tcb53wTf54331
-=qjzp
+-----BEGIN PGP SIGNATURE-----
+
+iQJEBAEBCgAuFiEECosDj14QzCeJv8//73NOpnfzESkFAmCxaNsQHGZhbHNlQGVt
+YWlsLmNvbQAKCRDvc06md/MRKQa+EACDqabXU0NUdJWQWY7t/MwYkGWUoMXqrlpr
+UBAs5feg10KMRqnz/oC3VKui3cb3lVIYqA1ZOonP/9H76CeEobkzN6YbUdhvw/67
+Zzv4IKKg9eV0W6JchHTCEhqZ4PGnpylh13xbvZP7laA7hkDebXN9f3mzIWv1nggu
+A85cMCNW/NYVUlfxCfVO/YJTUxFl8RuH7VANSHWzvxxAfwrcS8FAQpePUofm0EPU
+tp70gbHa3PQb+KPDVtam40hX3cd4Usn2SMcC0zkri2ztfr2HzmpYiR724JIvOfen
+mlhT5pxygHi3iboJVnyjEUPoQZo/MiD/NFQQaPjmqrcgvAhdtMAUeK1eGIeIeA3x
+jD7m6ykS01xWTImY7f0xuH2MbdnwEMMl1B6VoFfTVRqJAr3tG5KwDKM9zsVyegFs
+VGJbAf+ofSxacsMjcVNuGnP/qeaVVuAWVYiqj9eUk4lyqg6qH2S2mgqEYAwzFoAl
+3s80x1PSzyElYEvVsPkN84rKV5u0bnXE5Il8bIxY/DJ0Wtd/Ct7239aRjDLhCc1N
+hUnw3WpYiVrbNNqN3qtjP9mCHO4maLquOFfBJWjN8lehDqt24F6TMmhjfQLZW7Vy
+VHG2kMwX6qifHLcEeO9rSnvARUspvuvP07BXhwM4T2UX//lUMy6uvOV5tCH9Uw0P
+gDXREuKBxw==
+=sKlL
 -----END PGP SIGNATURE-----
 
