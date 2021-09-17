@@ -1,3 +1,5 @@
+Forked from https://github.com/chris-belcher/electrum-personal-server
+
 # Electrum Personal Server
 
 Electrum Personal Server aims to make using Electrum bitcoin wallet more secure
