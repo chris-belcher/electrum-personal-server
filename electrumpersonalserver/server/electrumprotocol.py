@@ -256,6 +256,14 @@ class ElectrumProtocol(object):
                     + "hash(address) = " + scrhash)
                 raise UnknownScripthashError(scrhash)
             self._send_response(query, balance)
+        elif method == "blockchain.scripthash.listunspent":
+            scrhash = query["params"][0]
+            utxos = self.txmonitor.get_address_utxos(scrhash)
+            if utxos == None:
+                self.logger.warning("Address history not known to server, "
+                    + "hash(address) = " + scrhash)
+                raise UnknownScripthashError(scrhash)
+            self._send_response(query, utxos)
         elif method == "server.ping":
             self._send_response(query, None)
         elif method == "blockchain.headers.subscribe":
