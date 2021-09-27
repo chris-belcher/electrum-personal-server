@@ -111,7 +111,7 @@ class TransactionMonitor(object):
     def build_address_history(self, monitored_scriptpubkeys):
         logger = self.logger
         logger.info("Building history with " +
-            str(len(monitored_scriptpubkeys)) + " addresses . . .")
+            str(len(monitored_scriptpubkeys)) + " addresses . . . : ")
         st = time.time()
         address_history = {}
         for spk in monitored_scriptpubkeys:
@@ -208,8 +208,14 @@ class TransactionMonitor(object):
         et = time.time()
         logger.info("Found " + str(count) + " txes. History built in "
             + str(et - st) + "sec")
-        self.address_history = address_history
-        self.unconfirmed_txes = unconfirmed_txes
+        if(self.address_history == None):
+            self.address_history=address_history
+        else:
+            self.address_history.update(address_history)
+        if(self.unconfirmed_txes == None): 
+            self.unconfirmed_txes=unconfirmed_txes
+        else:
+            self.unconfirmed_txes.update(unconfirmed_txes)
         return True
 
     def get_input_and_output_scriptpubkeys(self, txid):
