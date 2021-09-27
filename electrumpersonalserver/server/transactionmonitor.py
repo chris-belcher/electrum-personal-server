@@ -4,6 +4,7 @@ import pprint
 import math
 import sys
 import logging
+import json
 from decimal import Decimal
 from collections import defaultdict
 
@@ -81,6 +82,21 @@ class TransactionMonitor(object):
         return {"confirmed": confirmed_balance, "unconfirmed":
             unconfirmed_balance}
 
+    def get_address_utxos(self, scrhash):
+        history = self.get_electrum_history(scrhash)
+        if history == None:
+            return None
+        utxos = []
+        for tx_info in history:
+            tx = self.rpc.call("gettransaction", [tx_info["tx_hash"]])
+            txd = self.rpc.call("decoderawtransaction", [tx["hex"]])
+            for index, output in enumerate(txd["vout"]):
+                if script_to_scripthash(output["scriptPubKey"]["hex"]
+                    ) != scrhash:
+                    continue
+                utxos.append({"tx_hash": txd["txid"], "tx_pos": index, "value": output["value"], "confirmations": tx["confirmations"]})
+        return utxos
+                
     def subscribe_address(self, scrhash):
         if scrhash in self.address_history:
             self.address_history[scrhash]["subscribed"] = True
@@ -192,8 +208,14 @@ class TransactionMonitor(object):
         et = time.time()
         logger.info("Found " + str(count) + " txes. History built in "
             + str(et - st) + "sec")
-        self.address_history = address_history
-        self.unconfirmed_txes = unconfirmed_txes
+        if(self.address_history == None):
+            self.address_history=address_history
+        else:
+            self.address_history.update(address_history)
+        if(self.unconfirmed_txes == None): 
+            self.unconfirmed_txes=unconfirmed_txes
+        else:
+            self.unconfirmed_txes.update(unconfirmed_txes)
         return True
 
     def get_input_and_output_scriptpubkeys(self, txid):
