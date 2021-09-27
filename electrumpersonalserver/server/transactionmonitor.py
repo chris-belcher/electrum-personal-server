@@ -111,7 +111,7 @@ class TransactionMonitor(object):
     def build_address_history(self, monitored_scriptpubkeys):
         logger = self.logger
         logger.info("Building history with " +
-            str(len(monitored_scriptpubkeys)) + " addresses . . . : ")
+            str(len(monitored_scriptpubkeys)) + " addresses . . .")
         st = time.time()
         address_history = {}
         for spk in monitored_scriptpubkeys:
