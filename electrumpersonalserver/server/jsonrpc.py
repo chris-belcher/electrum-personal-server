@@ -114,7 +114,6 @@ class JsonRpc(object):
                 break
             #Failure means keepalive timed out, just make a new one
             self.conn = http.client.HTTPConnection(self.host, self.port)
-            self.logger.debug("Creating new jsonrpc HTTPConnection")
         if not response_received:
             raise JsonRpcConnectionError("Unable to connect over RPC")
         if response["id"] != currentId:
