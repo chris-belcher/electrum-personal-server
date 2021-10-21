@@ -47,8 +47,11 @@ def on_heartbeat_listening(poll_interval_listening, txmonitor):
     try:
         txmonitor.check_for_updated_txes()
         is_node_reachable = True
-    except JsonRpcError:
+    except JsonRpcError as e:
         is_node_reachable = False
+        logger = logging.getLogger('ELECTRUMPERSONALSERVER')
+        logger.debug("Error with node connection, e = " + repr(e)
+            + "\ntraceback = " + str(traceback.format_exc()))
     return is_node_reachable
 
 def on_heartbeat_connected(poll_interval_connected, rpc, txmonitor, protocol):
