@@ -146,7 +146,7 @@ rebroadcasting transactions without tor.
 
 ### Links to other setup guides
 
-- [How to setup Electrum Personal Server on a Raspberry Pi](https://github.com/Stadicus/RaspiBolt/blob/master/raspibolt_64_electrum.md)
+- [How to setup Electrum Personal Server on a Raspberry Pi](https://raspibolt.github.io/raspibolt/raspibolt_64_electrum.html)
 - [Electrum Personal Server on Windows 10](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_63_eps-win.html)
 - [Running Electrum Personal Server on Mac OS](https://driftwoodpalace.github.io/Hodl-Guide/hodl-guide_64_eps-mac.html)
 - [How to set up your own Bitcoin node, Electrum wallet and Server](https://curiosityoverflow.xyz/posts/bitcoin-electrum-wallet/)
