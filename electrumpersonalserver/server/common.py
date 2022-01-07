@@ -306,7 +306,6 @@ def get_scriptpubkeys_to_monitor(rpc, config):
                     break
                 spks_to_monitor.append(spks[0])
             wal.rewind_one(change)
-
     spks_to_monitor.extend([hashes.address_to_script(addr, rpc)
         for addr in watch_only_addresses])
     et = time.time()

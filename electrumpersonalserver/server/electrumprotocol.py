@@ -7,11 +7,13 @@ import struct
 import tempfile
 import socket
 from collections import defaultdict
+from electrumpersonalserver.server.deterministicwallet import import_addresses
 
 from electrumpersonalserver.server.hashes import (
     hash_merkle_root,
     get_status_electrum,
-    bytes_fmt
+    bytes_fmt,
+    address_to_script
 )
 from .jsonrpc import JsonRpc, JsonRpcError
 from electrumpersonalserver.server.peertopeer import tor_broadcast_tx
@@ -256,6 +258,14 @@ class ElectrumProtocol(object):
                     + "hash(address) = " + scrhash)
                 raise UnknownScripthashError(scrhash)
             self._send_response(query, balance)
+        elif method == "blockchain.scripthash.listunspent":
+            scrhash = query["params"][0]
+            utxos = self.txmonitor.get_address_utxos(scrhash)
+            if utxos == None:
+                self.logger.warning("Address history not known to server, "
+                    + "hash(address) = " + scrhash)
+                raise UnknownScripthashError(scrhash)
+            self._send_response(query, utxos)
         elif method == "server.ping":
             self._send_response(query, None)
         elif method == "blockchain.headers.subscribe":
@@ -384,6 +394,7 @@ class ElectrumProtocol(object):
             self._send_response(query, result)
         elif method == "blockchain.estimatefee":
             estimate = self.rpc.call("estimatesmartfee", [query["params"][0]])
+            self.logger.info('estimate: ' + estimate)
             feerate = 0.0001
             if "feerate" in estimate:
                 feerate = estimate["feerate"]
@@ -475,7 +486,27 @@ class ElectrumProtocol(object):
             except JsonRpcError as e:
                 error = {"message": repr(e)}
                 self._send_error(query["id"], error)
+        elif method == "import_addresses":
+            addresses = query["params"][0]
+            rescan_height = False
+            if len(query["params"]) > 1:
+                rescan_height = query["params"][1]
+            if rescan_height < 0:
+                rescan_height = False
+            if len(addresses) > 0:
+                spks_to_monitor = []
+                spks_to_monitor.extend([address_to_script(addr, self.rpc) for addr in addresses])
+                self.logger.info("Importing addresses:" + ' '.join(map(str,addresses)) +  "...")
+                import_addresses(self.rpc, spks_to_monitor, [], -1, self.logger)
+                self.logger.info("end")
+                if ( rescan_height ):
+                    self.logger.info("Rescanning. . . for progress indicator see the bitcoin node's" + " debug.log file")
+                    self.rpc.call("rescanblockchain", [rescan_height])
+                    self.logger.info("end")
+                self.txmonitor.build_address_history(spks_to_monitor)
+            self._send_response(query, { "result": "success"} )
         else:
+            self.logger.error(method)
             self.logger.error("*** BUG! Not handling method: " + method
                 + " query=" + str(query))
 
