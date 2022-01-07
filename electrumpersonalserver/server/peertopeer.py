@@ -18,7 +18,7 @@ from electrumpersonalserver.server.socks import (
 from electrumpersonalserver.server.jsonrpc import JsonRpcError
 
 PROTOCOL_VERSION = 70016
-DEFAULT_USER_AGENT = '/Satoshi:0.22.0/'
+DEFAULT_USER_AGENT = '/Satoshi:22.0.0/'
 
 #https://github.com/bitcoin/bitcoin/blob/master/src/protocol.h
 NODE_NETWORK = 1
