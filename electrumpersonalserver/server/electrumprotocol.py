@@ -27,7 +27,7 @@ SERVER_VERSION_NUMBER = "0.2.2"
 SERVER_PROTOCOL_VERSION_MAX = 1.4
 SERVER_PROTOCOL_VERSION_MIN = 1.1
 
-DONATION_ADDR = "bc1qp9ha0h2zns2ga2p00te72xs9nsnzspg9ess6fe"
+DONATION_ADDR = "bc1qe74qzd256kxevq2gn7gmscs564lfk5tqrxqsuy"
 
 BANNER = \
 """Welcome to Electrum Personal Server {serverversion}

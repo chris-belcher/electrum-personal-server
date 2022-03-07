@@ -3,7 +3,7 @@ Hash: SHA512
 
 Bitcoin address for sending donations to the Electrum Personal Server project:
 
-bc1qp9ha0h2zns2ga2p00te72xs9nsnzspg9ess6fe
+bc1qe74qzd256kxevq2gn7gmscs564lfk5tqrxqsuy
 
 Always check signatures of addresses to avoid man-in-the-middle attacks
 The GPG public key and fingerprint can be found at:
@@ -17,19 +17,19 @@ The GPG public key and fingerprint can be found at:
 
 -----BEGIN PGP SIGNATURE-----
 
-iQJEBAEBCgAuFiEECosDj14QzCeJv8//73NOpnfzESkFAmCxaNsQHGZhbHNlQGVt
-YWlsLmNvbQAKCRDvc06md/MRKQa+EACDqabXU0NUdJWQWY7t/MwYkGWUoMXqrlpr
-UBAs5feg10KMRqnz/oC3VKui3cb3lVIYqA1ZOonP/9H76CeEobkzN6YbUdhvw/67
-Zzv4IKKg9eV0W6JchHTCEhqZ4PGnpylh13xbvZP7laA7hkDebXN9f3mzIWv1nggu
-A85cMCNW/NYVUlfxCfVO/YJTUxFl8RuH7VANSHWzvxxAfwrcS8FAQpePUofm0EPU
-tp70gbHa3PQb+KPDVtam40hX3cd4Usn2SMcC0zkri2ztfr2HzmpYiR724JIvOfen
-mlhT5pxygHi3iboJVnyjEUPoQZo/MiD/NFQQaPjmqrcgvAhdtMAUeK1eGIeIeA3x
-jD7m6ykS01xWTImY7f0xuH2MbdnwEMMl1B6VoFfTVRqJAr3tG5KwDKM9zsVyegFs
-VGJbAf+ofSxacsMjcVNuGnP/qeaVVuAWVYiqj9eUk4lyqg6qH2S2mgqEYAwzFoAl
-3s80x1PSzyElYEvVsPkN84rKV5u0bnXE5Il8bIxY/DJ0Wtd/Ct7239aRjDLhCc1N
-hUnw3WpYiVrbNNqN3qtjP9mCHO4maLquOFfBJWjN8lehDqt24F6TMmhjfQLZW7Vy
-VHG2kMwX6qifHLcEeO9rSnvARUspvuvP07BXhwM4T2UX//lUMy6uvOV5tCH9Uw0P
-gDXREuKBxw==
-=sKlL
+iQJEBAEBCgAuFiEECosDj14QzCeJv8//73NOpnfzESkFAmImWOcQHGZhbHNlQGVt
+YWlsLmNvbQAKCRDvc06md/MRKW29D/9QJMY4egYSlSUtKVUyE7AiWTQeG/ClWE2S
+oOOKrneoQ+dEXcUA5o1P5+I8i6h03cwTQraZyL3sN+01X65d6vv57Qp11B2OQb4h
+6Xz4TYK7uUGc4oC/OkHPiM2XUsfH10YNZyYx6pvGTYURlzf7iyhysWaaGYHWmlmK
+ksTBNopx/S840ChT+h0M3zqQoEGodphZ27CTzv+ruaVhOL1X1H5Em6/H7VTp0yyu
+BL8pTvt6LP7Ca71bhDHllIOuAQy1OeWgcpeSn2kD9JNK47q8j+yX4G9BN2BxKEUx
+xPC6sUO/qtigN1X7E4EmlHBXlbB0mnyGPVQAeoetgwpz8/psay5MPTo+MYfP/t4i
+iDgELdqWoGnsd+nM89GIkTH+LjQounyzhKqYEsAubV8Vz3J1xiV+qyf2w2rvPY9g
+hJpMmJI3tXN/hGPv7b+hcQ+iV7oHXPtHta55w9DhCC9a29t/4Z7Pe2gthewklD48
+gLBZOr6ZLFbJVphqArFc/qfDElgOmLxxVPm9GvzFPi7Hc/2BJNmV+Nn3WZwrdl1w
+RmnqhQr3nEivB2zpBYtTwTPqP6OwhSE9BqqnM6dWoYssv6DqdpcMzrjp5skuC+JV
+YV0nitJdDi+7tYiouVCzaR/XuzXImwn0DoOJkEljZw1ytU+b/M4CzYjOJ8+XhEud
+ujzBkPVxVA==
+=FNv/
 -----END PGP SIGNATURE-----
 
