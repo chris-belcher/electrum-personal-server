@@ -383,10 +383,15 @@ class ElectrumProtocol(object):
                 + str(len(self.mempool_sync.mempool)))
             self._send_response(query, result)
         elif method == "blockchain.estimatefee":
-            estimate = self.rpc.call("estimatesmartfee", [query["params"][0]])
             feerate = 0.0001
-            if "feerate" in estimate:
-                feerate = estimate["feerate"]
+            try:
+                estimate = self.rpc.call("estimatesmartfee", [query["params"][0]])
+                if "feerate" in estimate:
+                    feerate = estimate["feerate"]
+            except JsonRpcError as e:
+                self.logger.debug(
+                    "sending 1sat/vb, unable to get fee estimate from node: "
+                    + repr(e))
             self._send_response(query, feerate)
         elif method == "blockchain.relayfee":
             networkinfo = self.rpc.call("getnetworkinfo", [])
