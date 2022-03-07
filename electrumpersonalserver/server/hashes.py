@@ -73,7 +73,7 @@ def hash_160(public_key):
 ## end of electrum copypaste
 
 def script_to_address(scriptPubKey, rpc):
-    return rpc.call("decodescript", [scriptPubKey])["addresses"][0]
+    return rpc.call("decodescript", [scriptPubKey])["address"]
 
 def address_to_script(addr, rpc):
     return rpc.call("validateaddress", [addr])["scriptPubKey"]
