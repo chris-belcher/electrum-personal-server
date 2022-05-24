@@ -231,12 +231,13 @@ def is_address_imported(rpc, address):
 def get_scriptpubkeys_to_monitor(rpc, config):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
     st = time.time()
+    gaplimit = int(config.get("bitcoin-rpc", "gap_limit"))
+    chain = rpc.call("getblockchaininfo", [])["chain"]
+    import_count = int(config.get("bitcoin-rpc", "initial_import_count"))
 
     deterministic_wallets = []
     for key in config.options("master-public-keys"):
         mpk = config.get("master-public-keys", key)
-        gaplimit = int(config.get("bitcoin-rpc", "gap_limit"))
-        chain = rpc.call("getblockchaininfo", [])["chain"]
         try:
             wal = deterministicwallet.parse_electrum_master_public_key(mpk,
                 gaplimit, rpc, chain)
@@ -256,8 +257,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
             count=TEST_ADDR_COUNT)
         logger.info("\n" + config_mpk_key + " =>\n\t" + "\n\t".join(
             first_addrs))
-        last_addr, last_spk = wal.get_addresses(change=0, from_index=int(
-            config.get("bitcoin-rpc", "initial_import_count")) - 1, count=1)
+        last_addr, last_spk = wal.get_addresses(change=0, from_index=import_count - 1, count=1)
         if not all((is_address_imported(rpc, a) for a in (first_addrs
                 + last_addr))):
             import_needed = True
@@ -296,8 +296,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     spks_to_monitor = []
     for wal in deterministic_wallets:
         for change in [0, 1]:
-            addrs, spks = wal.get_addresses(change, 0,
-                int(config.get("bitcoin-rpc", "initial_import_count")))
+            addrs, spks = wal.get_addresses(change, 0, import_count)
             spks_to_monitor.extend(spks)
             #loop until one address found that isnt imported
             while True:
