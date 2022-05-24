@@ -24,33 +24,30 @@ def import_addresses(rpc, watchonly_addrs, wallets, change_param, count,
         + "address[es] and " + str(len(wallets)) + " wallet[s] into label \""
         + ADDRESSES_LABEL + "\"")
 
-    watchonly_addr_param = [{"scriptPubKey": {"address": addr}, "label":
-        ADDRESSES_LABEL, "watchonly": True, "timestamp": "now"}
-        for addr in watchonly_addrs]
-    rpc.call("importmulti", [watchonly_addr_param, {"rescan": False}])
+    for addr in watchonly_addrs:
+        try:
+            addr_desc = rpc.call("getdescriptorinfo",[f'addr({addr})'])["descriptor"]
+            rpc.call("importdescriptors", [[{"desc": addr_desc, "label": ADDRESSES_LABEL, "timestamp": "now"}]])
+        except JsonRpcError as e:
+            ValueError(repr(e))
 
     for i, wal in enumerate(wallets):
         logger.info("Importing wallet " + str(i+1) + "/" + str(len(wallets)))
         if isinstance(wal, DescriptorDeterministicWallet):
             if change_param in (0, -1):
                 #import receive addrs
-                rpc.call("importmulti", [[{"desc": wal.descriptors[0], "range":
-                    [0, count-1], "label": ADDRESSES_LABEL, "watchonly": True,
-                    "timestamp": "now"}], {"rescan": False}])
+                rpc.call("importdescriptors", [[{"desc": wal.descriptors[0], "range": [0, count-1], "timestamp": "now" }]])
             if change_param in (1, -1):
                 #import change addrs
-                rpc.call("importmulti", [[{"desc": wal.descriptors[1], "range":
-                    [0, count-1], "label": ADDRESSES_LABEL, "watchonly": True,
-                    "timestamp": "now"}], {"rescan": False}])
+                rpc.call("importdescriptors", [[{"desc": wal.descriptors[1], "range": [0, count-1], "timestamp": "now" }]])
         else:
             #old-style-seed wallets
             logger.info("importing an old-style-seed wallet, will be slow...")
             for change in [0, 1]:
                 addrs, spks = wal.get_addresses(change, 0, count)
-                addr_param = [{"scriptPubKey": {"address": a}, "label":
-                    ADDRESSES_LABEL, "watchonly": True, "timestamp": "now"}
-                    for a in addrs]
-                rpc.call("importmulti", [addr_param, {"rescan": False}])
+                for a in addrs:
+                    addr_desc = rpc.call("getdescriptorinfo", [f'addr({a})'])["descriptor"]
+                    rpc.call("importdescriptors", [[{"desc": addr_desc, "label": ADDRESSES_LABEL, "timestamp": "now"}]])
     logger.debug("Importing done")
 
 

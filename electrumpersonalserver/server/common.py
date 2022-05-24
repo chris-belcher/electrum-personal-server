@@ -226,7 +226,7 @@ def run_electrum_server(rpc, txmonitor, config):
         time.sleep(0.2)
 
 def is_address_imported(rpc, address):
-    return rpc.call("getaddressinfo", [address])["iswatchonly"]
+    return rpc.call("getaddressinfo", [address])["ismine"]
 
 def get_scriptpubkeys_to_monitor(rpc, config):
     logger = logging.getLogger('ELECTRUMPERSONALSERVER')
@@ -236,6 +236,7 @@ def get_scriptpubkeys_to_monitor(rpc, config):
     import_count = int(config.get("bitcoin-rpc", "initial_import_count"))
 
     deterministic_wallets = []
+    xpubs = []
     for key in config.options("master-public-keys"):
         mpk = config.get("master-public-keys", key)
         try:
@@ -244,15 +245,24 @@ def get_scriptpubkeys_to_monitor(rpc, config):
         except ValueError:
             raise ValueError("Bad master public key format. Get it from " +
                 "Electrum menu `Wallet` -> `Information`")
+        xpubs.append(mpk)
         deterministic_wallets.append(wal)
+    for key in config.options("public-descriptors"):
+        descriptor = config.get("public-descriptors", key)
+        try:
+            wal = deterministicwallet.parse_xpub_descriptor(descriptor, gaplimit, rpc, chain)
+        except ValueError:
+            raise ValueError("Bad descriptor format.")
+        xpubs.append(descriptor)
+        deterministic_wallets.append(wal)
+
     #check whether these deterministic wallets have already been imported
     import_needed = False
     wallets_to_import = []
     TEST_ADDR_COUNT = 3
     logger.info("Displaying first " + str(TEST_ADDR_COUNT) + " addresses of " +
         "each master public key:")
-    for config_mpk_key, wal in zip(config.options("master-public-keys"),
-            deterministic_wallets):
+    for config_mpk_key, wal in zip(xpubs, deterministic_wallets):
         first_addrs, first_spk = wal.get_addresses(change=0, from_index=0,
             count=TEST_ADDR_COUNT)
         logger.info("\n" + config_mpk_key + " =>\n\t" + "\n\t".join(
@@ -443,6 +453,10 @@ def main():
         logger.error(repr(e))
         logger.error("Wallet related RPC call failed, possibly the " +
             "bitcoin node was compiled with the disable wallet flag")
+        return 1
+    if rpc.call("getwalletinfo", [])["descriptors"] is False:
+        logger.error("This is a legacy wallet that does not support descriptors." +
+                     "It needs to be replaced by a newer one.")
         return 1
 
     test_keydata = (
