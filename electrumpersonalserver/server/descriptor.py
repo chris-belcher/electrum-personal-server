@@ -179,50 +179,6 @@ class PubkeyProvider(object):
             s += self.deriv_path
         return s
 
-    def get_pubkey_bytes(self, pos: int) -> bytes:
-        if self.extkey is not None:
-            if self.deriv_path is not None:
-                path_str = self.deriv_path[1:]
-                if path_str[-1] == "*":
-                    path_str = path_str[-1] + str(pos)
-                path = parse_path(path_str)
-                child_key = self.extkey.derive_pub_path(path)
-                return child_key.pubkey
-            else:
-                return self.extkey.pubkey
-        return unhexlify(self.pubkey)
-
-    def get_full_derivation_path(self, pos: int) -> str:
-        """
-        Returns the full derivation path at the given position, including the origin
-        """
-        path = self.origin.get_derivation_path() if self.origin is not None else "m/"
-        path += self.deriv_path if self.deriv_path is not None else ""
-        if path[-1] == "*":
-            path = path[:-1] + str(pos)
-        return path
-
-    def get_full_derivation_int_list(self, pos: int) -> List[int]:
-        """
-        Returns the full derivation path as an integer list at the given position.
-        Includes the origin and master key fingerprint as an int
-        """
-        path: List[int] = self.origin.get_full_int_list() if self.origin is not None else []
-        if self.deriv_path is not None:
-            der_split = self.deriv_path.split("/")
-            for p in der_split:
-                if not p:
-                    continue
-                if p == "*":
-                    i = pos
-                elif p[-1] in "'phHP":
-                    assert len(p) >= 2
-                    i = int(p[:-1]) | 0x80000000
-                else:
-                    i = int(p)
-                path.append(i)
-        return path
-
     def __lt__(self, other: 'PubkeyProvider') -> bool:
         return self.pubkey < other.pubkey
 
@@ -282,12 +238,6 @@ class Descriptor(object):
         """
         return AddChecksum(self.to_string_no_checksum())
 
-    def expand(self, pos: int) -> "ExpandedScripts":
-        """
-        Returns the scripts for a descriptor at the given `pos` for ranged descriptors.
-        """
-        raise NotImplementedError("The Descriptor base class does not implement this method")
-
 
 class PKDescriptor(Descriptor):
     """
@@ -316,11 +266,6 @@ class PKHDescriptor(Descriptor):
         """
         super().__init__([pubkey], [], "pkh")
 
-    def expand(self, pos: int) -> "ExpandedScripts":
-        script = b"\x76\xa9\x14" + hash160(self.pubkeys[0].get_pubkey_bytes(pos)) + b"\x88\xac"
-        return ExpandedScripts(script, None, None)
-
-
 class WPKHDescriptor(Descriptor):
     """
     A descriptor for ``wpkh()`` descriptors
@@ -333,11 +278,6 @@ class WPKHDescriptor(Descriptor):
         :param pubkey: The :class:`PubkeyProvider` for this descriptor
         """
         super().__init__([pubkey], [], "wpkh")
-
-    def expand(self, pos: int) -> "ExpandedScripts":
-        script = b"\x00\x14" + hash160(self.pubkeys[0].get_pubkey_bytes(pos))
-        return ExpandedScripts(script, None, None)
-
 
 class MultisigDescriptor(Descriptor):
     """
@@ -379,13 +319,6 @@ class SHDescriptor(Descriptor):
         """
         super().__init__([], [subdescriptor], "sh")
 
-    def expand(self, pos: int) -> "ExpandedScripts":
-        assert len(self.subdescriptors) == 1
-        redeem_script, _, witness_script = self.subdescriptors[0].expand(pos)
-        script = b"\xa9\x14" + hash160(redeem_script) + b"\x87"
-        return ExpandedScripts(script, redeem_script, witness_script)
-
-
 class WSHDescriptor(Descriptor):
     """
     A descriptor for ``wsh()`` descriptors
@@ -398,13 +331,6 @@ class WSHDescriptor(Descriptor):
         :param subdescriptor: The :class:`Descriptor` that is a sub-descriptor for this descriptor
         """
         super().__init__([], [subdescriptor], "wsh")
-
-    def expand(self, pos: int) -> "ExpandedScripts":
-        assert len(self.subdescriptors) == 1
-        witness_script, _, _ = self.subdescriptors[0].expand(pos)
-        script = b"\x00\x20" + sha256(witness_script)
-        return ExpandedScripts(script, None, witness_script)
-
 
 class TRDescriptor(Descriptor):
     """
