@@ -12,8 +12,6 @@ from electrumpersonalserver.server.descriptor import parse_descriptor
 #and
 #https://github.com/spesmilo/electrum-docs/blob/master/xpub_version_bytes.rst
 
-ADDRESSES_LABEL = "electrum-watchonly-addresses"
-
 def import_addresses(rpc, watchonly_addrs, wallets, change_param, count,
         logger=None):
     """
@@ -21,13 +19,12 @@ def import_addresses(rpc, watchonly_addrs, wallets, change_param, count,
     """
     logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.debug("Importing " + str(len(watchonly_addrs)) + " watch-only "
-        + "address[es] and " + str(len(wallets)) + " wallet[s] into label \""
-        + ADDRESSES_LABEL + "\"")
+        + "address[es] and " + str(len(wallets)) + " wallet[s] ")
 
     for addr in watchonly_addrs:
         try:
             addr_desc = rpc.call("getdescriptorinfo",[f'addr({addr})'])["descriptor"]
-            rpc.call("importdescriptors", [[{"desc": addr_desc, "label": ADDRESSES_LABEL, "timestamp": "now"}]])
+            rpc.call("importdescriptors", [[{"desc": addr_desc, "timestamp": "now"}]])
         except JsonRpcError as e:
             ValueError(repr(e))
 
@@ -47,7 +44,7 @@ def import_addresses(rpc, watchonly_addrs, wallets, change_param, count,
                 addrs, spks = wal.get_addresses(change, 0, count)
                 for a in addrs:
                     addr_desc = rpc.call("getdescriptorinfo", [f'addr({a})'])["descriptor"]
-                    rpc.call("importdescriptors", [[{"desc": addr_desc, "label": ADDRESSES_LABEL, "timestamp": "now"}]])
+                    rpc.call("importdescriptors", [[{"desc": addr_desc, "timestamp": "now"}]])
     logger.debug("Importing done")
 
 
