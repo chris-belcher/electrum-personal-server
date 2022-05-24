@@ -152,6 +152,20 @@ class PubkeyProvider(object):
 
         return cls(origin, pubkey, deriv_path)
 
+    def is_xpub(self):
+        return self.extkey is not None
+
+    def to_string_ranged(self, change):
+        assert self.is_xpub()
+        assert change in (0,1)
+        s = ""
+        if self.origin:
+            s += "[{}]".format(self.origin.to_string())
+        s += self.pubkey
+        s += '/{}/*'.format(change)
+        return s
+
+
     def to_string(self) -> str:
         """
         Serialize the pubkey expression to a string to be used in a descriptor
@@ -226,12 +240,17 @@ class Descriptor(object):
     ) -> None:
         r"""
         :param pubkeys: The :class:`PubkeyProvider`\ s that are part of this descriptor
-        :param subdescriptor: The ``Descriptor``\ s that are part of this descriptor
+        :param subdescriptors: The ``Descriptor``\ s that are part of this descriptor
         :param name: The name of the function for this descriptor
         """
         self.pubkeys = pubkeys
         self.subdescriptors = subdescriptors
         self.name = name
+
+    def is_xpub(self) -> bool:
+        if not all(pubkey.is_xpub() for pubkey in self.pubkeys):
+            return False
+        return True
 
     def to_string_no_checksum(self) -> str:
         """
@@ -242,6 +261,18 @@ class Descriptor(object):
             self.name,
             ",".join([p.to_string() for p in self.pubkeys]),
             self.subdescriptors[0].to_string_no_checksum() if len(self.subdescriptors) > 0 else ""
+        )
+
+    def to_ranged_string_no_checksum(self, change) -> str:
+        """
+        Serializes the descriptor as a string without the descriptor checksum
+
+        :return: The descriptor string
+        """
+        return "{}({}{})".format(
+            self.name,
+            ",".join([p.to_string_ranged(change) for p in self.pubkeys]),
+            self.subdescriptors[0].to_ranged_string_no_checksum(change) if len(self.subdescriptors) > 0 else ""
         )
 
     def to_string(self) -> str:
@@ -332,22 +363,8 @@ class MultisigDescriptor(Descriptor):
     def to_string_no_checksum(self) -> str:
         return "{}({},{})".format(self.name, self.thresh, ",".join([p.to_string() for p in self.pubkeys]))
 
-    def expand(self, pos: int) -> "ExpandedScripts":
-        if self.thresh > 16:
-            m = b"\x01" + self.thresh.to_bytes(1, "big")
-        else:
-            m = (self.thresh + 0x50).to_bytes(1, "big") if self.thresh > 0 else b"\x00"
-        n = (len(self.pubkeys) + 0x50).to_bytes(1, "big") if len(self.pubkeys) > 0 else b"\x00"
-        script: bytes = m
-        der_pks = [p.get_pubkey_bytes(pos) for p in self.pubkeys]
-        if self.is_sorted:
-            der_pks.sort()
-        for pk in der_pks:
-            script += len(pk).to_bytes(1, "big") + pk
-        script += n + b"\xae"
-
-        return ExpandedScripts(script, None, None)
-
+    def to_ranged_string_no_checksum(self, change) -> str:
+        return "{}({},{})".format(self.name, self.thresh, ",".join([p.to_string_ranged(change) for p in self.pubkeys]))
 
 class SHDescriptor(Descriptor):
     """
@@ -417,6 +434,25 @@ class TRDescriptor(Descriptor):
                     r += "{"
                 path.append(False)
             r += self.subdescriptors[p].to_string_no_checksum()
+            while len(path) > 0 and path[-1]:
+                if len(path) > 0:
+                    r += "}"
+                path.pop()
+            if len(path) > 0:
+                path[-1] = True
+        r += ")"
+        return r
+
+    def to_ranged_string_no_checksum(self, change) -> str:
+        r = f"{self.name}({self.pubkeys[0].to_string_ranged(change)}"
+        path: List[bool] = [] # Track left or right for each depth
+        for p, depth in enumerate(self.depths):
+            r += ","
+            while len(path) <= depth:
+                if len(path) > 0:
+                    r += "{"
+                path.append(False)
+            r += self.subdescriptors[p].to_ranged_string_no_checksum(change)
             while len(path) > 0 and path[-1]:
                 if len(path) > 0:
                     r += "}"
@@ -667,110 +703,26 @@ class ExtendedKey(object):
         Create an :class:`~ExtendedKey` from a Base58 check encoded xpub
         :param xpub: The Base58 check encoded xpub
         """
-        data = base58.decode(xpub)[:-4] # Decoded xpub without checksum
-        return cls.from_bytes(data)
+
+        return cls.from_bytes(btc.b58check_to_bin_full(xpub))
 
     @classmethod
     def from_bytes(cls, data: bytes) -> 'ExtendedKey':
         """
         Create an :class:`~ExtendedKey` from a serialized xpub
-        :param xpub: The serialized xpub
+        :param data: The serialized xpub
         """
 
         version = data[0:4]
-        if version not in [ExtendedKey.MAINNET_PRIVATE, ExtendedKey.MAINNET_PUBLIC, ExtendedKey.TESTNET_PRIVATE, ExtendedKey.TESTNET_PUBLIC]:
-            raise BadArgumentError(f"Extended key magic of {version.hex()} is invalid")
-        is_private = version == ExtendedKey.MAINNET_PRIVATE or version == ExtendedKey.TESTNET_PRIVATE
+        if version not in [ExtendedKey.MAINNET_PUBLIC, ExtendedKey.TESTNET_PUBLIC]:
+            raise ValueError(f"Extended key magic of {version.hex()} is invalid")
         depth = data[4]
         parent_fingerprint = data[5:9]
         child_num = struct.unpack('>I', data[9:13])[0]
         chaincode = data[13:45]
 
-        if is_private:
-            privkey = data[46:]
-            pubkey = point_to_bytes(point_mul(G, int.from_bytes(privkey, byteorder="big")))
-            return cls(version, depth, parent_fingerprint, child_num, chaincode, privkey, pubkey)
-        else:
-            pubkey = data[45:78]
-            return cls(version, depth, parent_fingerprint, child_num, chaincode, None, pubkey)
-
-    def serialize(self) -> bytes:
-        """
-        Serialize the ExtendedKey with the serialization format described in BIP 32.
-        Does not create an xpub string, but the bytes serialized here can be Base58 check encoded into one.
-        :return: BIP 32 serialized extended key
-        """
-        r = self.version + struct.pack('B', self.depth) + self.parent_fingerprint + struct.pack('>I', self.child_num) + self.chaincode
-        if self.is_private:
-            if self.privkey is None:
-                raise ValueError("Somehow we are private but don't have a privkey")
-            r += b"\x00" + self.privkey
-        else:
-            r += self.pubkey
-        return r
-
-    def to_string(self) -> str:
-        """
-        Serialize the ExtendedKey as a Base58 check encoded xpub string
-        :return: Base58 check encoded xpub
-        """
-        data = self.serialize()
-        checksum = hash256(data)[0:4]
-        return base58.encode(data + checksum)
-
-    def get_printable_dict(self) -> Dict[str, object]:
-        """
-        Get the attributes of this ExtendedKey as a dictionary that can be printed
-        :return: Dictionary containing ExtendedKey information that can be printed
-        """
-        d: Dict[str, object] = {}
-        d['testnet'] = self.is_testnet
-        d['private'] = self.is_private
-        d['depth'] = self.depth
-        d['parent_fingerprint'] = binascii.hexlify(self.parent_fingerprint).decode()
-        d['child_num'] = self.child_num
-        d['chaincode'] = binascii.hexlify(self.chaincode).decode()
-        if self.is_private and isinstance(self.privkey, bytes):
-            d['privkey'] = binascii.hexlify(self.privkey).decode()
-        d['pubkey'] = binascii.hexlify(self.pubkey).decode()
-        return d
-
-    def derive_pub(self, i: int) -> 'ExtendedKey':
-        """
-        Derive the public key at the given child index.
-        :param i: The child index of the pubkey to derive
-        """
-        if is_hardened(i):
-            raise ValueError("Index cannot be larger than 2^31")
-
-        # Data to HMAC.  Same as CKDpriv() for public child key.
-        data = self.pubkey + struct.pack(">L", i)
-
-        # Get HMAC of data
-        Ihmac = hmac.new(self.chaincode, data, hashlib.sha512).digest()
-        Il = Ihmac[:32]
-        Ir = Ihmac[32:]
-
-        # Construct curve point Il*G+K
-        Il_int = int(binascii.hexlify(Il), 16)
-        child_pubkey = point_add(point_mul(G, Il_int), bytes_to_point(self.pubkey))
-
-        # Construct and return a new BIP32Key
-        pubkey = point_to_bytes(child_pubkey)
-        chaincode = Ir
-        fingerprint = hash160(self.pubkey)[0:4]
-        return ExtendedKey(ExtendedKey.TESTNET_PUBLIC if self.is_testnet else ExtendedKey.MAINNET_PUBLIC, self.depth + 1, fingerprint, i, chaincode, None, pubkey)
-
-    def derive_pub_path(self, path: Sequence[int]) -> 'ExtendedKey':
-        """
-        Derive the public key at the given path
-        :param path: Sequence of integers for the path of the pubkey to derive
-        """
-        key = self
-        for i in path:
-            key = key.derive_pub(i)
-        return key
-
+        pubkey = data[45:78]
+        return cls(version, depth, parent_fingerprint, child_num, chaincode, None, pubkey)
 
 
 class KeyOriginInfo(object):
