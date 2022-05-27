@@ -9,7 +9,7 @@ try:
     from electrumpersonalserver.bitcoin.secp256k1_main import *
     from electrumpersonalserver.bitcoin.secp256k1_transaction import *
     from electrumpersonalserver.bitcoin.secp256k1_deterministic import *
-except ImportError as e:
+except (ImportError, AttributeError) as e:
     from electrumpersonalserver.bitcoin.main import *
     from electrumpersonalserver.bitcoin.deterministic import *
     from electrumpersonalserver.bitcoin.transaction import *
