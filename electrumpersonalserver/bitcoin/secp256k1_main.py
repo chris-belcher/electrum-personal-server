@@ -12,7 +12,6 @@ import random
 import hmac
 import secp256k1
 
-ctx = secp256k1.lib.secp256k1_context_create(secp256k1.ALL_FLAGS)
 
 def privkey_to_address(priv, from_hex=True, magicbyte=0):
     return pubkey_to_address(privkey_to_pubkey(priv, from_hex), magicbyte)
@@ -257,7 +256,7 @@ def privkey_to_pubkey_inner(priv, usehex):
     and return compressed/uncompressed public key as appropriate.'''
     compressed, priv = read_privkey(priv)
     #secp256k1 checks for validity of key value.
-    newpriv = secp256k1.PrivateKey(privkey=priv, ctx=ctx)
+    newpriv = secp256k1.PrivateKey(privkey=priv)
     return newpriv.pubkey.serialize(compressed=compressed)
 
 def privkey_to_pubkey(priv, usehex=True):
@@ -279,7 +278,7 @@ def multiply(s, pub, usehex, rawpub=True):
     of the scalar s.
     ('raw' options passed in)
     '''
-    newpub = secp256k1.PublicKey(pub, raw=rawpub, ctx=ctx)
+    newpub = secp256k1.PublicKey(pub, raw=rawpub)
     res = newpub.tweak_mul(s)
     return res.serialize()
 
@@ -287,10 +286,9 @@ def multiply(s, pub, usehex, rawpub=True):
 def add_pubkeys(pubkeys, usehex):
     '''Input a list of binary compressed pubkeys
     and return their sum as a binary compressed pubkey.'''
-    r = secp256k1.PublicKey(ctx=ctx)  #dummy holding object
+    r = secp256k1.PublicKey()  #dummy holding object
     pubkey_list = [secp256k1.PublicKey(x,
-                                       raw=True,
-                                       ctx=ctx).public_key for x in pubkeys]
+                                       raw=True).public_key for x in pubkeys]
     r.combine(pubkey_list)
     return r.serialize()
 
@@ -306,7 +304,7 @@ def add_privkeys(priv1, priv2, usehex):
     else:
         compressed = y[0]
     newpriv1, newpriv2 = (y[1], z[1])
-    p1 = secp256k1.PrivateKey(newpriv1, raw=True, ctx=ctx)
+    p1 = secp256k1.PrivateKey(newpriv1, raw=True)
     res = p1.tweak_add(newpriv2)
     if compressed:
         res += '\x01'
@@ -336,9 +334,9 @@ def ecdsa_raw_sign(msg,
         raise Exception("Invalid hash input to ECDSA raw sign.")
     if rawpriv:
         compressed, p = read_privkey(priv)
-        newpriv = secp256k1.PrivateKey(p, raw=True, ctx=ctx)
+        newpriv = secp256k1.PrivateKey(p, raw=True)
     else:
-        newpriv = secp256k1.PrivateKey(priv, raw=False, ctx=ctx)
+        newpriv = secp256k1.PrivateKey(priv, raw=False)
     if usenonce and len(usenonce) != 32:
         raise ValueError("Invalid nonce passed to ecdsa_sign: " + str(usenonce))
 
@@ -357,7 +355,7 @@ def ecdsa_raw_verify(msg, pub, sig, usehex, rawmsg=False):
     otherwise. '''
     if rawmsg and len(msg) != 32:
         raise Exception("Invalid hash input to ECDSA raw sign.")
-    newpub = secp256k1.PublicKey(pubkey=pub, raw=True, ctx=ctx)
+    newpub = secp256k1.PublicKey(pubkey=pub, raw=True)
     sigobj = newpub.ecdsa_deserialize(sig)
     return newpub.ecdsa_verify(msg, sigobj, raw=rawmsg)
 
