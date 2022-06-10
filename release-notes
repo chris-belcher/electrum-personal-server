@@ -1,3 +1,11 @@
+# Release v0.2.4 (16th June 2022)
+
+New release, thanks to contributions by andrewtoth and theStack
+And thanks to everyone else who contributed via discussion and donations
+
+* Fixed crash caused by deprecated RPC in Bitcoin Core 23.0
+* Added signet support
+
 # Release v0.2.3 (9th March 2022)
 
 New release, thanks to contributions by andrewtoth and federicociro
