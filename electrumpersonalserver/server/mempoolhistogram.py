@@ -108,7 +108,7 @@ class MempoolSync(object):
                     mempool_tx = self.rpc.call("getmempoolentry", [txid])
                 except JsonRpcError:
                     continue
-                fee_rate = 1e8*mempool_tx["fee"] // mempool_tx["vsize"]
+                fee_rate = 1e8*mempool_tx["fees"]["base"] // mempool_tx["vsize"]
                 self.mempool[txid] = (fee_rate, mempool_tx["vsize"])
 
         return poll_interval_change
