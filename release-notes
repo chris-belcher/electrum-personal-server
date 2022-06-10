@@ -1,3 +1,10 @@
+# Release v0.2.3 (10th June 2022)
+
+New release, thanks to contributions by andrewtoth
+And thanks to everyone else who contributed via discussion and donations
+
+* Fixed crash caused by deprecated RPC in Bitcoin Core 23.0
+
 # Release v0.2.3 (9th March 2022)
 
 New release, thanks to contributions by andrewtoth and federicociro
