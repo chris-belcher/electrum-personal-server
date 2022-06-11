@@ -40,10 +40,10 @@ reasoning for your decisions. Further explanation
 
 ## Testing
 
-Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet)
-and [regtest](https://bitcoin.org/en/glossary/regression-test-mode). The
-Electrum wallet can be started in testnet mode with the command line flag
-`--testnet` or `--regtest`.
+Electrum Personal Server also works on [testnet](https://en.bitcoin.it/wiki/Testnet),
+[regtest](https://bitcoin.org/en/glossary/regression-test-mode) and
+[signet](https://en.bitcoin.it/wiki/Signet). The Electrum wallet can be started
+in testnet mode with the command line flag `--testnet`, `--regtest` or `--signet`.
 
 pytest is used for automated testing. On Debian-like systems install with
 `pip3 install pytest pytest-cov`

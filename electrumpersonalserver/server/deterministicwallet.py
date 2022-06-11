@@ -63,7 +63,7 @@ def is_string_parsable_as_hex_int(s):
 def parse_electrum_master_public_key(keydata, gaplimit, rpc, chain):
     if chain == "main":
         xpub_vbytes = b"\x04\x88\xb2\x1e"
-    elif chain == "test" or chain == "regtest":
+    elif chain == "test" or chain == "regtest" or chain == "signet":
         xpub_vbytes = b"\x04\x35\x87\xcf"
     else:
         assert False
