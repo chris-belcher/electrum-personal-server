@@ -108,30 +108,6 @@ def bip32_bin_extract_key(data):
 def bip32_extract_key(data):
     return safe_hexlify(bip32_deserialize(data)[-1])
 
-# Exploits the same vulnerability as above in Electrum wallets
-# Takes a BIP32 pubkey and one of the child privkeys of its corresponding
-# privkey and returns the BIP32 privkey associated with that pubkey
-
-def raw_crack_bip32_privkey(parent_pub, priv):
-    vbytes, depth, fingerprint, i, chaincode, key = priv
-    pvbytes, pdepth, pfingerprint, pi, pchaincode, pkey = parent_pub
-    i = int(i)
-
-    if i >= 2**31:
-        raise ValueError("Can't crack private derivation!")
-
-    I = hmac.new(pchaincode, pkey + encode(i, 256, 4), hashlib.sha512).digest()
-
-    pprivkey = subtract_privkeys(key, I[:32] + b'\x01')
-
-    newvbytes = MAINNET_PRIVATE if vbytes == MAINNET_PUBLIC else TESTNET_PRIVATE
-    return (newvbytes, pdepth, pfingerprint, pi, pchaincode, pprivkey)
-
-
-def crack_bip32_privkey(parent_pub, priv):
-    dsppub = bip32_deserialize(parent_pub)
-    dspriv = bip32_deserialize(priv)
-    return bip32_serialize(raw_crack_bip32_privkey(dsppub, dspriv))
 
 def bip32_descend(*args):
     if len(args) == 2:

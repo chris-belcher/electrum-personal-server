@@ -317,11 +317,6 @@ def subtract_pubkeys(p1, p2):
             decode_pubkey(p1, f1), (k2[0], (P - k2[1]) % P)), f1)
 
 
-def subtract_privkeys(p1, p2):
-    f1, f2 = get_privkey_format(p1), get_privkey_format(p2)
-    k2 = decode_privkey(p2, f2)
-    return encode_privkey((decode_privkey(p1, f1) - k2) % N, f1)
-
 # Hashes
 
 
