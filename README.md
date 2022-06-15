@@ -146,6 +146,15 @@ rebroadcasting transactions without tor.
 1. Restart the server if needed
 1. Start your Electrum wallet: `electrum --oneserver --server localhost:50002:s`.
 
+### Updating to a new version
+
+- Use `pip3 uninstall electrum-personal-server`, then use the same
+  `pip3 install ...` command as above to install the new version.
+
+- You can always use `electrum-personal-server --version` to check which version you're running.
+
+Updating to a new version of Electrum Personal Server does not require a blockchain rescan.
+
 ### Links to other setup guides
 
 - [How to setup Electrum Personal Server on a Raspberry Pi](https://raspibolt.github.io/raspibolt/raspibolt_64_electrum.html)
