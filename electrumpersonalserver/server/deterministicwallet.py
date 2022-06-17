@@ -5,13 +5,12 @@ import electrumpersonalserver.bitcoin as btc
 from electrumpersonalserver.server.hashes import bh2u, hash_160, bfh, sha256,\
     address_to_script, script_to_address
 from electrumpersonalserver.server.jsonrpc import JsonRpcError
+from electrumpersonalserver.server.descriptor import parse_descriptor
 
 #the wallet types are here
 #https://github.com/spesmilo/electrum/blob/3.0.6/RELEASE-NOTES
 #and
 #https://github.com/spesmilo/electrum-docs/blob/master/xpub_version_bytes.rst
-
-ADDRESSES_LABEL = "electrum-watchonly-addresses"
 
 def import_addresses(rpc, watchonly_addrs, wallets, change_param, count,
         logger=None):
@@ -20,36 +19,32 @@ def import_addresses(rpc, watchonly_addrs, wallets, change_param, count,
     """
     logger = logger if logger else logging.getLogger('ELECTRUMPERSONALSERVER')
     logger.debug("Importing " + str(len(watchonly_addrs)) + " watch-only "
-        + "address[es] and " + str(len(wallets)) + " wallet[s] into label \""
-        + ADDRESSES_LABEL + "\"")
+        + "address[es] and " + str(len(wallets)) + " wallet[s] ")
 
-    watchonly_addr_param = [{"scriptPubKey": {"address": addr}, "label":
-        ADDRESSES_LABEL, "watchonly": True, "timestamp": "now"}
-        for addr in watchonly_addrs]
-    rpc.call("importmulti", [watchonly_addr_param, {"rescan": False}])
+    for addr in watchonly_addrs:
+        try:
+            addr_desc = rpc.call("getdescriptorinfo",[f'addr({addr})'])["descriptor"]
+            rpc.call("importdescriptors", [[{"desc": addr_desc, "timestamp": "now"}]])
+        except JsonRpcError as e:
+            ValueError(repr(e))
 
     for i, wal in enumerate(wallets):
         logger.info("Importing wallet " + str(i+1) + "/" + str(len(wallets)))
         if isinstance(wal, DescriptorDeterministicWallet):
             if change_param in (0, -1):
                 #import receive addrs
-                rpc.call("importmulti", [[{"desc": wal.descriptors[0], "range":
-                    [0, count-1], "label": ADDRESSES_LABEL, "watchonly": True,
-                    "timestamp": "now"}], {"rescan": False}])
+                rpc.call("importdescriptors", [[{"desc": wal.descriptors[0], "range": [0, count-1], "timestamp": "now" }]])
             if change_param in (1, -1):
                 #import change addrs
-                rpc.call("importmulti", [[{"desc": wal.descriptors[1], "range":
-                    [0, count-1], "label": ADDRESSES_LABEL, "watchonly": True,
-                    "timestamp": "now"}], {"rescan": False}])
+                rpc.call("importdescriptors", [[{"desc": wal.descriptors[1], "range": [0, count-1], "timestamp": "now" }]])
         else:
             #old-style-seed wallets
             logger.info("importing an old-style-seed wallet, will be slow...")
             for change in [0, 1]:
                 addrs, spks = wal.get_addresses(change, 0, count)
-                addr_param = [{"scriptPubKey": {"address": a}, "label":
-                    ADDRESSES_LABEL, "watchonly": True, "timestamp": "now"}
-                    for a in addrs]
-                rpc.call("importmulti", [addr_param, {"rescan": False}])
+                for a in addrs:
+                    addr_desc = rpc.call("getdescriptorinfo", [f'addr({a})'])["descriptor"]
+                    rpc.call("importdescriptors", [[{"desc": addr_desc, "timestamp": "now"}]])
     logger.debug("Importing done")
 
 
@@ -59,6 +54,20 @@ def is_string_parsable_as_hex_int(s):
         return True
     except:
         return False
+
+def parse_xpub_descriptor(desc, gaplimit, rpc, chain):
+    if chain == "main":
+        xpub_vbytes = b"\x04\x88\xb2\x1e"
+    elif chain == "test" or chain == "regtest":
+        xpub_vbytes = b"\x04\x35\x87\xcf"
+    else:
+        assert False
+    parsed_descriptor = parse_descriptor(desc)
+    if not parsed_descriptor.is_xpub():
+        raise ValueError("The descriptor must include a master public key (xpub).")
+    wallet = DescriptorWallet(rpc, xpub_vbytes, parsed_descriptor)
+    wallet.gaplimit = gaplimit
+    return wallet
 
 def parse_electrum_master_public_key(keydata, gaplimit, rpc, chain):
     if chain == "main":
@@ -184,6 +193,17 @@ class DescriptorDeterministicWallet(DeterministicWallet):
     def _convert_to_standard_xpub(self, mpk):
         return btc.bip32_serialize((self.xpub_vbytes, *btc.bip32_deserialize(
             mpk)[1:]))
+
+class DescriptorWallet(DescriptorDeterministicWallet):
+    def __init__(self, rpc, xpub_vbytes, descriptor):
+        super(DescriptorWallet, self).__init__(rpc, xpub_vbytes, descriptor)
+
+    def obtain_descriptors_without_checksum(self, args):
+        descriptor = args[0]
+        descriptors_without_checksum = []
+        for change in [0, 1]:
+            descriptors_without_checksum.append(descriptor.to_ranged_string_no_checksum(change))
+        return descriptors_without_checksum
 
 class SingleSigWallet(DescriptorDeterministicWallet):
     def __init__(self, rpc, xpub_vbytes, xpub, descriptor_template):

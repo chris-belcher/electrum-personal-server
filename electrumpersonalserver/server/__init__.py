@@ -27,7 +27,6 @@ from electrumpersonalserver.server.deterministicwallet import (
     DeterministicWallet,
     DescriptorDeterministicWallet,
     import_addresses,
-    ADDRESSES_LABEL,
 )
 from electrumpersonalserver.server.socks import (
     socksocket,
