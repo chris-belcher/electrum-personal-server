@@ -1,6 +1,4 @@
 from electrumpersonalserver.bitcoin.secp256k1_main import *
-import hmac
-import hashlib
 from binascii import hexlify
 
 # Below code ASSUMES binary inputs and compressed pubkeys
@@ -10,36 +8,6 @@ TESTNET_PRIVATE = b'\x04\x35\x83\x94'
 TESTNET_PUBLIC = b'\x04\x35\x87\xCF'
 PRIVATE = [MAINNET_PRIVATE, TESTNET_PRIVATE]
 PUBLIC = [MAINNET_PUBLIC, TESTNET_PUBLIC]
-
-# BIP32 child key derivation
-
-def raw_bip32_ckd(rawtuple, i):
-    vbytes, depth, fingerprint, oldi, chaincode, key = rawtuple
-    i = int(i)
-
-    if vbytes in PRIVATE:
-        priv = key
-        pub = privtopub(key, False)
-    else:
-        pub = key
-
-    if i >= 2**31:
-        if vbytes in PUBLIC:
-            raise Exception("Can't do private derivation on public key!")
-        I = hmac.new(chaincode, b'\x00' + priv[:32] + encode(i, 256, 4),
-                     hashlib.sha512).digest()
-    else:
-        I = hmac.new(chaincode, pub + encode(i, 256, 4),
-                     hashlib.sha512).digest()
-
-    if vbytes in PRIVATE:
-        newkey = add_privkeys(I[:32] + B'\x01', priv, False)
-        fingerprint = bin_hash160(privtopub(key, False))[:4]
-    if vbytes in PUBLIC:
-        newkey = add_pubkeys([privtopub(I[:32] + '\x01', False), key], False)
-        fingerprint = bin_hash160(key)[:4]
-
-    return (vbytes, depth + 1, fingerprint, i, I[32:], newkey)
 
 def bip32_serialize(rawtuple):
     vbytes, depth, fingerprint, i, chaincode, key = rawtuple
