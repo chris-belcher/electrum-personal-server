@@ -1,6 +1,4 @@
 from electrumpersonalserver.bitcoin.main import *
-import hmac
-import hashlib
 from binascii import hexlify
 
 # Below code ASSUMES binary inputs and compressed pubkeys
@@ -26,36 +24,6 @@ PUBLIC = [  b'\x04\x88\xb2\x1e', #mainnet p2pkh or p2sh xpub
             b'\x02\x57\x54\x83' #testnet p2wsh Vpub
         ]
 
-# BIP32 child key derivation
-
-def raw_bip32_ckd(rawtuple, i):
-    vbytes, depth, fingerprint, oldi, chaincode, key = rawtuple
-    i = int(i)
-
-    if vbytes in PRIVATE:
-        priv = key
-        pub = privtopub(key)
-    else:
-        pub = key
-
-    if i >= 2**31:
-        if vbytes in PUBLIC:
-            raise ValueError("Can't do private derivation on public key!")
-        I = hmac.new(chaincode, b'\x00' + priv[:32] + encode(i, 256, 4),
-                     hashlib.sha512).digest()
-    else:
-        I = hmac.new(chaincode, pub + encode(i, 256, 4),
-                     hashlib.sha512).digest()
-
-    if vbytes in PRIVATE:
-        newkey = add_privkeys(I[:32] + B'\x01', priv)
-        fingerprint = bin_hash160(privtopub(key))[:4]
-    if vbytes in PUBLIC:
-        newkey = add_pubkeys(compress(privtopub(I[:32])), key)
-        fingerprint = bin_hash160(key)[:4]
-
-    return (vbytes, depth + 1, fingerprint, i, I[32:], newkey)
-
 
 def bip32_serialize(rawtuple):
     vbytes, depth, fingerprint, i, chaincode, key = rawtuple
@@ -79,44 +47,6 @@ def bip32_deserialize(data):
     key = dbin[46:78] + b'\x01' if vbytes in PRIVATE else dbin[45:78]
     return (vbytes, depth, fingerprint, i, chaincode, key)
 
-
-def raw_bip32_privtopub(rawtuple):
-    vbytes, depth, fingerprint, i, chaincode, key = rawtuple
-    newvbytes = MAINNET_PUBLIC if vbytes == MAINNET_PRIVATE else TESTNET_PUBLIC
-    return (newvbytes, depth, fingerprint, i, chaincode, privtopub(key))
-
-
-def bip32_privtopub(data):
-    return bip32_serialize(raw_bip32_privtopub(bip32_deserialize(data)))
-
-
-def bip32_ckd(data, i):
-    return bip32_serialize(raw_bip32_ckd(bip32_deserialize(data), i))
-
-
-def bip32_master_key(seed, vbytes=MAINNET_PRIVATE):
-    I = hmac.new(
-        from_string_to_bytes("Bitcoin seed"), seed, hashlib.sha512).digest()
-    return bip32_serialize((vbytes, 0, b'\x00' * 4, 0, I[32:], I[:32] + b'\x01'
-                           ))
-
-
-def bip32_bin_extract_key(data):
-    return bip32_deserialize(data)[-1]
-
-
-def bip32_extract_key(data):
-    return safe_hexlify(bip32_deserialize(data)[-1])
-
-
-def bip32_descend(*args):
-    if len(args) == 2:
-        key, path = args
-    else:
-        key, path = args[0], map(int, args[1:])
-    for p in path:
-        key = bip32_ckd(key, p)
-    return bip32_extract_key(key)
 
 # electrum
 def electrum_stretch(seed):
