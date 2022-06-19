@@ -80,20 +80,6 @@ def bip32_deserialize(data):
     return (vbytes, depth, fingerprint, i, chaincode, key)
 
 
-def raw_bip32_privtopub(rawtuple):
-    vbytes, depth, fingerprint, i, chaincode, key = rawtuple
-    newvbytes = MAINNET_PUBLIC if vbytes == MAINNET_PRIVATE else TESTNET_PUBLIC
-    return (newvbytes, depth, fingerprint, i, chaincode, privtopub(key))
-
-
-def bip32_ckd(data, i):
-    return bip32_serialize(raw_bip32_ckd(bip32_deserialize(data), i))
-
-
-def bip32_extract_key(data):
-    return safe_hexlify(bip32_deserialize(data)[-1])
-
-
 # electrum
 def electrum_stretch(seed):
     return slowsha(seed)
