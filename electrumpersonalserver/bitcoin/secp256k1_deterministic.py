@@ -67,26 +67,8 @@ def raw_bip32_privtopub(rawtuple):
     newvbytes = MAINNET_PUBLIC if vbytes == MAINNET_PRIVATE else TESTNET_PUBLIC
     return (newvbytes, depth, fingerprint, i, chaincode, privtopub(key, False))
 
-def bip32_privtopub(data):
-    return bip32_serialize(raw_bip32_privtopub(bip32_deserialize(data)))
-
 def bip32_ckd(data, i):
     return bip32_serialize(raw_bip32_ckd(bip32_deserialize(data), i))
 
-def bip32_master_key(seed, vbytes=MAINNET_PRIVATE):
-    I = hmac.new(
-        from_string_to_bytes("Bitcoin seed"), seed, hashlib.sha512).digest()
-    return bip32_serialize((vbytes, 0, b'\x00' * 4, 0, I[32:], I[:32] + b'\x01'
-                           ))
-
 def bip32_extract_key(data):
     return safe_hexlify(bip32_deserialize(data)[-1])
-
-def bip32_descend(*args):
-    if len(args) == 2:
-        key, path = args
-    else:
-        key, path = args[0], map(int, args[1:])
-    for p in path:
-        key = bip32_ckd(key, p)
-    return bip32_extract_key(key)
