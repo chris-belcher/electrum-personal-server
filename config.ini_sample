@@ -58,6 +58,10 @@ port = 50002
 # generally requires host binding (above) to be 0.0.0.0
 ip_whitelist = *
 
+# Use SSL by default
+# use_ssl = 0 # means using plain socket
+#use_ssl = 1
+
 #SSL certificate
 #uses the default one, which is fine because by default nobody should be
 # allowed to connect to your server or scan your packets
